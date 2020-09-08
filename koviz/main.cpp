@@ -54,6 +54,8 @@ QStandardItemModel* monteInputModelTrick07(const QString &monteInputFile,
                                            const QStringList &runs);
 QStandardItemModel* monteInputModelTrick17(const QString &monteInputFile,
                                            const QStringList &runs);
+QStandardItemModel* monteInputModelCSV(const QString &monteInputFile,
+                                           const QStringList &runs);
 QStringList runsSubset(const QStringList& runsList, const QString &filterPattern,
                        const QString& excludePattern,
                        uint beginRun, uint endRun);
@@ -1835,20 +1837,26 @@ QStandardItemModel* monteInputModel(const QString &monteDir,
     }
     QTextStream in(&file);
 
-    bool isTrick07 = false;
+    unsigned int trickVersion = 0;
     while (!in.atEnd()) {
         QString line = in.readLine();
         if ( line.startsWith("NUM_RUNS:") ) {
-            isTrick07 = true;
+            trickVersion = 7;
+            break;
+        } else if ( line.startsWith("#NAME:") ) {
+            trickVersion = 17;
             break;
         }
+        // Other else if's go here if Trick changes format AGAIN.
     }
     file.close();
 
-    if ( isTrick07 ) {
+    if ( trickVersion >= 7 && trickVersion < 17 ) {
         m = monteInputModelTrick07(monteInputFile,runs);
-    } else {
+    } else if (trickVersion >= 17) {
         m = monteInputModelTrick17(monteInputFile,runs);
+    } else {
+        m = monteInputModelCSV(monteInputFile,runs);
     }
 
     return m;
@@ -2071,7 +2079,7 @@ QStandardItemModel* monteInputModelTrick17(const QString &monteInputFile,
 
     //
     // Get number of runs
-    //
+    // TODO: Is this even doing anything? nRuns immediately overwritten after this
     bool isCount = false;
     int nRuns = 0;
     in.seek(0); // Go to beginning of file
@@ -2171,6 +2179,114 @@ QStandardItemModel* monteInputModelTrick17(const QString &monteInputFile,
         ++runLine;
     }
 
+    file.close();
+
+    return m;
+}
+QStandardItemModel* monteInputModelCSV(const QString &monteInputFile,
+                                           const QStringList& runs)
+{
+    QStandardItemModel* m = 0;
+
+    QFile file(monteInputFile);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        fprintf(stderr,"koviz [error]: could not open %s\n",
+                       monteInputFile.toLatin1().constData());
+        exit(-1);
+    }
+    QTextStream in(&file);
+
+    //
+    // Sanity check - top line should be #NAME:
+    //
+    QString line = in.readLine();
+    if ( !line.startsWith("RunId") ) {
+        fprintf(stderr,"koviz [error]: error parsing %s. "
+                       "First line should begin with \"RunId\"\n",
+                       monteInputFile.toLatin1().constData());
+        exit(-1);
+    }
+
+    //
+    // Get Vars
+    //
+    QStringList vars = line.split(QRegExp("\\s+"),QString::SkipEmptyParts);
+
+    //
+    // Allocate table items
+    //
+    int nRuns = runs.size(); // If beginRun,endRun set, runs could be a subset
+    m = new QStandardItemModel(nRuns,vars.size());
+
+    //
+    // Set table header for rows and get begin/end run ids
+    // TODO: this code is duplicated in multiple places
+    int beginRun = INT_MAX;
+    int endRun = 0;
+    int r = 0 ;
+    foreach ( QString run, runs ) {
+        int runId = run.mid(4).toInt(); // 4 is for RUN_
+        if ( runId < beginRun ) {
+            beginRun = runId;
+        }
+        if ( runId > endRun ) {
+            endRun = runId;
+        }
+        QString runName = QString("%0").arg(runId);
+        m->setHeaderData(r,Qt::Vertical,runName);
+        r++;
+    }
+    //
+    // Data
+    //
+    int lineNum = 1;
+    in.seek(0); // Go to beginning of file
+    line = in.readLine();  // Skip first header line
+    // TODO: much of this but not all is repeated code from Trick17 version
+    while (!in.atEnd()) {
+        ++lineNum;
+        line = in.readLine();
+        QStringList vals = line.split(QRegExp("\\s+"),QString::SkipEmptyParts);
+        if ( vals.size() != vars.size() ) {
+            fprintf(stderr, "koviz [error]: error parsing %s.  There "
+                            "are %d variables specified in top line, "
+                            "but only %d values on line number %d.\n",
+                           monteInputFile.toLatin1().constData(),
+                           vars.size(),vals.size(),lineNum);
+            exit(-1);
+        }
+
+        int runId = vals.at(0).toInt();
+        if ( runId < beginRun || runId > endRun ) {
+            continue;
+        }
+
+        QString runName= QString("%0").arg(runId);
+        runName = runName.rightJustified(5, '0');
+        runName.prepend("RUN_");
+        if ( ! runs.contains(runName) ) {
+            // Run is in the monte carlo input file,
+            // but it is not in the runs list.
+            // Assume that RUN was excluded intentionally,
+            // and not missing.
+            continue;
+        }
+
+        int nv = vals.size();
+        for ( int c = 0; c < nv; ++c) {
+            QString val = vals.at(c) ;
+            double v = val.toDouble();
+            if ( c == 0 ) {
+                int ival = val.toInt();
+                val = val.sprintf("%d",ival);
+            } else {
+                val = val.sprintf("%.4lf",v);
+            }
+            NumSortItem *item = new NumSortItem(val);
+            m->setItem(lineNum+1,c,item);
+            m->setHeaderData(c,Qt::Horizontal,vars.at(c));
+        }
+    }
     file.close();
 
     return m;
