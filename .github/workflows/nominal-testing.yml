@@ -1,0 +1,40 @@
+name: Koviz Testing Actions
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test-ubuntu:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: install prerequisites
+      run: sudo apt-get update && sudo apt-get install qtbase5-dev qt5-default
+    - name: qmake
+      run: qmake
+    - name: make
+      run: make -j3
+    - name: koviz -h
+      run: ./bin/koviz -h
+
+  test-centos7:
+
+    runs-on: ubuntu-latest
+    container:
+      image: centos:7
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: install prerequisites
+      run: yum update && yum install -y qt5-qtbase-devel gcc gcc-c++ make flex bison
+    - name: qmake
+      run: qmake-qt5
+    - name: make
+      run: make -j3
+    - name: koviz -h
+      run: ./bin/koviz -h
