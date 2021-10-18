@@ -99,7 +99,47 @@ void TimeCom::sendRun2Bvis(const QString& iRunDir)
         }
     }
     QString msg = QString("run=%1").arg(runDir);
+#define VIS
+#ifndef VIS
     _sendMsg2Bvis(msg);
+#endif
+
+#ifdef VIS
+    // Reads single line from RUN_dir/rpxyz.csv
+    // and sends that to blender
+    QString r;
+    QString p;
+    QString x;
+    QString y;
+    QString z;
+    filter.clear();
+    filter << "*.csv";
+    QStringList files = rdir.entryList(QDir::Files);
+    QFile file(rdir.dirName() + "/" + files.at(0));
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return;
+    }
+    int i = 0;
+    while (!file.atEnd()) {
+        QByteArray line = file.readLine();
+        if ( i == 1 ) {
+            QString str(line);
+            QStringList fields = str.split(',');
+            r = fields.at(1).trimmed();
+            p = fields.at(2).trimmed();
+            x = fields.at(3).trimmed();
+            y = fields.at(4).trimmed();
+            z = fields.at(5).trimmed();
+            break;
+        }
+        ++i;
+    }
+    file.close();
+
+    msg = QString("%1,roll=%2,pitch=%3,x=%4,y=%5,z=%6").
+                   arg(msg).arg(r).arg(p).arg(x).arg(y).arg(z);
+    _sendMsg2Bvis(msg);
+#endif
 }
 
 void TimeCom::sendList2Bvis(const QStringList &list)

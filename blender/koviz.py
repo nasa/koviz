@@ -23,6 +23,21 @@ def go():
 
 def get_run_dir():
     return KovizOperator.thread.get_koviz_run_dir()
+
+def get_roll():
+    return KovizOperator.thread.get_koviz_roll()
+
+def get_pitch():
+    return KovizOperator.thread.get_koviz_pitch()
+
+def get_x():
+    return KovizOperator.thread.get_koviz_x()
+
+def get_y():
+    return KovizOperator.thread.get_koviz_y()
+
+def get_z():
+    return KovizOperator.thread.get_koviz_z()
       
 def koviz_animation_handler(scene):
     t = get_blender_time()
@@ -59,6 +74,11 @@ class KovizThread(threading.Thread):
     self.koviz_beg_time = None
     self.koviz_end_time = None
     self.koviz_run_dir = None
+    self.koviz_roll = None
+    self.koviz_pitch = None
+    self.koviz_x = None
+    self.koviz_y = None
+    self.koviz_z = None
     self.is_running = False
     self.client_sock = None
     self.data = [0] * self.max_msg_size
@@ -69,6 +89,11 @@ class KovizThread(threading.Thread):
     self.koviz_beg_time = None
     self.koviz_end_time = None
     self.koviz_run_dir = None
+    self.koviz_roll = None
+    self.koviz_pitch = None
+    self.koviz_x = None
+    self.koviz_y = None
+    self.koviz_z = None
     threading.Thread.start(self)
  
   def stop(self):
@@ -76,6 +101,11 @@ class KovizThread(threading.Thread):
     self.koviz_beg_time = None
     self.koviz_end_time = None
     self.koviz_run_dir = None
+    self.koviz_roll = None
+    self.koviz_pitch = None
+    self.koviz_x = None
+    self.koviz_y = None
+    self.koviz_z = None
     self.is_running = False
 
   def get_koviz_time(self):
@@ -89,6 +119,36 @@ class KovizThread(threading.Thread):
 
   def get_koviz_run_dir(self):
       return self.koviz_run_dir
+
+  def get_koviz_roll(self):
+      if self.koviz_roll == None:
+          return 0.0
+      else:
+          return 3.1415926538*float(self.koviz_roll)/180.0
+
+  def get_koviz_pitch(self):
+      if self.koviz_pitch == None:
+          return 0.0
+      else:
+          return 3.1415926538*float(self.koviz_pitch)/180.0
+
+  def get_koviz_x(self):
+      if self.koviz_x == None:
+          return 0.0
+      else:
+          return float(self.koviz_x)
+
+  def get_koviz_y(self):
+      if self.koviz_y == None:
+          return 0.0
+      else:
+          return float(self.koviz_y)
+
+  def get_koviz_z(self):
+      if self.koviz_z == None:
+          return 0.0
+      else:
+          return float(self.koviz_z)
 
   def set_koviz_time(self,t):
       if not isinstance(t,float) or self.client_sock == None:
@@ -151,6 +211,16 @@ class KovizThread(threading.Thread):
                         self.koviz_end_time = float(words[1])
                     elif words[0] == 'run':
                         self.koviz_run_dir = words[1]
+                    elif words[0] == 'roll':
+                        self.koviz_roll = words[1]
+                    elif words[0] == 'pitch':
+                        self.koviz_pitch = words[1]
+                    elif words[0] == 'x':
+                        self.koviz_x = words[1]
+                    elif words[0] == 'y':
+                        self.koviz_y = words[1]
+                    elif words[0] == 'z':
+                        self.koviz_z = words[1]
 
         print('Close koviz connection')
         self.client_sock.close()
