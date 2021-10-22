@@ -157,6 +157,8 @@ private:
 
     QPixmap* _pixmap;
     QRectF _lastM;
+    bool _isMeasure;
+    QPoint _mouseCurrPos;
     QPixmap* _createLivePixmap();
 
     QString _format(double d);
@@ -165,6 +167,8 @@ private:
                                int low, int high, double time);
 
     // Key Events
+    bool _isLastPoint;
+    QPointF _lastPoint;
     void _keyPressSpace();
     void _keyPressUp();
     void _keyPressDown();
