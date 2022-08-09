@@ -19,6 +19,12 @@
 #include <QImage>
 #include <QFontMetrics>
 #include <QPoint>
+#include <QMessageBox>
+#include <QVBoxLayout>
+#include <QSlider>
+#include <QLineEdit>
+#include <QIntValidator>
+#include <QProgressDialog>
 #include <stdlib.h>
 #include <float.h>
 #include <math.h>
@@ -27,6 +33,13 @@
 #include "curvemodel.h"
 #include "roundoff.h"
 #include "layoutitem_curves.h"
+#include "coord_arrow.h"
+#include "curvemodel_fft.h"
+#include "curvemodel_ifft.h"
+#include "curvemodel_bw.h"
+#include "curvemodel_sg.h"
+#include "curvemodel_deriv.h"
+#include "curvemodel_integ.h"
 
 class TimeAndIndex
 {
@@ -43,72 +56,104 @@ class TimeAndIndex
     QModelIndex _modelIdx;
 };
 
-// ---------------------------------------------------------
-// Use . since backslash makes a C++ multi-line comment
-//
-//               b
-//         Y...........|<-m->(x,y)
-//        .
-//     a .
-//      .
-//    |_
-//   . -----------------------------Z
-//
-//      Quad1 - angle(Y.Z)===angle===45degrees
-//
-//                b
-// (x,y)<-m->|..........Y
-//                       .
-//                      a .
-//                         .
-//                          _|
-//                            .   --------------------Z
-//
-//      Quad2 - angle(Y.Z)===angle===135degrees
-//
-// ---------------------------------------------------------
-//
-//            A
-//            |.
-//            | .
-//            |  .
-//            |   .
-//            |    .
-//            |<-h->.       Arrow Head
-//            |    .
-//            |   .
-//            |  .
-//            | .
-//            |.
-//            B     angle(A.B)===tipAngle===arrowTipAngle===22.5
-//
-// ---------------------------------------------------------
-class CoordArrow
+class FFTCurveCache
 {
   public:
-    CoordArrow();
-    CoordArrow(const QPointF& coord,
-               double r, double h,
-               double a, double b, double m,
-               double angle, double tipAngle);
+    FFTCurveCache(double xbias, double xscale, CurveModel* curveModel);
+    double xbias() const ;
+    double xscale() const ;
+    CurveModel* curveModel() const ;
 
+  private:
+    FFTCurveCache() {}
+    double _xbias;
+    double _xscale;
+    CurveModel*  _curveModel;
+};
+
+class FFTCache
+{
   public:
-    QString txt;    // Text e.g. "(10.375,3.141593)"
-    QPointF coord;  // math coord
-    double r;       // radius of circle in window coords
-    double h;       // height of arrow head in window coords
-    double a;       // length of part1 of tail (see above)
-    double b;       // length of part2 of tail (see above)
-    double m;       // dist between text box and 'b'
-    double angle;   // angle of arrow off of horizon
-    double tipAngle; // tip of arrow angle (22.5)
+    FFTCache();
+    bool isCache;
+    QString xAxisLabel;
+    QRectF M;
+    double start;
+    double stop;
+    QList<FFTCurveCache*> curveCaches;
+};
 
-    QRectF boundingBox(const QPainter &painter, const QTransform &T) const;
-    void paintMe(QPainter &painter, const QTransform &T,
-                 const QColor &fg, const QColor &bg) const;
-    void paintMeCenter(QPainter &painter, const QTransform &T,
-                       const QRect& viewportRect,
-                       const QColor &fg, const QColor &bg) const;
+class DerivCurveCache
+{
+  public:
+    DerivCurveCache(CurveModel* curveModel,
+                    const QString& yUnit,
+                    const QString& yLabel);
+    CurveModel* curveModel() const ;
+    QString yUnit() const ;
+    QString yLabel() const;
+
+  private:
+    DerivCurveCache() {}
+    CurveModel*  _curveModel;
+    QString _yUnit;
+    QString _yLabel;
+};
+
+class DerivPlotCache
+{
+  public:
+    DerivPlotCache();
+    ~DerivPlotCache();
+    QString yAxisLabel;
+    QString yUnit;
+    QRectF M;
+    QList<DerivCurveCache*> curveCaches;
+};
+
+class DerivCache
+{
+  public:
+    DerivCache();
+    ~DerivCache();
+    QList<DerivPlotCache*> plotCaches;
+};
+
+class IntegCurveCache
+{
+  public:
+    IntegCurveCache(CurveModel* curveModel,
+                    const QString& yLabel,
+                    const QString& yUnit);
+    CurveModel* curveModel() const ;
+    QString yLabel() const ;
+    QString yUnit() const ;
+
+  private:
+    IntegCurveCache() {}
+    CurveModel*  _curveModel;
+    QString _yLabel;
+    QString _yUnit;
+};
+
+class IntegPlotCache
+{
+  public:
+    IntegPlotCache();
+    ~IntegPlotCache();
+    double initialValue;
+    QString yAxisLabel;
+    QString yUnit;
+    QRectF M;
+    QList<IntegCurveCache*> curveCaches;
+};
+
+class IntegCache
+{
+  public:
+    IntegCache();
+    ~IntegCache();
+    QList<IntegPlotCache*> plotCaches;
 };
 
 class CurvesView : public BookIdxView
@@ -161,6 +206,9 @@ private:
     QPoint _mouseCurrPos;
     QPixmap* _createLivePixmap();
 
+    double _mousePressXBias;
+    double _mousePressYBias;
+
     QString _format(double d);
 
     int _idxAtTimeBinarySearch(QPainterPath* path,
@@ -176,6 +224,37 @@ private:
     void _keyPressArrow(const Qt::ArrowType& arrow);
     void _keyPressComma();
     void _keyPressEscape();
+    void _keyPressF();
+    void _keyPressB();
+    void _keyPressG();
+    void _keyPressD();
+    void _keyPressI();
+    void _keyPressMinus();
+
+    QFrame* _bw_frame;
+    QLineEdit* _bw_label;
+    QSlider* _bw_slider;
+
+    QFrame* _sg_frame;
+    QLineEdit* _sg_window;
+    QLineEdit* _sg_degree;
+    QSlider* _sg_slider;
+    void _keyPressGChange(int window, int degree);
+
+    QFrame* _integ_frame;
+    QLineEdit* _integ_ival;
+
+    FFTCache _fftCache ;
+    DerivCache _derivCache ;
+    IntegCache _integCache ;
+
+private slots:
+    void _keyPressBSliderChanged(int value);
+    void _keyPressBLineEditReturnPressed();
+    void _keyPressGSliderChanged(int value);
+    void _keyPressGLineEditReturnPressed();
+    void _keyPressGDegreeReturnPressed();
+    void _keyPressIInitValueReturnPressed();
 
 protected slots:
     virtual void dataChanged(const QModelIndex &topLeft,

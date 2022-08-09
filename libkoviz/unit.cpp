@@ -417,6 +417,71 @@ QString Unit::showUnits()
     return msg;
 }
 
+QString Unit::derivative(const QString &unit)
+{
+    QString derivUnit;
+
+    QRegularExpression re0("/s$");
+    QRegularExpression re1("/s(\\d+)$");
+    QRegularExpressionMatch match0 = re0.match(unit);
+    QRegularExpressionMatch match1 = re1.match(unit);
+    if ( match0.hasMatch() ) {
+        derivUnit = unit;
+        derivUnit.replace(re0,"/s2");
+    } else if ( match1.hasMatch() ) {
+        bool ok;
+        int n = match1.captured(1).toInt(&ok);
+        if ( ok ) {
+            QString s = QString("/s%1").arg(++n);
+            derivUnit.replace(re1,s);
+        }
+    } else {
+        derivUnit = unit + "/s";
+    }
+
+    if ( !Unit::isUnit(derivUnit) ) {
+        derivUnit = "--";
+    }
+
+    return derivUnit;
+}
+
+QString Unit::integral(const QString &unit)
+{
+    QString integUnit;
+
+    QRegularExpression re0("(\\w+)/s$");
+    QRegularExpression re1("(\\w+)/s(\\d+)$");
+    QRegularExpressionMatch match0 = re0.match(unit);
+    QRegularExpressionMatch match1 = re1.match(unit);
+    if ( match0.hasMatch() ) {
+        integUnit = match0.captured(1);
+    } else if ( match1.hasMatch() ) {
+        bool ok;
+        QString u = match1.captured(1);
+        int n = match1.captured(2).toInt(&ok);
+        if ( ok ) {
+            if ( n == 2 ) {
+                integUnit = QString("%1/s").arg(u);
+            } else {
+                integUnit = QString("%1/s%2").arg(u).arg(--n);
+            }
+        }
+    } else if ( unit == "N" ) {
+        integUnit = "N*s";
+    } else if ( unit == "N*m" ) {
+        integUnit = "N*m*s";
+    } else {
+        integUnit = "--";
+    }
+
+    if ( !Unit::isUnit(integUnit) ) {
+        integUnit = "--";
+    }
+
+    return integUnit;
+}
+
 QHash<QPair<QString, QString>, double> Unit::_initScales()
 {
     QHash<QPair<QString, QString>, double> map;
@@ -457,6 +522,7 @@ QHash<QPair<QString, QString>, double> Unit::_initScales()
     map.insert(QPair<QString,QString>("m/s2","m/s2"),       1.0);
     map.insert(QPair<QString,QString>("m/s2","M/s2"),       1.0);
     map.insert(QPair<QString,QString>("m/s2","cm/s2"),      0.01);
+    map.insert(QPair<QString,QString>("m/s2","mm/s2"),      0.001);
     map.insert(QPair<QString,QString>("m/s2","in/s2"),      0.0254);
     map.insert(QPair<QString,QString>("m/s2","ft/s2"),      0.3048);
 
@@ -488,6 +554,7 @@ QHash<QPair<QString, QString>, double> Unit::_initScales()
     map.insert(QPair<QString,QString>("r/s2","rad/s2"),    1.0);
     map.insert(QPair<QString,QString>("r/s2","radian/s2"), 1.0);
     map.insert(QPair<QString,QString>("r/s2","d/s2"),      0.0174532925199433);
+    map.insert(QPair<QString,QString>("r/s2","degree/s2"), 0.0174532925199433);
     map.insert(QPair<QString,QString>("r/s2","rev/s2"),    6.28318530717958647);
 
     // Mass

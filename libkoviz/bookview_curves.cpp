@@ -1,325 +1,17 @@
 #include "bookview_curves.h"
 
-CoordArrow::CoordArrow() :
-    coord(QPointF(DBL_MAX,DBL_MAX)),
-    r(2.0),
-    h(16.0),
-    a(48.0),
-    b(18.0),
-    m(4.0),
-    angle(M_PI/4),
-    tipAngle(M_PI/8)
-{
-}
-
-CoordArrow::CoordArrow(const QPointF &coord,
-                       double r, double h,
-                       double a, double b, double m,
-                       double angle, double tipAngle) :
-    coord(coord),        // math coord of pt to draw arrow to
-    r(r),                // radius of circle around point
-    h(h),                // isoscelese triangle arrow head height
-    a(a),                // arrow tail length part between arrow head 'b'
-    b(b),                // arrow tail length part between 'a' and txt
-    m(m),                // distance (margin) between tail and text
-    angle(angle),
-    tipAngle(tipAngle)
-{
-}
-
-// T is coordToPix transform
-QRectF CoordArrow::boundingBox(const QPainter& painter,
-                               const QTransform& T) const
-{
-    QRectF bbox;
-
-    // Map math coord to window pt
-    QPointF pt = T.map(coord);
-
-    // Text bbox width and height
-    double tw = painter.fontMetrics().boundingRect(txt).width();
-    double th = painter.fontMetrics().boundingRect(txt).height();
-
-    double aw = (h+a)*qAbs(cos(angle)) + b + m + tw; //total arrow width (w/txt)
-    double ah = (h+a)*qAbs(sin(angle)) + th/2.0;     //total arrow height
-    QPointF atl; // top left point of arrow bbox
-    if ( angle > 0.0 && angle < M_PI/2.0 ) {
-        // Quadrant I
-        atl.setX(pt.x()+r*cos(angle));
-        atl.setY(pt.y()-(r+h+a)*sin(angle)-th/2.0); // neg since +y down
-    } else if ( angle > M_PI/2.0 && angle < M_PI ) {
-        // Quadrant II
-        atl.setX(pt.x()+(r+h+a)*cos(angle)-m-b-tw);
-        atl.setY(pt.y()-(r+h+a)*sin(angle)-th/2.0);
-    } else if ( angle > M_PI && angle < 3*(M_PI/2.0) ) {
-        // Quadrant III
-        atl.setX(pt.x()+(r+h+a)*cos(angle)-m-b-tw);
-        atl.setY(pt.y()-r*sin(angle));
-    } else if ( angle > 3*(M_PI/2.0) && angle < 2*M_PI ) {
-        // Quadrant IV
-        atl.setX(pt.x()+r*cos(angle));
-        atl.setY(pt.y()-r*sin(angle));
-    } else {
-        fprintf(stderr,"koviz [bad scoobs]: CoorArrow::boundingBox(): "
-                       "arrow angle <=0,==90,==270 or >=360. "
-                       "May want to support it.  Bailing!!!\n");
-        exit(-1);
-    }
-
-    bbox.setTopLeft(atl);
-    bbox.setSize(QSize(aw,ah));
-
-    return bbox;
-}
-
-void CoordArrow::paintMe(QPainter &painter, const QTransform &T,
-                         const QColor& fg, const QColor& bg) const
-{
-    // Save painter
-    painter.save();
-    QBrush origBrush = painter.brush();
-    QPen origPen = painter.pen();
-
-    // Map math coord to window pt
-    QPointF pt = T.map(coord);
-
-    double tw = painter.fontMetrics().boundingRect(txt).width();
-    double th = painter.fontMetrics().boundingRect(txt).height();
-
-    QRectF txtBox;
-    QVector<QPointF> ptsArrowHead;
-    QVector<QPointF> ptsArrowTail;
-    if ( angle > 0.0 && angle < M_PI/2.0 ) {
-        // Quadrant I
-        QPointF tip(pt.x()+r*cos(angle),
-                    pt.y()-r*sin(angle));  // note: minus since +y is down
-        QPointF p(tip.x()+h*cos(angle+tipAngle/2.0),
-                  tip.y()-h*sin(angle+tipAngle/2.0));
-        QPointF q(tip.x()+h*cos(angle-tipAngle/2.0),
-                  tip.y()-h*sin(angle-tipAngle/2.0));
-        ptsArrowHead << tip << q << p;
-
-        QPointF a0(tip.x()+h*cos(angle),
-                   tip.y()-h*sin(angle));
-        QPointF a1(a0.x()+a*cos(angle),
-                   a0.y()-a*sin(angle));
-        QPointF a2(a1.x()+b,a1.y());
-        ptsArrowTail << a0 << a1 << a2;
-
-        QPointF tl(a2.x()+m,
-                   a2.y()-th/2.0);
-        txtBox.setTopLeft(tl);
-        txtBox.setSize(QSize(tw,th));
-
-    } else if ( angle > M_PI/2.0 && angle < M_PI ) {
-        // Quadrant II
-        QPointF tip(pt.x()+r*cos(angle),
-                    pt.y()-r*sin(angle));  // note: minus since +y is down
-        QPointF p(tip.x()+h*cos(angle+tipAngle/2.0),
-                  tip.y()-h*sin(angle+tipAngle/2.0));
-        QPointF q(tip.x()+h*cos(angle-tipAngle/2.0),
-                  tip.y()-h*sin(angle-tipAngle/2.0));
-        ptsArrowHead << tip << q << p;
-
-        QPointF a0(tip.x()+h*cos(angle),
-                   tip.y()-h*sin(angle));
-        QPointF a1(a0.x()+a*cos(angle),
-                   a0.y()-a*sin(angle));
-        QPointF a2(a1.x()-b,a1.y());
-        ptsArrowTail << a0 << a1 << a2;
-
-        QPointF tl(a2.x()-m-tw,
-                   a2.y()-th/2.0);
-        txtBox.setTopLeft(tl);
-        txtBox.setSize(QSize(tw,th));
-
-    } else if ( angle > M_PI && angle < 3*(M_PI/2.0) ) {
-        // Quadrant III
-        QPointF tip(pt.x()+r*cos(angle),
-                    pt.y()-r*sin(angle));  // note: minus since +y is down
-        QPointF p(tip.x()+h*cos(angle+tipAngle/2.0),
-                  tip.y()-h*sin(angle+tipAngle/2.0));
-        QPointF q(tip.x()+h*cos(angle-tipAngle/2.0),
-                  tip.y()-h*sin(angle-tipAngle/2.0));
-        ptsArrowHead << tip << q << p;
-
-        QPointF a0(tip.x()+h*cos(angle),
-                   tip.y()-h*sin(angle));
-        QPointF a1(a0.x()+a*cos(angle),
-                   a0.y()-a*sin(angle));
-        QPointF a2(a1.x()-b,a1.y());
-        ptsArrowTail << a0 << a1 << a2;
-
-        QPointF tl(a2.x()-m-tw, a2.y()-th/2.0);
-        txtBox.setTopLeft(tl);
-        txtBox.setSize(QSize(tw,th));
-    } else if ( angle > 3*(M_PI/2.0) && angle < 2*M_PI ) {
-        // Quadrant IV
-        QPointF tip(pt.x()+r*cos(angle),
-                    pt.y()-r*sin(angle));  // note: minus since +y is down
-        QPointF p(tip.x()+h*cos(angle+tipAngle/2.0),
-                  tip.y()-h*sin(angle+tipAngle/2.0));
-        QPointF q(tip.x()+h*cos(angle-tipAngle/2.0),
-                  tip.y()-h*sin(angle-tipAngle/2.0));
-        ptsArrowHead << tip << q << p;
-
-        QPointF a0(tip.x()+h*cos(angle),
-                   tip.y()-h*sin(angle));
-        QPointF a1(a0.x()+a*cos(angle),
-                   a0.y()-a*sin(angle));
-        QPointF a2(a1.x()+b,a1.y());
-        ptsArrowTail << a0 << a1 << a2;
-
-        QPointF tl(a2.x()+m,a2.y()-th/2.0);
-        txtBox.setTopLeft(tl);
-        txtBox.setSize(QSize(tw,th));
-    } else {
-        fprintf(stderr,"koviz [bad scoobs]: CoorArrow::paintMe(): "
-                       "arrow angle <=0,==90,==270 or >=360. "
-                       "May want to support it.  Bailing!!!\n");
-        exit(-1);
-    }
-
-    // Draw circle around point
-    painter.setPen(fg);
-    painter.setBrush(bg);
-    painter.drawEllipse(pt,qRound(r),qRound(r));
-
-    // Draw arrow head (tip on circle, not on point)
-    QPolygonF arrowHead(ptsArrowHead);
-    painter.setPen(fg);
-    painter.setBrush(fg);
-    painter.drawConvexPolygon(arrowHead);
-
-    // Draw arrow tail (attached to triangle)
-    QPolygonF polyLine(ptsArrowTail);
-    painter.setPen(fg);
-    painter.setBrush(fg);
-    painter.drawPolyline(polyLine);
-
-    // Draw background for text box
-    painter.setPen(bg);
-    painter.setBrush(bg);
-    painter.drawRect(txtBox);
-
-    // Draw coord text i.e. (x,y)
-    painter.setPen(fg);
-    painter.setBrush(bg);
-    painter.drawText(txtBox,Qt::TextDontClip|Qt::AlignCenter,txt);
-
-    // Restore painter
-    painter.setPen(origPen);
-    painter.setBrush(origBrush);
-    painter.restore();
-}
-
-void CoordArrow::paintMeCenter(QPainter &painter,
-                               const QTransform &T, const QRect &viewportRect,
-                               const QColor &fg, const QColor &bg) const
-{
-    if (painter.fontMetrics().boundingRect(txt).width() > viewportRect.width()){
-        return;  // don't paint if coord txt will not fit in window
-    }
-
-    // Map math coord to window pt
-    QPointF pt = T.map(coord);
-
-    if ( !viewportRect.contains(pt.toPoint()) ) {
-        return; // don't paint if coord outside of window
-    }
-
-    // Save/set painter
-    painter.save();
-    QBrush origBrush = painter.brush();
-    QPen origPen = painter.pen();
-
-    // Init txtbox
-    QRectF txtbox = painter.fontMetrics().boundingRect(txt);
-    double tw = txtbox.width();
-    double th = txtbox.height();
-
-    // Set txtbox top left corner and arrow tail points
-    QVector<QPointF> ptsArrowTail;
-    QPointF a0;
-    QPointF a1;
-    QPointF a2;
-    if ( pt.y() < viewportRect.height()/2 ) {
-        // pt is in top half of viewport, so draw coord at bot of plot
-        QPointF tl(viewportRect.width()/2.0-tw/2.0,
-                   viewportRect.height()-th);
-        txtbox.moveTopLeft(tl);
-
-        a0.setX(txtbox.center().x());
-        a0.setY(txtbox.top()-m);
-        a1.setX(a0.x());
-        a1.setY(a0.y()-b);
-        a2.setX(pt.x());
-        a2.setY(pt.y());
-
-    } else {
-        // pt is in bot half of viewport, so draw coord at top of plot
-        QPointF tl(viewportRect.width()/2.0-tw/2.0,0);
-        txtbox.moveTopLeft(tl);
-
-        a0.setX(txtbox.center().x());
-        a0.setY(txtbox.bottom()+m);
-        a1.setX(a0.x());
-        a1.setY(a0.y()+b);
-        a2.setX(pt.x());
-        a2.setY(pt.y());
-    }
-    ptsArrowTail << a0 << a1 << a2;
-
-    // Draw background for text box
-    painter.setPen(bg);
-    painter.setBrush(bg);
-    painter.drawRect(txtbox);
-
-    // Draw coord text i.e. (x,y)
-    painter.setPen(fg);
-    painter.setBrush(bg);
-    painter.drawText(txtbox,Qt::TextDontClip|Qt::AlignCenter,txt);
-
-    // Draw arrow tail
-    painter.setPen(fg);
-    painter.setBrush(bg);
-    painter.drawPolyline(ptsArrowTail);
-
-    // Calculate arrow angle
-    double dx = a2.x()-a1.x();
-    double dy = -1*(a2.y()-a1.y());         // -1 since y+ is negative
-    double arrowAngle = atan2(dy,dx)+M_PI;  // +pi to flip arrow head
-
-    // Draw arrow head
-    QVector<QPointF> ptsArrowHead;
-    QPointF tip(pt.x()+r*cos(arrowAngle),
-                pt.y()-r*sin(arrowAngle));  // note: minus since +y is down
-    QPointF p(tip.x()+h*cos(arrowAngle+tipAngle/2.0),
-              tip.y()-h*sin(arrowAngle+tipAngle/2.0));
-    QPointF q(tip.x()+h*cos(arrowAngle-tipAngle/2.0),
-              tip.y()-h*sin(arrowAngle-tipAngle/2.0));
-    ptsArrowHead << tip << q << p;
-    QPolygonF arrowHead(ptsArrowHead);
-    painter.setPen(fg);
-    painter.setBrush(fg);
-    painter.drawConvexPolygon(arrowHead);
-
-    // Draw circle around point
-    painter.setPen(fg);
-    painter.setBrush(bg);
-    painter.drawEllipse(pt,qRound(r),qRound(r));
-
-    // Restore painter
-    painter.setPen(origPen);
-    painter.setBrush(origBrush);
-    painter.restore();
-}
-
 CurvesView::CurvesView(QWidget *parent) :
     BookIdxView(parent),
     _pixmap(0),
     _isMeasure(false),
-    _isLastPoint(false)
+    _isLastPoint(false),
+    _bw_frame(0),
+    _bw_label(0),
+    _bw_slider(0),
+    _sg_frame(0),
+    _sg_window(0),
+    _sg_slider(0),
+    _integ_frame(0)
 {
     setFocusPolicy(Qt::StrongFocus);
     setFrameShape(QFrame::NoFrame);
@@ -335,6 +27,10 @@ CurvesView::~CurvesView()
     }
     foreach ( TimeAndIndex* marker, _markers ) {
         delete marker;
+    }
+    foreach ( FFTCurveCache* cache,  _fftCache.curveCaches ) {
+        delete cache->curveModel();
+        delete cache;
     }
 }
 
@@ -836,27 +532,77 @@ void CurvesView::_paintMarkers(QPainter &painter)
         i = i+ii;  // LiveCoordTimeIndex is normally 0
 
         if ( tag == "Curve" ) {
-            // If x is not time (e.g. ball xy orbit), i is calculated from
-            // the curve model instead of the path
             QModelIndex curveIdx = marker->modelIdx();
             CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
             curveModel->map();
             QModelIndex plotIdx = marker->modelIdx().parent().parent();
-            if ( !_bookModel()->isXTime(plotIdx) ) {
-                // e.g. ball xy curve where x is position[0]
-                double f = _bookModel()->getDataDouble(QModelIndex(),
-                                                       "Frequency");
-                if ( f != 0.0 ) {
-                    // If frequency != 0.0, the path and curveModel iterator
-                    // are not aligned in time and 'i' cannot easily be solved
-                    fprintf(stderr, "koviz [todo]: support live coord "
-                                    "for xy curve where x is not time "
-                                    "and frequency is not zero.\n");
-                    exit(-1);
+            int nels = path->elementCount();
+            int npts = curveModel->rowCount();
+            if ( !_bookModel()->isXTime(plotIdx) || nels != npts ) {
+                // If X is not time, then x is e.g. xpos in ball xy orbit
+                //
+                // If nels != npts, the number of elements in the path do not
+                // match the number points in the data - most likely culled
+                // due to start/stop time or log eliminating zeroes
+                //
+                // i is calculated from the curve model instead of the path
+                // since the path does not have time
+                //
+                // i is a best guess
+                double xb = _bookModel()->xBias(curveIdx);
+                if ( _bookModel()->isXTime(plotIdx) ) {
+                    // Take time shift into account
+                    i = curveModel->indexAtTime(marker->time()-xb);
+                } else {
+                    i = curveModel->indexAtTime(marker->time());
                 }
-                double start = _bookModel()->getDataDouble(QModelIndex(),
-                                                           "StartTime");
-                i = curveModel->indexAtTime(marker->time());
+
+                if ( nels < npts ) {
+                    // Points have been culled out of the data leaving the
+                    // path with less elements than the curve
+                    // This can happen when:
+                    //    1) Log(curve) removes zeroes
+                    //    2) Frequency is given, points culled out of curve
+                    //    3) Start/stop time given, points lopped off ends
+                    // Search for first element that matches curve point at time
+                    ModelIterator* it = curveModel->begin();
+                    double x = it->at(i)->x(); // scale/bias only done if log
+                    double y = it->at(i)->y();
+                    if ( isXLogScale ) {
+                        // If logscale, scale and bias baked in path
+                        // Otherwise, scale and bias in path transform
+                        // not in path
+                        double xs = _bookModel()->xScale(curveIdx);
+                        x = log10(x*xs+xb);
+                    }
+                    if ( isYLogScale ) {
+                        double ys = _bookModel()->yScale(curveIdx);
+                        double yb = _bookModel()->yBias(curveIdx);
+                        y = log10(y*ys+yb);
+                    }
+                    int j = (i < nels) ? i : nels - 1;
+                    while ( j >= 0 ) {
+                        QPainterPath::Element el = path->elementAt(j);
+                        if ( el.x == x && el.y == y ) {
+                            i = j;
+                            break;
+                        }
+                        --j;
+                    }
+                    if ( i >= nels ) {
+                        // Point not found, set to init
+                        i = 0;
+                    }
+                    delete it;
+                } else if ( nels > npts ) {
+                    // There are more elements in the path than points
+                    // on the curve.  Shouldn't happen, but if it does
+                    // don't show markers
+                    painter.restore();
+                    curveModel->unmap();
+                    return;
+                }
+
                 /* There may be duplicate timestamps in sequence - goto first */
                 ModelIterator* it = curveModel->begin();
                 double iTime = it->at(i)->t();
@@ -867,17 +613,8 @@ void CurvesView::_paintMarkers(QPainter &painter)
                         break;
                     }
                 }
+                delete it;
                 i = i + ii;
-                int j = curveModel->indexAtTime(start);
-                i = i - j;
-                if ( i < 0 ) {
-                    // This can happen when liveCoord is unset (0.0) initially
-                    curveModel->unmap();
-                    continue;
-                }
-                if ( i > high ) {
-                    i = high;
-                }
             }
             curveModel->unmap();
         }
@@ -1304,6 +1041,11 @@ void CurvesView::dataChanged(const QModelIndex &topLeft,
                 delete _pixmap;
             }
             _pixmap = _createLivePixmap();
+        } else if ( tag == "CurveYBias" ) {
+            if ( _pixmap ) {
+                delete _pixmap;
+            }
+            _pixmap = _createLivePixmap();
         } else if ( tag == "CurveColor") {
             if ( _pixmap ) {
                 delete _pixmap;
@@ -1436,6 +1178,24 @@ void CurvesView::mousePressEvent(QMouseEvent *event)
     if (  event->button() == _buttonSelectAndPan ) {
         _mousePressPos = event->pos();
         _mousePressMathRect = _mathRect();
+        if ( currentIndex().isValid() ) {
+            QString tag = model()->data(currentIndex()).toString();
+            QString presentation = _bookModel()->getDataString(rootIndex(),
+                                                  "PlotPresentation","Plot");
+            if ( (tag == "Curve" &&
+                  (presentation == "compare" || presentation.isEmpty())) ) {
+
+                CurveModel* curveModel =
+                                    _bookModel()->getCurveModel(currentIndex());
+                if ( curveModel ) {
+                    QModelIndex curveIdx = currentIndex();
+                    _mousePressXBias = _bookModel()->getDataDouble(curveIdx,
+                                                          "CurveXBias","Curve");
+                    _mousePressYBias = _bookModel()->getDataDouble(curveIdx,
+                                                          "CurveYBias","Curve");
+                }
+            }
+        }
         event->ignore();
     } else if (  event->button() == _buttonRubberBandZoom ) {
         event->ignore();
@@ -1934,73 +1694,76 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                         }
                     }
 
-                    // Set live coord in model
-                    double start = _bookModel()->getDataDouble(QModelIndex(),
-                                                               "StartTime");
-                    double stop = _bookModel()->getDataDouble(QModelIndex(),
-                                                "StopTime");
-                    double time = liveCoord.x();
-                    if ( plotXScale == "log" ) {
-                        time = pow(10,time);
-                    }
-                    if ( time <= start ) {
-                        time = start;
-                    } else if ( time >= stop ) {
-                        time = stop;
-                    }
-                    model()->setData(liveTimeIdx,time);
+                    if ( rc > 0 ) {
+                        // Set live coord in model
+                        double start =_bookModel()->getDataDouble(QModelIndex(),
+                                                                   "StartTime");
+                        double stop = _bookModel()->getDataDouble(QModelIndex(),
+                                                                  "StopTime");
+                        double time = liveCoord.x();
+                        if ( plotXScale == "log" ) {
+                            time = pow(10,time);
+                        }
+                        if ( time <= start ) {
+                            time = start;
+                        } else if ( time >= stop ) {
+                            time = stop;
+                        }
+                        model()->setData(liveTimeIdx,time);
 
-                    // If timestamps are identical, set liveTimeIndex so
-                    // that livecoord is set to max y value
-                    if ( plotXScale == "log") {
-                        time = log10(time);
-                    }
-                    int i =  _idxAtTimeBinarySearch(path,0,rc-1,(time-xb)/xs);
-                    double iTime = path->elementAt(i).x;
-                    int j = i;  // j is start index of identical timestamps
-                    for ( int l = i; l >= 0; --l ) {
-                        double lTime = path->elementAt(l).x;
-                        if ( iTime != lTime ) {
-                            break;
-                        } else {
-                            j = l;
+                        // If timestamps are identical, set liveTimeIndex so
+                        // that livecoord is set to max y value
+                        if ( plotXScale == "log") {
+                            time = log10(time);
                         }
-                    }
-                    int nels = path->elementCount();
-                    int k = j; // k is last index of identical timestamps
-                    for (int l = j; l < nels; ++l) {
-                        double lTime = path->elementAt(l).x;
-                        if ( iTime != lTime ) {
-                            break;
-                        } else {
-                            k = l;
-                        }
-                    }
-                    int liveCoordTimeIdx = 0;
-                    if ( k - j > 1 ) {
-                        // Find index of max y of identical timestamps
-                        // Note: min is not used even if mouse below curve.
-                        //       This is because I simply didn't want any
-                        //       more code
-                        double maxY = -DBL_MAX;
-                        int m = 0 ;
-                        for (int l = j; l <= k; ++l) {
-                            double x = path->elementAt(l).x;
-                            double y = path->elementAt(l).y;
-                            if ( y > maxY ) {
-                                maxY = y;
-                                liveCoordTimeIdx = m;
-                            }
-                            if ( x != iTime ) {
+                        int i =  _idxAtTimeBinarySearch(path,0,
+                                                        rc-1,(time-xb)/xs);
+                        double iTime = path->elementAt(i).x;
+                        int j = i;  // j is start index of identical timestamps
+                        for ( int l = i; l >= 0; --l ) {
+                            double lTime = path->elementAt(l).x;
+                            if ( iTime != lTime ) {
                                 break;
+                            } else {
+                                j = l;
                             }
-                            ++m;
                         }
-                    }
-                    QModelIndex idx = _bookModel()->getDataIndex(
+                        int nels = path->elementCount();
+                        int k = j; // k is last index of identical timestamps
+                        for (int l = j; l < nels; ++l) {
+                            double lTime = path->elementAt(l).x;
+                            if ( iTime != lTime ) {
+                                break;
+                            } else {
+                                k = l;
+                            }
+                        }
+                        int liveCoordTimeIdx = 0;
+                        if ( k - j > 1 ) {
+                            // Find index of max y of identical timestamps
+                            // Note: min is not used even if mouse below curve.
+                            //       This is because I simply didn't want any
+                            //       more code
+                            double maxY = -DBL_MAX;
+                            int m = 0 ;
+                            for (int l = j; l <= k; ++l) {
+                                double x = path->elementAt(l).x;
+                                double y = path->elementAt(l).y;
+                                if ( y > maxY ) {
+                                    maxY = y;
+                                    liveCoordTimeIdx = m;
+                                }
+                                if ( x != iTime ) {
+                                    break;
+                                }
+                                ++m;
+                            }
+                        }
+                        QModelIndex idx = _bookModel()->getDataIndex(
                                                        QModelIndex(),
                                                        "LiveCoordTimeIndex","");
-                    _bookModel()->setData(idx,liveCoordTimeIdx);
+                        _bookModel()->setData(idx,liveCoordTimeIdx);
+                    }
                 } else {  // Curve x is not time e.g. ball xy-position
 
                     double start = _bookModel()->getDataDouble(QModelIndex(),
@@ -2257,8 +2020,12 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
         if ( keymods & Qt::AltModifier ) {
             isAltKey = true;
         }
+        bool isCtrlKey = false;
+        if ( keymods & Qt::ControlModifier ) {
+            isCtrlKey = true;
+        }
 
-        if ( isAltKey ) {
+        if ( isAltKey && !isCtrlKey ) {
             // Measuring line with dx,dy
             _isMeasure = true; // Tell paint event to draw line
             QRectF M = _bookModel()->getPlotMathRect(rootIndex());
@@ -2295,6 +2062,140 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                                   .arg(dx).arg(xUnit).arg(dy).arg(yUnit);
              _bookModel()->setData(statusIdx,msg);
              viewport()->update();
+
+        } else if ( isCtrlKey == true && currentIndex().isValid() ) {
+            // Drag curve (snap to init point of another curve with ctrl+alt)
+            QString tag = model()->data(currentIndex()).toString();
+            QString presentation = _bookModel()->getDataString(rootIndex(),
+                                                     "PlotPresentation","Plot");
+            QString xScale = _bookModel()->getDataString(rootIndex(),
+                                                         "PlotXScale","Plot");
+            QString yScale = _bookModel()->getDataString(rootIndex(),
+                                                         "PlotYScale","Plot");
+            bool isScaleLinear = false;
+            if ( xScale == "linear" && yScale == "linear" ) {
+                isScaleLinear = true;
+            } else {
+                QMessageBox msgBox;
+                QString msg = QString("Curve dragging only "
+                                      "works in linear scale");
+                msgBox.setText(msg);
+                msgBox.exec();
+            }
+            if ( (tag == "Curve" && isScaleLinear &&
+                 (presentation == "compare" || presentation.isEmpty())) ) {
+
+                QModelIndex curveIdx = currentIndex();
+                CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+
+                if ( curveModel ) {
+                    QTransform M2W = _coordToPixelTransform();
+                    double xInitWin = 0.0;
+                    double yInitWin = 0.0;
+                    double xInit = 0.0;
+                    double yInit = 0.0;
+                    double xInitBias = 0.0;
+                    double yInitBias = 0.0;
+                    curveModel->map();
+                    ModelIterator* it = curveModel->begin();
+                    it->start();
+                    if ( ! it->isDone() ) {
+                        double xs = _bookModel()->getDataDouble(
+                                                curveIdx,"CurveXScale","Curve");
+                        double xb = _bookModel()->getDataDouble(
+                                                curveIdx,"CurveXBias","Curve");
+                        double ys = _bookModel()->getDataDouble(
+                                                curveIdx,"CurveYScale","Curve");
+                        double yb = _bookModel()->getDataDouble(
+                                                curveIdx,"CurveYBias","Curve");
+                        xInitBias = xb;
+                        yInitBias = yb;
+                        xInit = it->at(0)->x()*xs + xb;
+                        yInit = it->at(0)->y()*ys + yb;
+                        QPointF p(xInit,yInit);
+                        p = M2W.map(p);
+                        xInitWin = p.x();
+                        yInitWin = p.y();
+                    }
+                    curveModel->unmap();
+                    delete it;
+
+                    bool isSnap = false;
+                    double xSnapBias = 0.0;
+                    double ySnapBias = 0.0;
+                    if ( isAltKey ) {
+                        QModelIndex curvesIdx = curveIdx.parent();
+                        QModelIndexList curveIdxs = _bookModel()->
+                                      getIndexList(curvesIdx, "Curve","Curves");
+                        foreach ( QModelIndex crvIdx, curveIdxs ) {
+                            if ( crvIdx == currentIndex() ) {
+                                continue;
+                            }
+                            CurveModel* curve = _bookModel()->
+                                    getCurveModel(crvIdx);
+                            if ( curve ) {
+                                curve->map();
+                                ModelIterator* it = curve->begin();
+                                it->start();
+                                if ( ! it->isDone() ) {
+                                    double xs = _bookModel()->getDataDouble(
+                                                  crvIdx,"CurveXScale","Curve");
+                                    double xb = _bookModel()->getDataDouble(
+                                                   crvIdx,"CurveXBias","Curve");
+                                    double ys = _bookModel()->getDataDouble(
+                                                  crvIdx,"CurveYScale","Curve");
+                                    double yb = _bookModel()->getDataDouble(
+                                                   crvIdx,"CurveYBias","Curve");
+                                    double x0 = it->at(0)->x()*xs + xb;
+                                    double y0 = it->at(0)->y()*ys + yb;
+                                    QPointF p(x0,y0);
+                                    p = M2W.map(p);
+                                    double xWin = p.x();
+                                    double yWin = p.y();
+
+                                    double dxw = xInitWin-xWin;
+                                    double dyw = yInitWin-yWin;
+                                    double d = qSqrt(dxw*dxw + dyw*dyw);
+
+                                    if ( d < 30 ) {
+                                        isSnap = true;
+                                        double dx = xInit-x0;
+                                        double dy = yInit-y0;
+                                        xSnapBias = xInitBias-dx;
+                                        ySnapBias = yInitBias-dy;
+                                        break;
+                                    }
+
+                                }
+                                delete it;
+                                curve->unmap();
+                            }
+                        }
+                    }
+
+                    QModelIndex xBiasIdx = _bookModel()->getDataIndex(
+                                                 curveIdx,"CurveXBias","Curve");
+                    QModelIndex yBiasIdx = _bookModel()->getDataIndex(
+                                                 curveIdx,"CurveYBias","Curve");
+                    if ( isSnap ) {
+                        _bookModel()->setData(xBiasIdx, xSnapBias);
+                        _bookModel()->setData(yBiasIdx, ySnapBias);
+                    } else {
+                        QRectF M = _mathRect();
+                        double Mw = M.width();
+                        double Mh = M.height();
+                        QTransform W2M(Mw/Ww, 0.0, // div by zero checked at top
+                                       0.0, Mh/Wh,
+                                       0.0, 0.0);
+                        QPointF dW = event->pos()-_mousePressPos;
+                        QPointF dM = W2M.map(dW);
+                        double xbias = _mousePressXBias+dM.x();
+                        double ybias = _mousePressYBias+dM.y();
+                        _bookModel()->setData(xBiasIdx, xbias);
+                        _bookModel()->setData(yBiasIdx, ybias);
+                    }
+                }
+            }
         } else {
             // Pan or scale
             double k = 0.88;
@@ -2356,6 +2257,12 @@ void CurvesView::keyPressEvent(QKeyEvent *event)
     case Qt::Key_Right: _keyPressArrow(Qt::RightArrow);break;
     case Qt::Key_Comma: _keyPressComma();break;
     case Qt::Key_Escape: _keyPressEscape();break;
+    case Qt::Key_F: _keyPressF();break;
+    case Qt::Key_B: _keyPressB();break;
+    case Qt::Key_G: _keyPressG();break;
+    case Qt::Key_D: _keyPressD();break;
+    case Qt::Key_I: _keyPressI();break;
+    case Qt::Key_Minus: _keyPressMinus();break;
     default: ; // do nothing
     }
 }
@@ -2541,6 +2448,1075 @@ void CurvesView::_keyPressEscape()
     viewport()->update();
 }
 
+// Toggle between Time and Frequency domain
+void CurvesView::_keyPressF()
+{
+    QModelIndex plotIdx = rootIndex();
+    QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,"Curves","Plot");
+    QModelIndexList curveIdxs = _bookModel()->getIndexList(curvesIdx,
+                                                           "Curve","Curves");
+
+    // All curves should be time or frequency domain (x should be "s" or "Hz")
+    bool isTimeDomain = false;
+    bool isFrequencyDomain = false;
+    QString xUnit = _bookModel()->getCurvesXUnit(curvesIdx);
+    if ( xUnit == "s" ) {
+        isTimeDomain = true;
+    } else if ( xUnit == "Hz" ) {
+        isFrequencyDomain = true;
+    }
+    if ( !isTimeDomain && !isFrequencyDomain ) {
+        QMessageBox msgBox;
+        QString msg = QString("Attempting to take Fourier transform on data "
+                              "where x units are neither seconds or Hz. "
+                              "Aborting!");
+        msgBox.setText(msg);
+        msgBox.exec();
+        return;
+    }
+    if ( isFrequencyDomain && !_fftCache.isCache ) {
+        QMessageBox msgBox;
+        QString msg = QString("Attempting to take Inverse Fourier transform "
+                              "on data logged in Hz.  Sorry, this is not "
+                              "implemented. Aborting!");
+        msgBox.setText(msg);
+        msgBox.exec();
+        return;
+    }
+
+    QRectF M = _bookModel()->getPlotMathRect(rootIndex());
+
+    QModelIndex xAxisLabelIdx = _bookModel()->getDataIndex(plotIdx,
+                                                       "PlotXAxisLabel","Plot");
+    QModelIndex startTimeIdx = _bookModel()->getDataIndex(QModelIndex(),
+                                                          "StartTime");
+    QModelIndex stopTimeIdx = _bookModel()->getDataIndex(QModelIndex(),
+                                                         "StopTime");
+
+    QProgressDialog progress("Time/Frequency domain", "Abort", 0,
+                             curveIdxs.size(), this);
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setMinimumDuration(500);
+    int i = 0;
+
+    if ( isTimeDomain ) {
+        // TimeDomain -> FrequencyDomain
+        _fftCache.isCache = true;
+        _fftCache.xAxisLabel = _bookModel()->data(xAxisLabelIdx).toString();
+        _fftCache.M = M;
+        _fftCache.start = _bookModel()->data(startTimeIdx).toDouble();
+        _fftCache.stop = _bookModel()->data(stopTimeIdx).toDouble();
+        _fftCache.curveCaches.clear();
+        bool block = _bookModel()->blockSignals(true);
+        foreach ( QModelIndex curveIdx, curveIdxs ) {
+            CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+            double xb = _bookModel()->getDataDouble(curveIdx,
+                                                    "CurveXBias","Curve");
+            double xs = _bookModel()->getDataDouble(curveIdx,
+                                                    "CurveXScale","Curve");
+            FFTCurveCache* cache = new FFTCurveCache(xb,xs,curveModel);
+            _fftCache.curveCaches.append(cache);
+
+            CurveModel* fft = new CurveModelFFT(curveModel,
+                                                xb,xs,
+                                                M.left(),M.right());
+            QVariant v = PtrToQVariant<CurveModel>::convert(fft);
+            QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
+                                                           "CurveData","Curve");
+            QModelIndex xUnitIdx = _bookModel()->getDataIndex(curveIdx,
+                                                          "CurveXUnit","Curve");
+            QModelIndex xBiasIdx = _bookModel()->getDataIndex(curveIdx,
+                                                          "CurveXBias","Curve");
+            QModelIndex xScaleIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveXScale","Curve");
+            _bookModel()->setData(xUnitIdx,"Hz");
+            _bookModel()->setData(xBiasIdx,0.0);
+            _bookModel()->setData(xScaleIdx,1.0);
+            _bookModel()->setData(curveDataIdx,v);
+
+            progress.setValue(i++);
+            if (progress.wasCanceled()) {
+                break;
+            }
+            QString msg = QString("Loaded %1 of %2 curves")
+                             .arg(i).arg(curveIdxs.size());
+            progress.setLabelText(msg);
+        }
+        QRectF bbox = _bookModel()->calcCurvesBBox(curvesIdx);
+        _bookModel()->setPlotMathRect(bbox,rootIndex());
+        _bookModel()->setData(startTimeIdx,-DBL_MAX);
+        _bookModel()->setData(stopTimeIdx,DBL_MAX);
+        _bookModel()->setData(xAxisLabelIdx,"Frequency");
+        _bookModel()->blockSignals(block);
+        QModelIndex xScaleIdx = _bookModel()->getDataIndex(plotIdx,
+                                                           "PlotXScale","Plot");
+        _bookModel()->setData(xScaleIdx,"log");
+    } else {
+        // FrequencyDomain -> TimeDomain
+        _bookModel()->setData(xAxisLabelIdx,_fftCache.xAxisLabel);
+        _bookModel()->setPlotMathRect(_fftCache.M,plotIdx);
+        _bookModel()->setData(startTimeIdx,_fftCache.start);
+        _bookModel()->setData(stopTimeIdx,_fftCache.stop);
+        bool block = _bookModel()->blockSignals(true);
+        foreach ( QModelIndex curveIdx, curveIdxs ) {
+            QModelIndex xUnitIdx = _bookModel()->getDataIndex(curveIdx,
+                                                          "CurveXUnit","Curve");
+            _bookModel()->setData(xUnitIdx,"s");
+            QModelIndex xBiasIdx = _bookModel()->getDataIndex(curveIdx,
+                                                          "CurveXBias","Curve");
+            QModelIndex xScaleIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveXScale","Curve");
+            QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
+                                                           "CurveData","Curve");
+            FFTCurveCache* cache = _fftCache.curveCaches.takeFirst();
+
+            _bookModel()->setData(xBiasIdx,cache->xbias());
+            _bookModel()->setData(xScaleIdx,cache->xscale());
+
+            CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+            if ( curveModel ) {
+                delete curveModel;
+            }
+            QVariant v=PtrToQVariant<CurveModel>::convert(cache->curveModel());
+            _bookModel()->setData(curveDataIdx,v);
+
+            progress.setValue(i++);
+            if (progress.wasCanceled()) {
+                break;
+            }
+            QString msg = QString("Loaded %1 of %2 curves")
+                             .arg(i).arg(curveIdxs.size());
+            progress.setLabelText(msg);
+        }
+        QModelIndex xScaleIdx = _bookModel()->getDataIndex(plotIdx,
+                                                           "PlotXScale","Plot");
+        _bookModel()->setData(xScaleIdx,"linear");
+        _bookModel()->blockSignals(block);
+        _bookModel()->setPlotMathRect(_fftCache.M,plotIdx);
+    }
+
+    progress.setValue(curveIdxs.size());
+}
+
+void CurvesView::_keyPressB()
+{
+    QModelIndex plotIdx = rootIndex();
+    QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,"Curves","Plot");
+    QModelIndexList curveIdxs = _bookModel()->getIndexList(curvesIdx,
+                                                           "Curve","Curves");
+
+    foreach ( QModelIndex curveIdx, curveIdxs ) {
+        CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+        if ( curveModel->x()->unit() != "s" ) {
+            QMessageBox msgBox;
+            QString msg = QString("Butterworth filter expects xunits to be "
+                                  "seconds.  Please try again.\n");
+            msgBox.setText(msg);
+            msgBox.exec();
+            return;
+        }
+    }
+
+    if ( ! _bw_frame ) {
+        _bw_frame = new QFrame(this);
+        _bw_slider = new QSlider(_bw_frame);
+        _bw_label = new QLineEdit(_bw_frame);
+
+        // Shrink text box since default stretches over plot
+        QFontMetrics fm(_bw_label->font());
+        int w = fm.averageCharWidth()*7; // 7 is an arbitrary init value
+        _bw_label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+        _bw_label->setMinimumWidth(w);
+
+        _bw_label->setToolTip("Frequency");
+
+        // Validate label entry
+        QIntValidator* v = new QIntValidator(this);
+        _bw_label->setValidator(v);
+
+    } else if ( _bw_frame->isHidden() ) {
+        _bw_frame->show();
+        return;
+    } else {
+        _bw_frame->hide();
+        return;
+    }
+    QVBoxLayout *layout = new QVBoxLayout();
+    layout->addWidget(_bw_label);
+    layout->addWidget(_bw_slider);
+    _bw_frame->setLayout(layout);
+
+    connect(_bw_slider,SIGNAL(valueChanged(int)),
+            this,SLOT(_keyPressBSliderChanged(int)));
+    connect(_bw_label,SIGNAL(returnPressed()),
+            this,SLOT(_keyPressBLineEditReturnPressed()));
+
+    // Get Nyquist frequency for bw filter
+    double dtMin = DBL_MAX;
+    foreach ( QModelIndex curveIdx, curveIdxs ) {
+        CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+        if ( curveModel ) {
+            curveModel->map();
+            int N = 0;
+            double dt = 0.0;
+            bool isFirst = true;
+            double lastTime = 0.0;
+            double lastDt = 0.0;
+            ModelIterator* it = curveModel->begin();
+            while ( !it->isDone() ) {
+                if ( isFirst ) {
+                    isFirst = false;
+                } else {
+                    dt = it->t() - lastTime;
+                    if (lastDt > 0.0 && dt > 0.0 && qAbs(dt-lastDt) > 1.0e-9) {
+                        QMessageBox msgBox;
+                        QString msg = QString(
+                                    "Butterworth filter expects "
+                                    "uniform sampling frequency.  "
+                                    "Data has variable dt.  Bailing!");
+                        msgBox.setText(msg);
+                        msgBox.exec();
+                        delete it;
+                        curveModel->unmap();
+                        _bw_frame->hide();
+                        return;
+                    } else if ( dt == 0.0 ) {
+                        QMessageBox msgBox;
+                        QString msg = QString(
+                                   "Butterworth filter expects "
+                                   "uniform sampling frequency.  "
+                                   "Data has two values with same time stamp.  "
+                                   "Bailing!");
+                        msgBox.setText(msg);
+                        msgBox.exec();
+                        delete it;
+                        curveModel->unmap();
+                        _bw_frame->hide();
+                        return;
+                    }
+                    lastDt = dt;
+                }
+                lastTime = it->t();
+                ++N;
+                it->next();
+            }
+            if ( dt > 0 && dt < dtMin ) {
+                dtMin = dt;
+            }
+
+            double minSamplingRate = 4.0; // Hz
+            if ( dtMin > 1/minSamplingRate ) {
+                QMessageBox msgBox;
+                QString msg = QString(
+                            "Attempted filter of data with a low sampling rate "
+                            "of %1Hz.  "
+                            "Butterworth filter expects "
+                            "a sampling frequency greater than %2Hz.  "
+                            "Bailing!").arg(1/dtMin).arg(minSamplingRate);
+                msgBox.setText(msg);
+                msgBox.exec();
+                _bw_frame->hide();
+                return;
+            }
+
+            // Cache off original data for later filtering (use _real as cache)
+            curveModel->_real = (double*)malloc(N*sizeof(double));
+
+            it = it->at(0);
+            double goodVal = 0.0;
+            while ( !it->isDone() ) {
+                if ( std::isnan(it->y()) ) {
+                    it->next();
+                    continue;
+                }
+                goodVal = it->y();
+                break;
+            }
+
+            int i = 0;
+            it = it->at(0);
+            while ( !it->isDone() ) {
+                curveModel->_real[i] = it->y();
+                if ( std::isnan(curveModel->_real[i]) ) {
+                    curveModel->_real[i] = goodVal;
+                }
+                goodVal = curveModel->_real[i];
+                it->next();
+                ++i;
+            }
+        }
+    }
+    int maxFilterFreq = 0; // Nyquist frequency - 1
+    if ( qRound(1.0/dtMin) % 2 == 0 ) {
+        // even
+        maxFilterFreq = qRound(0.5*(1.0/dtMin))-1;
+    } else {
+        // odd
+        maxFilterFreq = qFloor(0.5*(1.0/dtMin));
+    }
+    _bw_slider->setRange(1,maxFilterFreq);
+    QIntValidator* v = (QIntValidator*)_bw_label->validator();
+    v->setRange(1,maxFilterFreq);
+    if ( maxFilterFreq > 7 ) {
+        _bw_slider->setValue(7); // Setting to 7Hz just because it works a lot
+    } else {
+        _bw_slider->setValue(1);
+    }
+
+    _bw_slider->show();
+    _bw_label->show();
+    _bw_frame->show();
+}
+
+void CurvesView::_keyPressBSliderChanged(int value)
+{
+    QModelIndex plotIdx = rootIndex();
+    QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,"Curves","Plot");
+    QModelIndexList curveIdxs = _bookModel()->getIndexList(curvesIdx,
+                                                           "Curve","Curves");
+
+    bool block = _bookModel()->blockSignals(true);
+    foreach ( QModelIndex curveIdx, curveIdxs ) {
+        CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+        if ( curveModel ) {
+            CurveModel* bw = new CurveModelBW(curveModel,value);
+            QVariant v = PtrToQVariant<CurveModel>::convert(bw);
+            QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
+                                                           "CurveData","Curve");
+            _bookModel()->setData(curveDataIdx,v);
+            curveModel->_real = 0; // Zero out cache since bw now owns it
+            delete curveModel;
+        }
+    }
+    _bookModel()->blockSignals(block);
+
+    // Reset bounding box so that plot refreshes (optimizing redraw)
+    QRectF Z; // Empty
+    QRectF M = _bookModel()->getPlotMathRect(plotIdx);
+    _bookModel()->setPlotMathRect(Z,plotIdx);
+    _bookModel()->setPlotMathRect(M,plotIdx);
+
+    // Update lineedit label
+    QString s = QString("%1").arg(value);
+    _bw_label->setText(s);
+}
+
+void CurvesView::_keyPressBLineEditReturnPressed()
+{
+    QString s = _bw_label->text();
+    bool ok;
+    int value = s.toInt(&ok);
+    if ( ok ) {
+        _keyPressBSliderChanged(value);
+
+        // Update slider
+        _bw_slider->setValue(value);
+    }
+}
+
+void CurvesView::_keyPressG()
+{
+    QModelIndex plotIdx = rootIndex();
+    QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,"Curves","Plot");
+    QModelIndexList curveIdxs = _bookModel()->getIndexList(curvesIdx,
+                                                           "Curve","Curves");
+    foreach ( QModelIndex curveIdx, curveIdxs ) {
+        CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+        if ( curveModel->x()->unit() != "s" ) {
+            QMessageBox msgBox;
+            QString msg = QString("S-Golay filter expects xunits to be "
+                                  "seconds.  Please try again.\n");
+            msgBox.setText(msg);
+            msgBox.exec();
+            return;
+        }
+    }
+
+    if ( ! _sg_frame ) {
+        _sg_frame = new QFrame(this);
+        _sg_slider = new QSlider(_sg_frame);
+        _sg_window = new QLineEdit(_sg_frame);
+        _sg_degree = new QLineEdit(_sg_frame);
+
+        // Shrink text box since default stretches over plot
+        QFontMetrics fm(_sg_window->font());
+        int w = fm.averageCharWidth()*7; // 7 is an arbitrary init value
+        _sg_window->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+        _sg_window->setMinimumWidth(w);
+        _sg_window->setToolTip("SG Window");
+        _sg_degree->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+        _sg_degree->setMinimumWidth(w);
+        _sg_degree->setToolTip("Degree: 2-6");
+
+        // Validate label entry
+        QIntValidator* v = new QIntValidator(this);
+        _sg_window->setValidator(v);
+        _sg_degree->setValidator(new QIntValidator(this));
+
+    } else if ( _sg_frame->isHidden() ) {
+        _sg_frame->show();
+        return;
+    } else {
+        _sg_frame->hide();
+        return;
+    }
+    QVBoxLayout *layout = new QVBoxLayout();
+    layout->addWidget(_sg_degree);
+    layout->addWidget(_sg_window);
+    layout->addWidget(_sg_slider);
+    _sg_frame->setLayout(layout);
+
+    connect(_sg_slider,SIGNAL(valueChanged(int)),
+            this,SLOT(_keyPressGSliderChanged(int)));
+    connect(_sg_window,SIGNAL(returnPressed()),
+            this,SLOT(_keyPressGLineEditReturnPressed()));
+    connect(_sg_degree,SIGNAL(returnPressed()),
+            this,SLOT(_keyPressGDegreeReturnPressed()));
+
+    // Get data's dt for sgolay window
+    double dtMin = DBL_MAX;
+    foreach ( QModelIndex curveIdx, curveIdxs ) {
+        CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+        if ( curveModel ) {
+            curveModel->map();
+            int N = 0;
+            double dt = 0.0;
+            bool isFirst = true;
+            double lastTime = 0.0;
+            double lastDt = 0.0;
+            ModelIterator* it = curveModel->begin();
+            while ( !it->isDone() ) {
+                if ( isFirst ) {
+                    isFirst = false;
+                } else {
+                    dt = it->t() - lastTime;
+                    if (lastDt > 0.0 && dt > 0.0 && qAbs(dt-lastDt) > 1.0e-9) {
+                        QMessageBox msgBox;
+                        QString msg = QString(
+                                    "Savitzky-Golay filter expects "
+                                    "uniform sampling frequency.  "
+                                    "Data has variable dt.  Bailing!");
+                        msgBox.setText(msg);
+                        msgBox.exec();
+                        delete it;
+                        curveModel->unmap();
+                        _sg_frame->hide();
+                        return;
+                    } else if ( dt == 0.0 ) {
+                        QMessageBox msgBox;
+                        QString msg = QString(
+                                   "Savitzky-Golay filter expects "
+                                   "uniform sampling frequency.  "
+                                   "Data has two values with same time stamp.  "
+                                   "Bailing!");
+                        msgBox.setText(msg);
+                        msgBox.exec();
+                        delete it;
+                        curveModel->unmap();
+                        _sg_frame->hide();
+                        return;
+                    }
+                    lastDt = dt;
+                }
+                lastTime = it->t();
+                ++N;
+                it->next();
+            }
+            if ( dt > 0 && dt < dtMin ) {
+                dtMin = dt;
+            }
+
+            double minSamplingRate = 4.0; // Hz
+            if ( dtMin > 1/minSamplingRate ) {
+                QMessageBox msgBox;
+                QString msg = QString(
+                            "Attempted filter of data with a low sampling rate "
+                            "of %1Hz.  "
+                            "S-Golay smoothing function expects "
+                            "a sampling frequency greater than %2Hz.  "
+                            "Bailing!").arg(1/dtMin).arg(minSamplingRate);
+                msgBox.setText(msg);
+                msgBox.exec();
+                _sg_frame->hide();
+                return;
+            }
+
+            // Cache off original data for later filtering (use _real as cache)
+            curveModel->_real = (double*)malloc(N*sizeof(double));
+
+            it = it->at(0);
+            double goodVal = 0.0;
+            while ( !it->isDone() ) {
+                if ( std::isnan(it->y()) ) {
+                    it->next();
+                    continue;
+                }
+                goodVal = it->y();
+                break;
+            }
+
+            int i = 0;
+            it = it->at(0);
+            while ( !it->isDone() ) {
+                curveModel->_real[i] = it->y();
+                if ( std::isnan(curveModel->_real[i]) ) {
+                    curveModel->_real[i] = goodVal;
+                }
+                goodVal = curveModel->_real[i];
+                it->next();
+                ++i;
+            }
+        }
+    }
+    int maxRange = (int)((1.0/dtMin)/5.0);
+    if ( maxRange > 999 ) {
+        maxRange = 999;
+    }
+    _sg_slider->setRange(3,maxRange);
+    QIntValidator* v = (QIntValidator*)_sg_window->validator();
+    v->setRange(3,maxRange);
+    v = (QIntValidator*)_sg_degree->validator();
+    v->setRange(2,6);
+    QString degree = QString("%1").arg(2);
+    _sg_degree->setText(degree);
+    _sg_slider->setValue((int)(maxRange/3));  // Initial guess that works a lot
+
+    _sg_slider->show();
+    _sg_window->show();
+    _sg_frame->show();
+
+}
+
+void CurvesView::_keyPressD()
+{
+    QModelIndex plotIdx = rootIndex();
+    QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,"Curves","Plot");
+    QModelIndexList curveIdxs = _bookModel()->getIndexList(curvesIdx,
+                                                           "Curve","Curves");
+
+    // Plot presentation should be compare
+    QString plotPresentation = _bookModel()->getDataString(plotIdx,
+                                                     "PlotPresentation","Plot");
+    if ( plotPresentation != "compare" ) {
+        QMessageBox msgBox;
+        QString msg = QString("Attempting to take derivative with plot "
+                              "presentation=%1.  The derivative only works in "
+                              "compare mode.\n").arg(plotPresentation);
+        msgBox.setText(msg);
+        msgBox.exec();
+        return;
+    }
+
+    // xunit should be in seconds
+    foreach ( QModelIndex curveIdx, curveIdxs ) {
+        CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+        if ( curveModel->x()->unit() != "s" ) {
+            QMessageBox msgBox;
+            QString msg = QString("Sorry, attempting to take derivative with "
+                                  "xunit=%1.  The derivative expects the logged"
+                                  " xunits to be seconds.\n")
+                                  .arg(curveModel->x()->unit());
+            msgBox.setText(msg);
+            msgBox.exec();
+            return;
+        }
+    }
+
+    // If user added curves to plot - cache is no longer valid
+    if ( !_integCache.plotCaches.isEmpty()) {
+        int nCachedCurves = _integCache.plotCaches.last()->curveCaches.size();
+        int ncurves = curveIdxs.size();
+        if ( nCachedCurves != ncurves ) {
+            QMessageBox msgBox;
+            QString msg = QString("Curves added after last integration.  "
+                                  "Please clear plot and try again.");
+            msgBox.setText(msg);
+            msgBox.exec();
+            return;
+        }
+    }
+
+    if ( _integCache.plotCaches.isEmpty()) {
+
+        // Cache
+        DerivPlotCache* plotCache = new DerivPlotCache();
+        plotCache->yAxisLabel = _bookModel()->getDataString(plotIdx,
+                                                       "PlotYAxisLabel","Plot");
+        plotCache->M = _bookModel()->getPlotMathRect(plotIdx);
+        foreach ( QModelIndex curveIdx, curveIdxs ) {
+            CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+            QString yUnit = _bookModel()->getDataString(curveIdx,
+                                                        "CurveYUnit","Curve");
+            QString yLabel = _bookModel()->getDataString(curveIdx,
+                                                         "CurveYLabel","Curve");
+            DerivCurveCache* curveCache = new DerivCurveCache(curveModel,
+                                                              yUnit,yLabel);
+            plotCache->curveCaches.append(curveCache);
+        }
+        _derivCache.plotCaches.append(plotCache);
+
+        QProgressDialog progress("Derivative", "Abort", 0,
+                                 curveIdxs.size(), this);
+        progress.setWindowModality(Qt::WindowModal);
+        progress.setMinimumDuration(500);
+        int i = 0;
+
+        bool block = _bookModel()->blockSignals(true);
+        QString plotUnit = _bookModel()->getCurvesYUnit(curvesIdx);
+        QString plotDerivUnit = Unit::derivative(plotUnit);
+        foreach ( QModelIndex curveIdx, curveIdxs ) {
+            CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+            CurveModel* deriv = new CurveModelDerivative(curveModel);
+            QVariant v = PtrToQVariant<CurveModel>::convert(deriv);
+            QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
+                                                           "CurveData","Curve");
+            QModelIndex yUnitIdx = _bookModel()->getDataIndex(curveIdx,
+                                                          "CurveYUnit","Curve");
+            _bookModel()->setData(yUnitIdx,"--");  // temp for conversion below
+            _bookModel()->setData(curveDataIdx,v);
+            if ( Unit::canConvert(deriv->y()->unit(),plotDerivUnit) ) {
+                _bookModel()->setData(yUnitIdx,plotDerivUnit);
+            } else {
+                _bookModel()->setData(yUnitIdx,deriv->y()->unit());
+            }
+
+            QModelIndex yNameIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYName","Curve");
+            QModelIndex yLabelIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYLabel","Curve");
+            _bookModel()->setData(yNameIdx, deriv->y()->name());
+            _bookModel()->setData(yLabelIdx, deriv->y()->name());
+
+            progress.setValue(i++);
+            if (progress.wasCanceled()) {
+                break;
+            }
+            QString msg = QString("Loaded %1 of %2 curves")
+                    .arg(i).arg(curveIdxs.size());
+            progress.setLabelText(msg);
+        }
+        _bookModel()->blockSignals(block);
+
+        // Yaxislabel and refresh plot with new bounding box
+        QModelIndex yAxisLabelIdx = _bookModel()->getDataIndex(plotIdx,
+                                                       "PlotYAxisLabel","Plot");
+        QString yAxisLabel = _bookModel()->data(yAxisLabelIdx).toString();
+        QString dYAxisLabel = "d\'(" + yAxisLabel + ")";
+        _bookModel()->setData(yAxisLabelIdx,dYAxisLabel);
+        QRectF bbox = _bookModel()->calcCurvesBBox(curvesIdx);
+        _bookModel()->setPlotMathRect(bbox,rootIndex());
+
+        progress.setValue(curveIdxs.size());
+    } else {
+        IntegPlotCache* plotCache = _integCache.plotCaches.takeLast();
+        if ( _integ_ival ) {
+            QString s = QString("%1").arg(plotCache->initialValue);
+            _integ_ival->setText(s);
+        }
+        bool block = _bookModel()->blockSignals(true);
+        int i = 0;
+        foreach ( QModelIndex curveIdx, curveIdxs ) {
+            IntegCurveCache* curveCache = plotCache->curveCaches.at(i++);
+            QModelIndex yUnitIdx = _bookModel()->getDataIndex(curveIdx,
+                                                          "CurveYUnit","Curve");
+            _bookModel()->setData(yUnitIdx,curveCache->yUnit());
+            QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
+                                                           "CurveData","Curve");
+            CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+            if ( curveModel ) {
+                delete curveModel;
+            }
+            QVariant v=PtrToQVariant<CurveModel>::convert(
+                                                      curveCache->curveModel());
+            _bookModel()->setData(curveDataIdx,v);
+
+            QModelIndex yNameIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYName","Curve");
+            QModelIndex yLabelIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYLabel","Curve");
+            _bookModel()->setData(yNameIdx,
+                                  curveCache->curveModel()->y()->name());
+            _bookModel()->setData(yLabelIdx, curveCache->yLabel());
+        }
+        _bookModel()->blockSignals(block);
+        QModelIndex yAxisLabelIdx = _bookModel()->getDataIndex(plotIdx,
+                                                       "PlotYAxisLabel","Plot");
+        _bookModel()->setData(yAxisLabelIdx,plotCache->yAxisLabel);
+        _bookModel()->setPlotMathRect(plotCache->M,plotIdx);
+    }
+
+    // Since signals blocked above for performance, refresh yname/ylabels
+    foreach ( QModelIndex curveIdx, curveIdxs ) {
+        QModelIndex yNameIdx = _bookModel()->getDataIndex(curveIdx,
+                                                          "CurveYName","Curve");
+        QModelIndex yLabelIdx = _bookModel()->getDataIndex(curveIdx,
+                                                           "CurveYLabel","Curve");
+        QString yName = _bookModel()->getDataString(curveIdx,
+                                                    "CurveYName","Curve");
+        QString yLabel = _bookModel()->getDataString(curveIdx,
+                                                     "CurveYLabel","Curve");
+        _bookModel()->setData(yNameIdx, "");
+        _bookModel()->setData(yLabelIdx, "");
+        _bookModel()->setData(yNameIdx, yName);
+        _bookModel()->setData(yLabelIdx, yLabel);
+    }
+
+    if ( _integ_frame && _integCache.plotCaches.isEmpty() ) {
+        // Hide integ init value entry box
+        _integ_frame->hide();
+    }
+}
+
+// Integrate
+void CurvesView::_keyPressI()
+{
+    QModelIndex plotIdx = rootIndex();
+    QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,"Curves","Plot");
+    QModelIndexList curveIdxs = _bookModel()->getIndexList(curvesIdx,
+                                                           "Curve","Curves");
+
+    QString plotPresentation = _bookModel()->getDataString(plotIdx,
+                                                     "PlotPresentation","Plot");
+    if ( plotPresentation != "compare" ) {
+        QMessageBox msgBox;
+        QString msg = QString("Attempting integrate with plot "
+                              "presentation=%1.  The integral only works in "
+                              "compare mode.\n").arg(plotPresentation);
+        msgBox.setText(msg);
+        msgBox.exec();
+        return;
+    }
+
+    // xunit should be in seconds
+    foreach ( QModelIndex curveIdx, curveIdxs ) {
+        CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+        if ( curveModel->x()->unit() != "s" ) {
+            QMessageBox msgBox;
+            QString msg = QString("Sorry, attempting integrate with "
+                                  "xunit=%1.  The integral expects the logged"
+                                  " xunits to be seconds.\n")
+                                  .arg(curveModel->x()->unit());
+            msgBox.setText(msg);
+            msgBox.exec();
+            return;
+        }
+    }
+
+    // If user added curves to plot - cache is no longer valid
+    if ( !_derivCache.plotCaches.isEmpty()) {
+        int nCachedCurves = _derivCache.plotCaches.last()->curveCaches.size();
+        int ncurves = curveIdxs.size();
+        if ( nCachedCurves != ncurves ) {
+            QMessageBox msgBox;
+            QString msg = QString("Curves added after last derivative.  "
+                                  "Please clear plot and try again.");
+            msgBox.setText(msg);
+            msgBox.exec();
+            return;
+        }
+    }
+
+    if ( ! _integ_frame && _derivCache.plotCaches.isEmpty()) {
+        _integ_frame = new QFrame(this);
+        _integ_ival = new QLineEdit(_integ_frame);
+        _integ_ival->setText("0.0");
+        connect(_integ_ival,SIGNAL(returnPressed()),
+                this,SLOT(_keyPressIInitValueReturnPressed()));
+
+        // Shrink text box since default stretches over plot
+        QFontMetrics fm(_integ_ival->font());
+        int w = fm.averageCharWidth()*16; // 16 is arbitrary
+        _integ_ival->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);
+        _integ_ival->setMinimumWidth(w);
+        _integ_ival->setToolTip("Initial integration value");
+
+        // Validate label entry
+        QDoubleValidator* v = new QDoubleValidator(this);
+        _integ_ival->setValidator(v);
+
+        QVBoxLayout *layout = new QVBoxLayout();
+        layout->addWidget(_integ_ival);
+        _integ_frame->setLayout(layout);
+        _integ_frame->show();
+    }
+
+    if ( _derivCache.plotCaches.isEmpty()) {
+
+        // Show integ init value entry box
+        _integ_frame->show();
+
+        // Cache
+        IntegPlotCache* plotCache = new IntegPlotCache();
+        plotCache->initialValue = _integ_ival->text().toDouble();
+        plotCache->yAxisLabel = _bookModel()->getDataString(plotIdx,
+                                                       "PlotYAxisLabel","Plot");
+        plotCache->M = _bookModel()->getPlotMathRect(plotIdx);
+        foreach ( QModelIndex curveIdx, curveIdxs ) {
+            CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+            QString yLabel = _bookModel()->getDataString(curveIdx,
+                                                        "CurveYLabel","Curve");
+            QString yUnit = _bookModel()->getDataString(curveIdx,
+                                                        "CurveYUnit","Curve");
+            IntegCurveCache* curveCache = new IntegCurveCache(curveModel,
+                                                              yLabel,yUnit);
+            plotCache->curveCaches.append(curveCache);
+        }
+        _integCache.plotCaches.append(plotCache);
+
+        // Integrate
+        double ival = _integ_ival->text().toDouble();
+        QString plotUnit = _bookModel()->getCurvesYUnit(curvesIdx);
+        QString plotIntegUnit = Unit::integral(plotUnit);
+        bool block = _bookModel()->blockSignals(true);
+        foreach ( QModelIndex curveIdx, curveIdxs ) {
+            CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+            CurveModel* integ = new CurveModelIntegral(curveModel,ival);
+            QVariant v = PtrToQVariant<CurveModel>::convert(integ);
+            QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
+                                                           "CurveData","Curve");
+            QModelIndex yUnitIdx = _bookModel()->getDataIndex(curveIdx,
+                                                          "CurveYUnit","Curve");
+            _bookModel()->setData(yUnitIdx,"--");  // temp for conversion below
+            _bookModel()->setData(curveDataIdx,v);
+            if ( Unit::canConvert(integ->y()->unit(),plotIntegUnit) ) {
+                _bookModel()->setData(yUnitIdx,plotIntegUnit);
+            } else {
+                _bookModel()->setData(yUnitIdx,integ->y()->unit());
+            }
+
+            QModelIndex yNameIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYName","Curve");
+            QModelIndex yLabelIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYLabel","Curve");
+            _bookModel()->setData(yNameIdx, integ->y()->name());
+            _bookModel()->setData(yLabelIdx, integ->y()->name());
+        }
+        _bookModel()->blockSignals(block);
+        QRectF bbox = _bookModel()->calcCurvesBBox(curvesIdx);
+        _bookModel()->setPlotMathRect(bbox,rootIndex());
+
+        // Set YAxisLabel
+        QModelIndex yAxisLabelIdx = _bookModel()->getDataIndex(plotIdx,
+                                                       "PlotYAxisLabel","Plot");
+        QString yAxisLabel = _bookModel()->data(yAxisLabelIdx).toString();
+        QChar integSymbol(8747);
+        QString iYAxisLabel;
+        if ( _integCache.plotCaches.size() == 1 ) {
+            iYAxisLabel = QString("%1(%2)").arg(integSymbol).arg(yAxisLabel);
+        } else {
+            iYAxisLabel = QString("%1%2").arg(integSymbol).arg(yAxisLabel);
+        }
+        _bookModel()->setData(yAxisLabelIdx,iYAxisLabel);
+
+    } else {
+        DerivPlotCache* plotCache = _derivCache.plotCaches.takeLast();
+        bool block = _bookModel()->blockSignals(true);
+        int i = 0;
+        foreach ( QModelIndex curveIdx, curveIdxs ) {
+            DerivCurveCache* curveCache = plotCache->curveCaches.at(i++);
+            QModelIndex yUnitIdx = _bookModel()->getDataIndex(curveIdx,
+                                                          "CurveYUnit","Curve");
+            _bookModel()->setData(yUnitIdx,curveCache->yUnit());
+            QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
+                                                           "CurveData","Curve");
+            CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+            if ( curveModel ) {
+                delete curveModel;
+            }
+            QVariant v=PtrToQVariant<CurveModel>::convert(
+                                                      curveCache->curveModel());
+            _bookModel()->setData(curveDataIdx,v);
+
+            QModelIndex yNameIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYName","Curve");
+            QModelIndex yLabelIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYLabel","Curve");
+            _bookModel()->setData(yNameIdx,
+                                  curveCache->curveModel()->y()->name());
+            _bookModel()->setData(yLabelIdx, curveCache->yLabel());
+        }
+        _bookModel()->blockSignals(block);
+        QModelIndex yAxisLabelIdx = _bookModel()->getDataIndex(plotIdx,
+                                                       "PlotYAxisLabel","Plot");
+        _bookModel()->setData(yAxisLabelIdx,plotCache->yAxisLabel);
+        _bookModel()->setPlotMathRect(plotCache->M,plotIdx);
+    }
+
+    // Since signals blocked above for performance, refresh yname/ylabels
+    foreach ( QModelIndex curveIdx, curveIdxs ) {
+        QModelIndex yNameIdx = _bookModel()->getDataIndex(curveIdx,
+                                                          "CurveYName","Curve");
+        QModelIndex yLabelIdx = _bookModel()->getDataIndex(curveIdx,
+                                                           "CurveYLabel","Curve");
+        QString yName = _bookModel()->getDataString(curveIdx,
+                                                    "CurveYName","Curve");
+        QString yLabel = _bookModel()->getDataString(curveIdx,
+                                                     "CurveYLabel","Curve");
+        _bookModel()->setData(yNameIdx, "");
+        _bookModel()->setData(yLabelIdx, "");
+        _bookModel()->setData(yNameIdx, yName);
+        _bookModel()->setData(yLabelIdx, yLabel);
+    }
+}
+
+void CurvesView::_keyPressGChange(int window, int degree)
+{
+    QModelIndex plotIdx = rootIndex();
+    QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,"Curves","Plot");
+    QModelIndexList curveIdxs = _bookModel()->getIndexList(curvesIdx,
+                                                           "Curve","Curves");
+
+    bool block = _bookModel()->blockSignals(true);
+    foreach ( QModelIndex curveIdx, curveIdxs ) {
+        CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+        if ( curveModel ) {
+            CurveModel* sg = new CurveModelSG(curveModel,window,degree);
+            QVariant v = PtrToQVariant<CurveModel>::convert(sg);
+            QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
+                                                           "CurveData","Curve");
+            _bookModel()->setData(curveDataIdx,v);
+            curveModel->_real = 0; // Zero out cache since sg now owns it
+            delete curveModel;
+        }
+    }
+    _bookModel()->blockSignals(block);
+
+    // Reset bounding box so that plot refreshes (optimizing redraw)
+    QRectF Z; // Empty
+    QRectF M = _bookModel()->getPlotMathRect(plotIdx);
+    _bookModel()->setPlotMathRect(Z,plotIdx);
+    _bookModel()->setPlotMathRect(M,plotIdx);
+}
+
+void CurvesView::_keyPressGSliderChanged(int value)
+{
+    QModelIndex plotIdx = rootIndex();
+    QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,"Curves","Plot");
+    QModelIndexList curveIdxs = _bookModel()->getIndexList(curvesIdx,
+                                                           "Curve","Curves");
+
+    bool block = _bookModel()->blockSignals(true);
+    foreach ( QModelIndex curveIdx, curveIdxs ) {
+        CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+        if ( curveModel ) {
+            CurveModel* sg = new CurveModelSG(curveModel,value,3);
+            QVariant v = PtrToQVariant<CurveModel>::convert(sg);
+            QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
+                                                           "CurveData","Curve");
+            _bookModel()->setData(curveDataIdx,v);
+            curveModel->_real = 0; // Zero out cache since sg now owns it
+            delete curveModel;
+        }
+    }
+    _bookModel()->blockSignals(block);
+
+    // Reset bounding box so that plot refreshes (optimizing redraw)
+    QRectF Z; // Empty
+    QRectF M = _bookModel()->getPlotMathRect(plotIdx);
+    _bookModel()->setPlotMathRect(Z,plotIdx);
+    _bookModel()->setPlotMathRect(M,plotIdx);
+
+    // Update lineedit label
+    QString s = QString("%1").arg(value);
+    _sg_window->setText(s);
+}
+
+void CurvesView::_keyPressGLineEditReturnPressed()
+{
+    QString s = _sg_window->text();
+    bool ok;
+    int value = s.toInt(&ok);
+    if ( ok ) {
+        _keyPressGSliderChanged(value);
+        _sg_slider->setValue(value);
+    }
+}
+
+void CurvesView::_keyPressGDegreeReturnPressed()
+{
+    QString s = _sg_degree->text();
+    bool ok;
+    int degree = s.toInt(&ok);
+    if ( ok ) {
+        int window = _sg_window->text().toInt(&ok);
+        if ( ok ) {
+            _keyPressGChange(window,degree);
+        }
+    }
+}
+
+// Re-integrate using initial value from entry box
+void CurvesView::_keyPressIInitValueReturnPressed()
+{
+    bool ok;
+    double ival = _integ_ival->text().toDouble(&ok);
+    if ( !ok ) {
+        // Since there is a validator this should never happen
+        fprintf(stderr, "koviz [bad scoobs]:keyPressIInitValueReturnPressed\n");
+        exit(-1);
+    }
+
+    QModelIndex plotIdx = rootIndex();
+    QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,"Curves","Plot");
+    QModelIndexList curveIdxs = _bookModel()->getIndexList(curvesIdx,
+                                                           "Curve","Curves");
+
+    // Integrate from cached state using updated initial value
+    IntegPlotCache* cache = _integCache.plotCaches.last();
+    int i = 0;
+    foreach ( QModelIndex curveIdx, curveIdxs ) {
+        CurveModel* curveModel = cache->curveCaches.at(i++)->curveModel();
+        CurveModel* integ = new CurveModelIntegral(curveModel,ival);
+        QVariant v = PtrToQVariant<CurveModel>::convert(integ);
+        QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
+                                                           "CurveData","Curve");
+        _bookModel()->setData(curveDataIdx,v);
+    }
+    QRectF bbox = _bookModel()->calcCurvesBBox(curvesIdx);
+    _bookModel()->setPlotMathRect(bbox,rootIndex());
+}
+
+void CurvesView::_keyPressMinus()
+{
+    QModelIndex curveIdx;
+    if ( !currentIndex().isValid() ) {
+        // If curve not selected, but only a single curve on plot, use it
+        QModelIndex plotIdx = rootIndex();
+        QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,"Curves","Plot");
+        int nCurves = _bookModel()->rowCount(curvesIdx);
+        if ( nCurves == 1 ) {
+            curveIdx = _bookModel()->
+                       getIndexList(curvesIdx,"Curve","Curves").at(0);
+        }
+    } else {
+        QModelIndex gpidx = currentIndex().parent().parent();
+        QString tag = model()->data(currentIndex()).toString();
+        if (currentIndex().isValid() && tag == "Curve" && gpidx == rootIndex()){
+            // Curve is selected
+            curveIdx = currentIndex();
+        }
+    }
+
+    if ( curveIdx.isValid() ) {
+        QModelIndex yScaleIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYScale","Curve");
+        double yScale = -1.0*_bookModel()->data(yScaleIdx).toDouble();
+        _bookModel()->setData(yScaleIdx,yScale);
+
+        // Reset bounding box
+        QModelIndex plotIdx = rootIndex();
+        QModelIndex curvesIdx = curveIdx.parent();
+        QRectF M = _bookModel()->calcCurvesBBox(curvesIdx);
+        _bookModel()->setPlotMathRect(M,plotIdx);
+    } else {
+        QMessageBox msgBox;
+        QString msg = QString("Please select curve to flip, "
+                              "then press the minus key.");
+        msgBox.setText(msg);
+        msgBox.exec();
+    }
+}
+
 TimeAndIndex::TimeAndIndex(double time, int timeIdx, const QModelIndex &idx) :
     _time(time),
     _timeIdx(timeIdx),
@@ -2561,4 +3537,124 @@ int TimeAndIndex::timeIdx() const
 QModelIndex TimeAndIndex::modelIdx() const
 {
     return _modelIdx;
+}
+
+
+FFTCurveCache::FFTCurveCache(double xbias, double xscale,
+                             CurveModel* curveModel) :
+    _xbias(xbias),
+    _xscale(xscale),
+    _curveModel(curveModel)
+{
+}
+
+double FFTCurveCache::xbias() const
+{
+    return _xbias;
+}
+
+double FFTCurveCache::xscale() const
+{
+    return _xscale;
+}
+
+CurveModel* FFTCurveCache::curveModel() const
+{
+    return _curveModel;
+}
+
+FFTCache::FFTCache() :
+    isCache(false)
+{
+}
+
+DerivPlotCache::DerivPlotCache()
+{
+}
+
+DerivPlotCache::~DerivPlotCache()
+{
+}
+
+DerivCache::DerivCache()
+{
+}
+
+DerivCache::~DerivCache()
+{
+    foreach ( DerivPlotCache* plotCache, plotCaches ) {
+        foreach ( DerivCurveCache* curveCache, plotCache->curveCaches ) {
+            delete curveCache;
+        }
+        delete plotCache;
+    }
+}
+
+DerivCurveCache::DerivCurveCache(CurveModel *curveModel,
+                                 const QString &yUnit, const QString &yLabel) :
+    _curveModel(curveModel),
+    _yUnit(yUnit),
+    _yLabel(yLabel)
+{
+}
+
+CurveModel *DerivCurveCache::curveModel() const
+{
+    return _curveModel;
+}
+
+QString DerivCurveCache::yUnit() const
+{
+    return _yUnit;
+}
+
+QString DerivCurveCache::yLabel() const
+{
+    return _yLabel;
+}
+
+IntegPlotCache::IntegPlotCache() :
+    initialValue(0.0)
+{
+}
+
+IntegPlotCache::~IntegPlotCache()
+{
+}
+
+IntegCache::IntegCache()
+{
+}
+
+IntegCache::~IntegCache()
+{
+    foreach ( IntegPlotCache* plotCache, plotCaches ) {
+        foreach ( IntegCurveCache* curveCache, plotCache->curveCaches ) {
+            delete curveCache;
+        }
+        delete plotCache;
+    }
+}
+
+IntegCurveCache::IntegCurveCache(CurveModel *curveModel,
+                                 const QString &yLabel, const QString &yUnit) :
+    _curveModel(curveModel),
+    _yLabel(yLabel),
+    _yUnit(yUnit)
+{
+}
+
+CurveModel *IntegCurveCache::curveModel() const
+{
+    return _curveModel;
+}
+
+QString IntegCurveCache::yLabel() const
+{
+    return _yLabel;
+}
+
+QString IntegCurveCache::yUnit() const
+{
+    return _yUnit;
 }

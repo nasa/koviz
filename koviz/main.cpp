@@ -157,6 +157,9 @@ class SnapOptions : public Options
     QString buttonZoom;
     QString buttonReset;
     QString platform;
+    QString xaxislabel;
+    QString yaxislabel;
+    QString vars;
 };
 
 SnapOptions opts;
@@ -299,6 +302,13 @@ int main(int argc, char *argv[])
              &opts.buttonReset,"right","left, middle or right mouse button");
     opts.add("-platform",
              &opts.platform,"","Set to \"offscreen\" for pdf without X");
+    opts.add("-xaxislabel",
+             &opts.xaxislabel,"","X axis label override");
+    opts.add("-yaxislabel",
+             &opts.yaxislabel,"","Y axis label override");
+    opts.add("-vars",
+             &opts.vars,"","List variables to plot. "
+                        "Use @var to place var on same plot as prev variable.");
 
     opts.parse(argc,argv, QString("koviz"), &ok);
 
@@ -529,11 +539,12 @@ int main(int argc, char *argv[])
 
         // If outputting to pdf, you must have a DP file and RUN dir
         if ( isPdf &&
-            ((!opts.isPlotAllVars && dps.size() == 0) || runDirs.size() == 0)){
+            ((!opts.isPlotAllVars && dps.size() == 0) || runDirs.size() == 0)&&
+            ((opts.vars.isEmpty() && dps.size() == 0) || runDirs.size() == 0)){
             fprintf(stderr,
                     "koviz [error] : when using the -pdf option you must "
                     "specify a RUN directory and DP product file "
-                    "(or -a option for all vars) \n");
+                    "(or -a or -vars option) \n");
             exit(-1);
         }
 
@@ -688,9 +699,6 @@ int main(int argc, char *argv[])
         QString presentation = opts.presentation;
         if ( presentation.isEmpty() && session ) {
             presentation = session->presentation();
-        }
-        if ( presentation.isEmpty() ){
-            presentation = "compare";
         }
 
         // Make a list of legend labels
@@ -1025,6 +1033,16 @@ int main(int argc, char *argv[])
             exit(-1);
         }
 
+        // Axis labels
+        QString xaxislabel = opts.xaxislabel;
+        if ( xaxislabel.isEmpty() && session ) {
+            xaxislabel = session->xAxisLabel();
+        }
+        QString yaxislabel = opts.yaxislabel;
+        if ( yaxislabel.isEmpty() && session ) {
+            yaxislabel = session->yAxisLabel();
+        }
+
         // Create book model
         PlotBookModel* bookModel = new PlotBookModel(timeNames,runs,0,1);
         if ( titles.size() == 4 ) {
@@ -1117,10 +1135,10 @@ int main(int argc, char *argv[])
                                      plotLegendPosition );
         bookModel->addChild(rootItem,"ButtonSelectAndPan",
                                      opts.buttonSelectAndPan );
-        bookModel->addChild(rootItem,"ButtonZoom",
-                                     opts.buttonZoom );
-        bookModel->addChild(rootItem,"ButtonReset",
-                                     opts.buttonReset );
+        bookModel->addChild(rootItem,"ButtonZoom",opts.buttonZoom );
+        bookModel->addChild(rootItem,"ButtonReset",opts.buttonReset );
+        bookModel->addChild(rootItem,"XAxisLabel",xaxislabel );
+        bookModel->addChild(rootItem,"YAxisLabel",yaxislabel );
 
         if ( isTrk ) {
 
@@ -1253,6 +1271,74 @@ int main(int argc, char *argv[])
                              runs,
                              varsModel,
                              monteInputsModel);
+
+            //
+            // Handle -vars commandline option
+            //
+            QStringList vars = opts.vars.split(",", QString::SkipEmptyParts);
+            foreach (QString var, vars ) {
+                QString v = var;
+                if ( v.at(0) == '@' ) {
+                    v = var.mid(1);
+                }
+                if ( !runs->params().contains(v) ) {
+                    fprintf(stderr, "koviz [error]: Cannot find var=\"%s\" "
+                                    "from -vars option.  Run(s) do not contain "
+                                    "this variable.\n",
+                                    var.toLatin1().constData());
+                    exit(-1);
+                }
+            }
+            int i = 0;
+            QStandardItem* pageItem = 0;
+            QModelIndex plotIdx;
+            foreach ( QString var, vars ) {
+                if ( i > 0 && var.at(0) == '@' ) {
+                    // If var begins with @, place on same plot as last var
+                    QModelIndex pageIdx = pageItem->index();
+                    QModelIndex plotsIdx = bookModel->getIndex(pageIdx,
+                                                                "Plots","Page");
+                    int nplots = bookModel->rowCount(plotsIdx);
+                    plotIdx = bookModel->index(nplots-1,0,plotsIdx);
+                    QModelIndex curvesIdx = bookModel->getIndex(plotIdx,
+                                                         "Curves", "Plot");
+                    QString v = var.mid(1);
+                    bookModel->createCurves(curvesIdx,timeName,v,
+                                            unitOverridesList, 0,0);
+
+                    // Set y axis label to empty string (since multiple vars)
+                    QModelIndex yAxisLabelIdx = bookModel->getDataIndex(plotIdx,
+                                                       "PlotYAxisLabel","Plot");
+                    bookModel->setData(yAxisLabelIdx, "");
+                } else {
+                    if ( i%6 == 0 ) {
+                        pageItem = bookModel->createPageItem();
+                    }
+
+                    QStandardItem* plotItem = bookModel->createPlotItem(
+                                                          pageItem,
+                                                          timeName,
+                                                          var.trimmed(),
+                                                          unitOverridesList,0);
+                    plotIdx = plotItem->index();
+                    ++i;
+                }
+
+                // Presentation
+                QModelIndex presIdx = bookModel->getDataIndex(plotIdx,
+                                                    "PlotPresentation", "Plot");
+                if ( runs->runDirs().size() == 2 ) {
+                    QModelIndex curvesIdx = bookModel->getIndex(plotIdx,
+                                                               "Curves","Plot");
+                    QModelIndexList curveIdxs = bookModel->getIndexList(
+                                                    curvesIdx,"Curve","Curves");
+                    if ( curveIdxs.size() == 2 && !presentation.isEmpty()) {
+                        bookModel->setData(presIdx,presentation);
+                        QRectF bbox = bookModel->calcCurvesBBox(curvesIdx);
+                        bookModel->setPlotMathRect(bbox,plotIdx);
+                    }
+                }
+            }
 
             if ( isPdf ) {
                 w.savePdf(pdfOutFile);
@@ -1881,6 +1967,13 @@ bool convert2trk(const QString& csvFileName, const QString& trkFileName)
                             val += vals.at(2).toDouble(&ok);
                         }
                     }
+                }
+            }
+            if ( !ok ) {
+                // If a single char, convert to unicode numeric value
+                if ( s.size() == 1 ) {
+                    val = s.at(0).unicode();
+                    ok = true;
                 }
             }
             if ( !ok ) {

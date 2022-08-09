@@ -94,7 +94,17 @@ SOURCES += bookmodel.cpp \
            mapvalue.cpp \
            curvemodelparameter.cpp \
            datamodel_mot.cpp \
-           bookview_tabwidget.cpp
+           bookview_tabwidget.cpp \
+           fft.cpp \
+           curvemodel_fft.cpp \
+           curvemodel_ifft.cpp \
+           filter.c \
+           curvemodel_bw.cpp \
+           curvemodel_sg.cpp \
+           filter_sgolay.cpp \
+           coord_arrow.cpp \
+           curvemodel_deriv.cpp \
+           curvemodel_integ.cpp
 
 HEADERS  += bookmodel.h \
             bookidxview.h \
@@ -164,7 +174,17 @@ HEADERS  += bookmodel.h \
             mapvalue.h \
             curvemodelparameter.h \
             datamodel_mot.h \
-            bookview_tabwidget.h
+            bookview_tabwidget.h \
+            fft.h \
+            curvemodel_fft.h \
+            curvemodel_ifft.h \
+            filter.h \
+            curvemodel_bw.h \
+            curvemodel_sg.h \
+            filter_sgolay.h \
+            coord_arrow.h \
+            curvemodel_deriv.h \
+            curvemodel_integ.h
 
 FLEXSOURCES = product_lexer.l
 BISONSOURCES = product_parser.y
