@@ -426,6 +426,9 @@ y_var: DP_Y_VARIABLE ':' DP_STR {
                     currYVar->setSymbolStyle($4);
                 }
         }
+        | y_var DP_SYMBOL_SIZE ':' DP_STR {
+                msg("SYMBOL_SIZE not supported.");
+        }
         | y_var DP_SYMBOL_END ':' DP_STR {
                 if ( isXYPair ) {
                     currXYPairYVar->setSymbolEnd($4);
