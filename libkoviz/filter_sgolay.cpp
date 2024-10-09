@@ -19,7 +19,7 @@
 // system headers
 #include <stdio.h>
 #include <stddef.h>             // for size_t
-#include <stdlib.h>             // for size_t
+#include <stdlib.h>             // for CentOS7 build
 #include <math.h>               // for fabs  
 #include <vector>
 
