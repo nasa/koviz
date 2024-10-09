@@ -163,6 +163,11 @@ class SnapOptions : public Options
 
 SnapOptions opts;
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    Qt::SplitBehaviorFlags skipEmptyParts = Qt::SkipEmptyParts;
+#else
+    QString::SplitBehavior skipEmptyParts = QString::SkipEmptyParts;
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -454,12 +459,12 @@ int main(int argc, char *argv[])
             exit(-1);
         }
 
-        QStringList items = opts.videoList.split(',',Qt::SkipEmptyParts);
+        QStringList items = opts.videoList.split(',',skipEmptyParts);
         foreach ( QString item, items ) {
             if ( item.contains(':') ) {
                 QString f = item.split(':',
-                                       Qt::SkipEmptyParts).at(0).trimmed();
-                QString s = item.split(':',Qt::SkipEmptyParts).at(1);
+                                       skipEmptyParts).at(0).trimmed();
+                QString s = item.split(':',skipEmptyParts).at(1);
                 bool ok;
                 double o = s.toDouble(&ok);
                 if ( !ok ) {
@@ -1039,7 +1044,7 @@ int main(int argc, char *argv[])
         // Unit overrides list
         QStringList unitOverridesList;
         foreach ( QString unitOverride, opts.unitOverrides.
-                                        split(',',Qt::SkipEmptyParts) ) {
+                                        split(',',skipEmptyParts) ) {
             unitOverridesList << unitOverride.trimmed();
         }
 
@@ -1342,7 +1347,7 @@ int main(int argc, char *argv[])
             //
             // Handle -vars commandline option
             //
-            QStringList vars = opts.vars.split(",", Qt::SkipEmptyParts);
+            QStringList vars = opts.vars.split(",", skipEmptyParts);
             foreach (QString var, vars ) {
                 QString v = var;
                 if ( v.at(0) == '@' ) {
@@ -1975,7 +1980,7 @@ bool convert2trk(const QString& csvFileName, const QString& trkFileName)
     }
     foreach ( QString s, list ) {
         TrickParameter p;
-        QStringList plist = s.split(" ", Qt::SkipEmptyParts);
+        QStringList plist = s.split(" ", skipEmptyParts);
         p.setName(plist.at(0));
         if ( plist.size() > 1 ) {
             QString unitString = plist.at(1);
@@ -2074,7 +2079,7 @@ QHash<QString,QVariant> getShiftHash(const QString& shiftString,
 
     if (shiftString.isEmpty() || runPaths.isEmpty() ) return shifts; //empty map
 
-    QStringList shiftStrings = shiftString.split(',',Qt::SkipEmptyParts);
+    QStringList shiftStrings = shiftString.split(',',skipEmptyParts);
     foreach ( QString s, shiftStrings ) {
 
         s = s.trimmed();
@@ -2168,7 +2173,7 @@ QHash<QString,QStringList> getVarMap(const QString& mapString)
 
     if (mapString.isEmpty() ) return varMap; // empty map
 
-    QStringList maps = mapString.split(',',Qt::SkipEmptyParts);
+    QStringList maps = mapString.split(',',skipEmptyParts);
     foreach ( QString s, maps ) {
         s = s.trimmed();
         if ( s.contains('=') ) {
@@ -2240,7 +2245,7 @@ QHash<QString,QStringList> getVarMapFromFile(const QString& mapFileName)
 QStringList getTimeNames(const QString& timeName)
 {
     QStringList timeNames;
-    QStringList names = timeName.split('=',Qt::SkipEmptyParts);
+    QStringList names = timeName.split('=',skipEmptyParts);
     foreach ( QString s, names ) {
         timeNames << s.trimmed();
     }

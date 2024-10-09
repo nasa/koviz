@@ -206,14 +206,22 @@ void Runs::_init()
     QSet<QString> paramSet;
     foreach ( Run* run, _runs ) {
         QStringList list = run->params();
-        QSet<QString> runParamSet(list.begin(), list.end());
+        #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            QSet<QString> runParamSet(list.begin(), list.end());
+        #else
+            QSet<QString> runParamSet = QSet<QString>::fromList(list);
+        #endif
         if ( paramSet.isEmpty() ) {
             paramSet = runParamSet;
         } else {
             paramSet = paramSet.intersect(runParamSet);
         }
     }
-    _params = QStringList(paramSet.begin(),paramSet.end());
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        _params = QStringList(paramSet.begin(), paramSet.end());
+    #else
+        _params = paramSet.toList();
+    #endif
     _params.removeDuplicates();
     _params.sort();
 
@@ -852,7 +860,12 @@ void Runs::_loadMonteInputModelTrick07(QStandardItemModel* model,
         // Monte carlo input data values
         //
         dataLine = dataLine.mid(0,hashIdx).trimmed();
-        QStringList dataVals = dataLine.split(' ',Qt::SkipEmptyParts);
+        #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            const auto SkipEmptyParts = Qt::SkipEmptyParts ;
+        #else
+            const auto SkipEmptyParts = QString::SkipEmptyParts;
+        #endif
+        QStringList dataVals = dataLine.split(' ',SkipEmptyParts);
         if ( dataVals.size() != vars.size() ) {
             fprintf(stderr,
                     "koviz [error]: error parsing monte carlo input file.  "
@@ -981,7 +994,12 @@ void Runs::_loadMonteInputModelTrick17(QStandardItemModel* model,
         if ( !isParseLine ) {
             continue;
         }
-        QStringList vals = line.split(QRegExp("\\s+"),Qt::SkipEmptyParts);
+        #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            const auto SkipEmptyParts = Qt::SkipEmptyParts ;
+        #else
+            const auto SkipEmptyParts = QString::SkipEmptyParts;
+        #endif
+        QStringList vals = line.split(QRegExp("\\s+"),SkipEmptyParts);
         if ( vals.size() != vars.size() ) {
             fprintf(stderr, "koviz [error]: error parsing %s.  There "
                             "are %d variables specified in top line, "

@@ -19,6 +19,7 @@
 // system headers
 #include <stdio.h>
 #include <stddef.h>             // for size_t
+#include <stdlib.h>             // for size_t
 #include <math.h>               // for fabs  
 #include <vector>
 

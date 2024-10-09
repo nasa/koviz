@@ -37,8 +37,11 @@ RunsWidget::RunsWidget(Runs *runs,
     _filterModel->setSourceModel(_fileModel);
     _filterModel->setFilterRole(Qt::DisplayRole);
     _filterModel->setFilterKeyColumn(0);
-    _filterModel->setFilterRegularExpression("");
-
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        _filterModel->setFilterRegularExpression("");
+    #else
+        _filterModel->setFilterRegExp("");
+    #endif
     // File browser view
     _fileTreeView = new QTreeView(this);
     _fileTreeView->setModel(_filterModel);
@@ -79,7 +82,11 @@ QString RunsWidget::runsHome()
 void RunsWidget::_runsSearchBoxReturnPressed()
 {
     QString rx = _searchBox->text();
-    _filterModel->setFilterRegularExpression(rx);
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        _filterModel->setFilterRegularExpression(rx);
+    #else
+        _filterModel->setFilterRegExp(rx);
+    #endif
 
     QModelIndex sourceIndex = _fileModel->index(_runsHome);
     QModelIndex proxyIndex = _filterModel->mapFromSource(sourceIndex);
@@ -98,21 +105,34 @@ bool RunsWidgetFilterProxyModel::filterAcceptsRow(
                                      QFileSystemModel::FilePathRole).toString();
     QFileInfo fi(path);
 
-    QStringList pathComponents = path.split(QDir::separator(),
-                                            Qt::SkipEmptyParts);
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        const auto SkipEmptyParts = Qt::SkipEmptyParts ;
+    #else
+        const auto SkipEmptyParts = QString::SkipEmptyParts;
+    #endif
+    QStringList pathComponents = path.split(QDir::separator(), SkipEmptyParts);
 
     if ( pathComponents.size() <= 2 ) {
         // If path is root or nearly toplevel, always accept
         return true;
     }
 
+    // Lambda for Qt compatability
+    auto getFilterRegularExpression = [this]() {
+        #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            return filterRegularExpression();
+        #else
+            return QRegularExpression(filterRegExp().pattern());
+        #endif
+    };
+
     if ( fi.isFile() ) {
-        if ( path.contains(filterRegularExpression()) &&
+        if ( path.contains(getFilterRegularExpression()) &&
              _runs->isValidRunPath(path) ) {
             return true;
         }
     } else if ( fi.isDir() ) {
-        if ( _isDirAccept(path,filterRegularExpression(),0) ) {
+        if ( _isDirAccept(path,getFilterRegularExpression(),0) ) {
             return true;
         }
     }

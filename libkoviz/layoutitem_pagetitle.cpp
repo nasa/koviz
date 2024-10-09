@@ -134,7 +134,12 @@ void PageTitleLayoutItem::paint(QPainter *painter,
     painter->setFont(font);
     QFontMetrics fm2(painter->fontMetrics());
     if ( !title2.isEmpty() && !title2.trimmed().isEmpty() ) {
-        QStringList lines = title2.split('\n', Qt::SkipEmptyParts);
+        #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            const auto SkipEmptyParts = Qt::SkipEmptyParts ;
+        #else
+            const auto SkipEmptyParts = QString::SkipEmptyParts;
+        #endif
+        QStringList lines = title2.split('\n', SkipEmptyParts);
         y += fm1.descent() + fm1.leading() + fm2.ascent();
         if ( lines.size() == 1 ) {
             // single RUN

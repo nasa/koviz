@@ -27,8 +27,14 @@ void CsvModel::_init()
     QTextStream in(&file);
     in.setCodec("UTF-8");
 
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        const auto SkipEmptyParts = Qt::SkipEmptyParts ;
+    #else
+        const auto SkipEmptyParts = QString::SkipEmptyParts;
+    #endif
+
     QString line0 = in.readLine();
-    QStringList items = line0.split(',',Qt::SkipEmptyParts);
+    QStringList items = line0.split(',',SkipEmptyParts);
     int col = 0;
     foreach ( QString item, items ) {
         QString name;
@@ -336,10 +342,16 @@ bool CsvModel::isValid(const QString &csvFile, const QStringList &timeNames)
     QTextStream in(&file);
     in.setCodec("UTF-8");
 
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        const auto KeepEmptyParts = Qt::KeepEmptyParts ;
+    #else
+        const auto KeepEmptyParts = QString::KeepEmptyParts;
+    #endif
+
     // Get list of variable names
     QStringList names;
     QString line0 = in.readLine();
-    QStringList items = line0.split(',',Qt::KeepEmptyParts);
+    QStringList items = line0.split(',',KeepEmptyParts);
     foreach ( QString item, items ) {
         QString name;
         if ( item.contains('{') ) {
@@ -373,7 +385,7 @@ bool CsvModel::isValid(const QString &csvFile, const QStringList &timeNames)
 
     // Sanity check second line to ensure num cols is same as num header cols
     QString line1 = in.readLine();
-    items = line1.split(',',Qt::KeepEmptyParts);
+    items = line1.split(',',KeepEmptyParts);
     if ( items.size() != names.size() ) {
         file.close();
         return false;

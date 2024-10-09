@@ -60,6 +60,13 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
     _trickView(0),
     vidView(0)
 {
+    // Set version dependent string split flag
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        _skipEmptyParts = Qt::SkipEmptyParts;
+    #else
+        _skipEmptyParts = QString::SkipEmptyParts;
+    #endif
+
     // Window title
     QModelIndex titlesIdx = _bookModel->getIndex(QModelIndex(),
                                                  "DefaultPageTitles");
@@ -343,7 +350,7 @@ void PlotMainWindow::createMenu()
     _menuBar->addMenu(_optsMenu);
     if ( !_scripts.isEmpty() ) {
         _scriptsMenu = new QMenu(tr("&Scripts"), this);
-        QStringList scripts = _scripts.split(',',Qt::SkipEmptyParts);
+        QStringList scripts = _scripts.split(',',_skipEmptyParts);
         foreach ( QString script, scripts ) {
             QAction* action = _scriptsMenu->addAction(script);
             Q_UNUSED(action);
@@ -1358,7 +1365,7 @@ void PlotMainWindow::_openVideoByRun()
                                     line.toLatin1().constData());
                             exit(-1);
                         }
-                        QString f = line.split(',',Qt::SkipEmptyParts)[0];
+                        QString f = line.split(',', _skipEmptyParts)[0];
 
                         if ( !videoDir.exists(f) ) {
                             fprintf(stderr, "koviz [error]: Video file=%s "
@@ -1368,7 +1375,7 @@ void PlotMainWindow::_openVideoByRun()
                             exit(-1);
                         }
                         f = videoDir.filePath(f);
-                        QString o = line.split(',',Qt::SkipEmptyParts)[1];
+                        QString o = line.split(',', _skipEmptyParts)[1];
                         bool ok;
                         double offset = o.toDouble(&ok);
                         if ( ok ) {
@@ -1577,8 +1584,7 @@ void PlotMainWindow::_launchScript(QAction* action)
         }
     }
     if ( !runpath.isEmpty() ) {
-        QStringList fields = action->text().split(' ',
-                                                  Qt::SkipEmptyParts);
+        QStringList fields = action->text().split(' ', _skipEmptyParts);
         QString program = fields.takeAt(0);
         program = program.remove('&');
         QStringList arguments;

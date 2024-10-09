@@ -106,6 +106,12 @@ private:
     QHeaderView* _monteInputsHeaderView;
     TimeInput* _timeInput;
 
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        Qt::SplitBehaviorFlags _skipEmptyParts;
+    #else
+        QString::SplitBehavior _skipEmptyParts;
+    #endif
+
     QGridLayout* _layout;
     QGridLayout* _left_lay ;
 

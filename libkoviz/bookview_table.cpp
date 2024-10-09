@@ -70,11 +70,20 @@ void BookTableView::paintEvent(QPaintEvent *event)
     }
     QStringList labels = _columnLabels();
 
+    // Define this lambda for Qt compatability
+    auto getHorizontalAdvance = [&fm](const QString &text) {
+        #if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
+            return fm.horizontalAdvance(text);
+        #else
+            return fm.width(text);
+        #endif
+    };
+
     // Calculate column width
-    int w = fm.horizontalAdvance("0123456789");
+    int w = getHorizontalAdvance("0123456789");
     foreach ( QString label, labels ) {
-        if ( fm.horizontalAdvance(label) > w ) {
-            w = fm.horizontalAdvance(label);
+        if ( getHorizontalAdvance(label) > w ) {
+            w = getHorizontalAdvance(label);
         }
     }
     w = _mLft + w + _mRgt;
@@ -144,9 +153,19 @@ void BookTableView::paintEvent(QPaintEvent *event)
             painter.drawLine(0,hline,W.width(),hline);
             painter.setPen(penTxt);
             QString s;
+
+            // Lambda for Qt compatability
+            auto getHorizontalAdvance = [&fm](const QString &text) {
+                #if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
+                    return fm.horizontalAdvance(text);
+                #else
+                    return fm.width(text);
+                #endif
+            };
+
             if ( i == 0 ) {
                 s = labels.at(q+j);
-                int l = fm.horizontalAdvance(labels.at(q+j));
+                int l = getHorizontalAdvance(labels.at(q+j));
                 painter.drawText(w*j+(w-l),baseline,s);
             } else {
                 if ( j == 0 ) {
@@ -160,7 +179,7 @@ void BookTableView::paintEvent(QPaintEvent *event)
                         // s is an empty string since no corresponding time
                     }
                 }
-                int l = fm.horizontalAdvance(s);
+                int l = getHorizontalAdvance(s);
                 painter.drawText(w*j+(w-l),baseline,s);
             }
         }
@@ -437,13 +456,22 @@ QModelIndex BookTableView::indexAt(const QPoint &point) const
         return idx; // invalid idx
     }
 
-    // Calculate column width (TODO: this is cut-n-paste code from paintEvent)
+    // Lambda for Qt compatability
     QFontMetrics fm = fontMetrics();
+    auto getHorizontalAdvance = [&fm](const QString &text) {
+        #if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
+            return fm.horizontalAdvance(text);
+        #else
+            return fm.width(text);
+        #endif
+    };
+
+    // Calculate column width (TODO: this is cut-n-paste code from paintEvent)
     QStringList labels = _columnLabels();
-    int w = fm.horizontalAdvance("0123456789");
+    int w = getHorizontalAdvance("0123456789");
     foreach ( QString label, labels ) {
-        if ( fm.horizontalAdvance(label) > w ) {
-            w = fm.horizontalAdvance(label);
+        if ( getHorizontalAdvance(label) > w ) {
+            w = getHorizontalAdvance(label);
         }
     }
     w = _mLft + w + _mRgt;
@@ -564,7 +592,11 @@ void BookTableView::keyPressEvent(QKeyEvent *event)
 
 void BookTableView::wheelEvent(QWheelEvent *e)
 {
-    QModelIndex tableVarIdx = indexAt(e->position().toPoint());
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
+        QModelIndex tableVarIdx = indexAt(e->position().toPoint());
+    #else
+        QModelIndex tableVarIdx = indexAt(e->pos());
+    #endif
 
     if ( !tableVarIdx.isValid() ) return;
 
