@@ -332,8 +332,8 @@ QString Options::usage()
                      #define QT_RIGHT Qt::right
                      #define QT_LEFT  Qt::left
                 #else
-                     #define QT_RIGHT QTextStream::right
-                     #define QT_LEFT  QTextStream::left
+                     #define QT_RIGHT right
+                     #define QT_LEFT  left
                 #endif
 
                 s << QT_RIGHT << qSetFieldWidth(15) << opt->nameSpec()
