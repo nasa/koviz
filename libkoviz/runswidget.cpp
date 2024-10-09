@@ -117,7 +117,7 @@ bool RunsWidgetFilterProxyModel::filterAcceptsRow(
         return true;
     }
 
-    // Lambda for Qt compatability
+    // Lambda for Qt compatibility
     auto getFilterRegularExpression = [this]() {
         #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             return filterRegularExpression();

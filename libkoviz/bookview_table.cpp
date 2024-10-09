@@ -70,7 +70,7 @@ void BookTableView::paintEvent(QPaintEvent *event)
     }
     QStringList labels = _columnLabels();
 
-    // Define this lambda for Qt compatability
+    // Define this lambda for Qt compatibility
     auto getHorizontalAdvance = [&fm](const QString &text) {
         #if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
             return fm.horizontalAdvance(text);
@@ -154,7 +154,7 @@ void BookTableView::paintEvent(QPaintEvent *event)
             painter.setPen(penTxt);
             QString s;
 
-            // Lambda for Qt compatability
+            // Lambda for Qt compatibility
             auto getHorizontalAdvance = [&fm](const QString &text) {
                 #if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
                     return fm.horizontalAdvance(text);
@@ -456,7 +456,7 @@ QModelIndex BookTableView::indexAt(const QPoint &point) const
         return idx; // invalid idx
     }
 
-    // Lambda for Qt compatability
+    // Lambda for Qt compatibility
     QFontMetrics fm = fontMetrics();
     auto getHorizontalAdvance = [&fm](const QString &text) {
         #if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
