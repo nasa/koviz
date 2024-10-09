@@ -315,8 +315,8 @@ QString Options::usage()
     QString u;
     QTextStream s(&u);
 
-    s << endl;
-    s << "usage: " <<  _programName << endl;
+    s << '\n';
+    s << "usage: " <<  _programName << '\n';
 
     QStringList optNames;
     foreach ( Option* opt, _opts.values() ) {
@@ -327,15 +327,25 @@ QString Options::usage()
     foreach ( QString optName, optNames ) {
         foreach ( Option* opt, _opts.values() ) {
             if ( opt->name() == optName ) {
-                s << QTextStream::AlignRight << qSetFieldWidth(15) << opt->nameSpec()
-                  << QTextStream::AlignLeft  << qSetFieldWidth(0)  << "      "
-                  << QTextStream::AlignLeft  << qSetFieldWidth(60) << opt->info()
-                  << qSetFieldWidth(1) << endl;
+
+                #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                     #define QT_RIGHT Qt::right
+                     #define QT_LEFT  Qt::left
+                #else
+                     #define QT_RIGHT QTextStream::right
+                     #define QT_LEFT  QTextStream::left
+                #endif
+
+                s << QT_RIGHT << qSetFieldWidth(15) << opt->nameSpec()
+                  << QT_LEFT  << qSetFieldWidth(0)  << "      "
+                  << QT_LEFT  << qSetFieldWidth(60) << opt->info()
+                  << qSetFieldWidth(1) << '\n';
+
                 break;
             }
         }
     }
-    s << endl;
+    s << '\n';
 
     return u;
 }
