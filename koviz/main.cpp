@@ -1616,7 +1616,7 @@ bool writeTrk(const QString& ftrk, const QString& timeName,
     TrickParameter timeParam;
     timeParam.setName(timeName);
     timeParam.setUnit("s");
-    timeParam.setType(TRICK_07_DOUBLE);
+    timeParam.setType(TRICK_10_DOUBLE);
     timeParam.setSize(sizeof(double));
     params << timeParam;
 
@@ -1666,7 +1666,7 @@ bool writeTrk(const QString& ftrk, const QString& timeName,
         TrickParameter p;
         p.setName(yParam);
         p.setUnit(c->y()->unit());
-        p.setType(TRICK_07_DOUBLE);
+        p.setType(TRICK_10_DOUBLE);
         p.setSize(sizeof(double));
 
         // Make params/curves lists (lazily mapping params to curves)
@@ -1990,7 +1990,7 @@ bool convert2trk(const QString& csvFileName, const QString& trkFileName)
                 p.setUnit(unitString);
             }
         }
-        p.setType(TRICK_07_DOUBLE);
+        p.setType(TRICK_10_DOUBLE);
         p.setSize(sizeof(double));
         params.append(p);
     }
