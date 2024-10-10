@@ -222,7 +222,7 @@ void TrickModel::writeTrkHeader(QDataStream &out,
     // Trick-version-endian (10 bytes)
     //
     out.writeRawData("Trick-",6) ;
-    out.writeRawData("07",2) ;
+    out.writeRawData("10",2) ;
     out.writeRawData("-",1) ;
     out.writeRawData("L",1) ; // little endian
 
