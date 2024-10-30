@@ -127,6 +127,9 @@ bool Fft_transformBluestein(double real[], double imag[], size_t n) {
 	}
 
 	// Allocate memory
+	if ( n <= 0 || m <= 0 ) {
+            return false;
+        }
     if (FFT_SIZE_MAX / sizeof(double) < n || FFT_SIZE_MAX / sizeof(double) < m)
 		return false;
 	size_t size_n = n * sizeof(double);
