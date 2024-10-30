@@ -4,7 +4,7 @@ BookIdxView::BookIdxView(QWidget *parent) :
     QAbstractItemView(parent),
     _curvesView(0),
     _buttonSelectAndPan(Qt::LeftButton),
-    _buttonRubberBandZoom(Qt::MidButton),
+    _buttonRubberBandZoom(Qt::MiddleButton),
     _buttonResetView(Qt::RightButton)
 {
 }
