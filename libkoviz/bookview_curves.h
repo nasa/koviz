@@ -40,6 +40,7 @@
 #include "curvemodel_sg.h"
 #include "curvemodel_deriv.h"
 #include "curvemodel_integ.h"
+#include "datamodel_points.h"
 
 class TimeAndIndex
 {
@@ -229,6 +230,7 @@ private:
     void _keyPressG();
     void _keyPressD();
     void _keyPressI();
+    void _keyPressS();
     void _keyPressMinus();
 
     QFrame* _bw_frame;
@@ -247,6 +249,8 @@ private:
     FFTCache _fftCache ;
     DerivCache _derivCache ;
     IntegCache _integCache ;
+
+    CurveModel* _sumCurveModels(const QList<CurveModel*>& curveModels);
 
 private slots:
     void _keyPressBSliderChanged(int value);

@@ -2124,6 +2124,7 @@ void CurvesView::keyPressEvent(QKeyEvent *event)
     case Qt::Key_G: _keyPressG();break;
     case Qt::Key_D: _keyPressD();break;
     case Qt::Key_I: _keyPressI();break;
+    case Qt::Key_S: _keyPressS();break;
     case Qt::Key_Minus: _keyPressMinus();break;
     default: ; // do nothing
     }
@@ -3228,6 +3229,320 @@ void CurvesView::_keyPressI()
         _bookModel()->setData(yNameIdx, yName);
         _bookModel()->setData(yLabelIdx, yLabel);
     }
+}
+
+void CurvesView::_keyPressS()
+{
+    QModelIndex plotIdx = rootIndex();
+    QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,"Curves","Plot");
+    QModelIndexList curveIdxs = _bookModel()->getIndexList(curvesIdx,
+                                                           "Curve","Curves");
+
+    // Get list of curves to sum
+    QList<CurveModel*> curveModels;
+    foreach ( QModelIndex curveIdx, curveIdxs ) {
+        CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+        if ( curveModel ) {
+            curveModels.append(curveModel);
+        }
+    }
+
+    CurveModel* curveModel = _sumCurveModels(curveModels);
+    if ( !curveModel ) {
+        return;
+    }
+
+    bool block = _bookModel()->blockSignals(true);
+    QStandardItem* curvesItem = _bookModel()->itemFromIndex(curvesIdx);
+    QStandardItem *curveItem = _bookModel()->addChild(curvesItem,"Curve");
+
+    _bookModel()->addChild(curveItem, "CurveRunID", -1);
+    _bookModel()->addChild(curveItem, "CurveRunPath",QString("koviz:memory"));
+    _bookModel()->addChild(curveItem, "CurveTimeName",curveModel->t()->name());
+    _bookModel()->addChild(curveItem, "CurveTimeUnit",curveModel->t()->unit());
+
+    _bookModel()->addChild(curveItem, "CurveXName", curveModel->x()->name());
+    _bookModel()->addChild(curveItem, "CurveXUnit", curveModel->x()->unit());
+    _bookModel()->addChild(curveItem, "CurveXScale", 1.0);
+    _bookModel()->addChild(curveItem, "CurveXBias", 0.0);
+
+    _bookModel()->addChild(curveItem, "CurveYName", curveModel->y()->name());
+    _bookModel()->addChild(curveItem, "CurveYLabel", curveModel->y()->name());
+    _bookModel()->addChild(curveItem, "CurveYUnit", curveModel->y()->unit());
+    _bookModel()->addChild(curveItem, "CurveYScale", 1.0);
+    _bookModel()->addChild(curveItem, "CurveYBias", 0.0);
+
+    _bookModel()->addChild(curveItem, "CurveXMinRange", -DBL_MAX);
+    _bookModel()->addChild(curveItem, "CurveXMaxRange",  DBL_MAX);
+    _bookModel()->addChild(curveItem, "CurveYMinRange", -DBL_MAX);
+    _bookModel()->addChild(curveItem, "CurveYMaxRange",  DBL_MAX);
+
+    _bookModel()->addChild(curveItem, "CurveSymbolSize", "");
+    _bookModel()->addChild(curveItem, "CurveColor","green"); // TODOOOOOOOOOOOOOOOOOO
+    _bookModel()->addChild(curveItem, "CurveLineStyle", "plain");
+    _bookModel()->addChild(curveItem, "CurveSymbolStyle", "none");
+    _bookModel()->addChild(curveItem, "CurveSymbolSize", "");
+    _bookModel()->addChild(curveItem, "CurveSymbolEnd", "none");
+
+    QVariant v = PtrToQVariant<CurveModel>::convert(curveModel);
+    _bookModel()->addChild(curveItem, "CurveData", v);
+
+    // Turn signals back on and reset bounding box
+    _bookModel()->blockSignals(block);
+    QRectF M = _bookModel()->calcCurvesBBox(curvesIdx);
+    QRectF E; // Empty set below to force redraw
+    _bookModel()->setPlotMathRect(E,plotIdx);
+    _bookModel()->setPlotMathRect(M,plotIdx);
+} 
+
+// Sums up yvalues against time (x is not used)
+// If curve has a timestamp with a nan y-val, throw out the timestamp
+// If any curve model is not using seconds for time, bail
+// Handle case when there are duplicate timestamps
+CurveModel *CurvesView::_sumCurveModels(const QList<CurveModel *> &curveModels)
+{
+    if (curveModels.isEmpty()) {
+        return nullptr;
+    }
+
+    // Map all models
+    foreach (CurveModel* curveModel, curveModels) {
+        curveModel->map();
+    }
+
+    // Check if curve model times are all in seconds, if not bail
+    bool isTimeInSeconds = true;
+    foreach (CurveModel* curveModel, curveModels) {
+        if ( curveModel->t()->unit() != "s" ) {
+            isTimeInSeconds = false;
+            break;
+        }
+    }
+    if ( !isTimeInSeconds ) {
+        QMessageBox msgBox;
+        QString msg = QString("Attempting to sum curves with time units that "
+                              "are not seconds.  Bailing!");
+        msgBox.setText(msg);
+        msgBox.exec();
+        return nullptr;
+    }
+
+    // Check if y units are all in same family for conversion
+    QString yUnit;
+    foreach (CurveModel* curveModel, curveModels) {
+        if ( yUnit.isEmpty() ) {
+            yUnit = curveModel->y()->unit();
+        } else {
+            if ( !Unit::canConvert(yUnit,curveModel->y()->unit()) ) {
+                yUnit.clear();
+                break;
+            }
+        }
+    }
+
+    // Hash to keep previous points and unit for each iterator
+    QHash<ModelIterator*, QPointF> it2prevPoint;
+    QHash<ModelIterator*, QString> it2yUnit;
+    // Map each curve and get iterators for each curve
+    QList<ModelIterator*> iterators;
+    foreach (CurveModel* curveModel, curveModels) {
+        ModelIterator* it = curveModel->begin();
+        it->start();
+        iterators.append(it);
+        it2prevPoint.insert(it,QPointF(qQNaN(),qQNaN()));
+        it2yUnit.insert(it,curveModel->y()->unit());
+    }
+
+    // Get time match tolerance for comparing timestamps
+    double tmt = _bookModel()->getDataDouble(QModelIndex(),
+                                             "TimeMatchTolerance",
+                                             "");
+
+    // Calculate intersection of time domains for all curves
+    // i.e. the time segment [begTime-tmt,endTime+tmt] which contains all curves
+    double begTime = -DBL_MAX;  // max of mins
+    double endTime = DBL_MAX;   // min of maxs
+    foreach (ModelIterator* it, iterators) {
+        double minTime = DBL_MAX;
+        double maxTime = -DBL_MAX;
+        while ( !it->isDone() ) {
+            if ( it->t() < minTime && !qIsNaN(it->y()) ) {
+                minTime = it->t();
+            }
+            if ( it->t() > maxTime && !qIsNaN(it->y()) ) {
+                maxTime = it->t();
+            }
+            it->next();
+        }
+        if ( minTime > begTime ) {
+            begTime = minTime;
+        }
+        if ( maxTime < endTime ) {
+            endTime = maxTime;
+        }
+    }
+    begTime -= tmt;
+    endTime += tmt;
+
+    // Reset all iterators to start
+    foreach (ModelIterator* it, iterators) {
+        it->start();
+    }
+
+    // Load the sum into a vector of points
+    QVector<QPointF>* points = new QVector<QPointF>();
+    while (true) {
+
+        bool isDone = true;
+        foreach (ModelIterator* it, iterators) {
+            if ( !it->isDone() ) {
+                isDone = false;
+                break;
+            }
+        }
+        if ( isDone ) {
+            break;
+        }
+
+        double minTime = DBL_MAX;
+        foreach (ModelIterator* it, iterators) {
+            if ( !it->isDone() && it->t() < minTime ) {
+                minTime = it->t();
+            }
+        }
+
+        bool isTimeMatch = true;
+        foreach (ModelIterator* it, iterators) {
+            if (qAbs(it->t()-minTime) > tmt) {
+                isTimeMatch = false;
+                break;
+            }
+        }
+
+        if (isTimeMatch) {
+            // Sum the y-values for matching timestamps
+            double sumY = 0.0;
+            foreach (ModelIterator* it, iterators) {
+                double unitScale = 1.0;
+                double unitBias = 0.0;
+                if ( !yUnit.isEmpty() ) {
+                    unitScale = Unit::scale(it2yUnit.value(it), yUnit);
+                    unitBias  = Unit::bias(it2yUnit.value(it), yUnit);
+                }
+                double y = it->y()*unitScale + unitBias;
+                sumY += y;
+                it2prevPoint.insert(it,QPointF(it->t(),y));
+            }
+
+            // Accept/load point
+            if ( !qIsNaN(sumY) ) {
+                points->append(QPointF(minTime,sumY));
+            }
+
+            // Move all iterators to the next point
+            foreach (ModelIterator* it, iterators) {
+                it->next();
+            }
+        } else {
+            double isSumOK = true;
+            double sumY = 0.0;
+            foreach (ModelIterator* it, iterators) {
+                if (!it->isDone() && qAbs(it->t()-minTime) > tmt ) {
+                    // Iterator time doesn't match, try to interpolate
+                    // Note: No extrapolation, time inside intersection of time
+                    //       domains of all curves
+                    if ( minTime >= begTime && minTime <= endTime ) {
+                        double unitScale = 1.0;
+                        double unitBias = 0.0;
+                        if ( !yUnit.isEmpty() ) {
+                            unitScale = Unit::scale(it2yUnit.value(it),yUnit);
+                            unitBias  = Unit::bias(it2yUnit.value(it),yUnit);
+                        }
+                        QPointF p0 = it2prevPoint.value(it);
+                        QPointF p1 = QPointF(it->t(),
+                                             it->y()*unitScale+unitBias);
+                        double t0 = p0.x();
+                        double y0 = p0.y();
+                        double t1 = p1.x();
+                        double y1 = p1.y();
+                        if ( qIsNaN(t0) || qIsNaN(t1) ||
+                             qIsNaN(y0) || qIsNaN(y1) ) {
+                            isSumOK = false;
+                            break;
+                        } else if ( t1-t0 != 0.0 ) {
+                            double m = (y1-y0)/(t1-t0);
+                            double y = m*(minTime-t0)+y0;
+                            sumY += y;
+                        } else {
+                            isSumOK = false;
+                            break;
+                        }
+                    } else {
+                        isSumOK = false;
+                        break;
+                    }
+                } else if (!it->isDone() && qAbs(it->t()-minTime) <= tmt ) {
+                    // Iterator time matches
+                    if ( !qIsNaN(it->y()) ) {
+                        double unitScale = 1.0;
+                        double unitBias = 0.0;
+                        if ( !yUnit.isEmpty() ) {
+                            unitScale = Unit::scale(it2yUnit.value(it),yUnit);
+                            unitBias  = Unit::bias(it2yUnit.value(it),yUnit);
+                        }
+                        sumY += it->y()*unitScale+unitBias;
+                    } else {
+                        isSumOK = false;
+                        break;
+                    }
+                } else {
+                    isSumOK = false;
+                    break;
+                }
+            }
+            if ( isSumOK ) {
+                points->append(QPointF(minTime,sumY));
+           }
+
+            // Step iterators that are sitting on minTime
+            foreach (ModelIterator* it, iterators) {
+                if (!it->isDone() && qAbs(it->t()-minTime) <= tmt ) {
+                    double unitScale = 1.0;
+                    double unitBias = 0.0;
+                    if ( !yUnit.isEmpty() ) {
+                        unitScale = Unit::scale(it2yUnit.value(it),yUnit);
+                        unitBias  = Unit::bias(it2yUnit.value(it),yUnit);
+                    }
+                    it2prevPoint.insert(it,QPointF(it->t(),
+                                               it->y()*unitScale+unitBias));
+                    it->next();
+                }
+            }
+        }
+    }
+
+    // Clean up iterators
+    qDeleteAll(iterators);
+
+    // Unmap curve models
+    foreach (CurveModel* curveModel, curveModels) {
+        curveModel->unmap();
+    }
+
+    // Create curve model from points
+    // PointsModel takes ownership of points
+    if ( yUnit.isEmpty() ) {
+        yUnit = "--";
+    }
+    QScopedPointer<QVector<QPointF>> pointsPtr(points);
+    DataModel* dataModel = new PointsModel(pointsPtr.take(),
+                                           QString("sys.exec.out.time"),
+                                           QString("s"),
+                                           QString("sum"),
+                                           yUnit);
+    CurveModel* sumCurveModel = new CurveModel(dataModel,0,0,1);
+
+    return sumCurveModel;
 }
 
 void CurvesView::_keyPressGChange(int window, int degree)
