@@ -42,6 +42,27 @@
 #include "curvemodel_integ.h"
 #include "datamodel_points.h"
 
+// This is for curve summations
+struct CurveInfo
+{
+    CurveInfo(CurveModel* cm,
+              double xs, double xb,
+              double ys, double yb,
+              const QString& bmyu)
+            : curveModel(cm),
+              xScale(xs), xBias(xb),
+              yScale(ys), yBias(yb),
+              bmYUnit(bmyu) {}
+
+    CurveModel* curveModel;
+    double xScale;
+    double xBias;
+    double yScale;
+    double yBias;
+    QString bmYUnit; // Book model's y unit (possibly from DP file)
+                     // The curveModel->y()->unit() may not be same as bm unit
+};
+
 class TimeAndIndex
 {
   public:
@@ -250,7 +271,7 @@ private:
     DerivCache _derivCache ;
     IntegCache _integCache ;
 
-    CurveModel* _sumCurveModels(const QList<CurveModel*>& curveModels);
+    CurveModel* _sumCurveModels(const QList<CurveInfo>& curveInfos);
 
 private slots:
     void _keyPressBSliderChanged(int value);

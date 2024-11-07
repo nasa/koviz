@@ -3239,15 +3239,20 @@ void CurvesView::_keyPressS()
                                                            "Curve","Curves");
 
     // Get list of curves to sum
-    QList<CurveModel*> curveModels;
+    QList<CurveInfo> curveInfos;
     foreach ( QModelIndex curveIdx, curveIdxs ) {
         CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+        double xs = _bookModel()->getDataDouble(curveIdx,"CurveXScale");
+        double xb = _bookModel()->getDataDouble(curveIdx,"CurveXBias");
+        double ys = _bookModel()->getDataDouble(curveIdx,"CurveYScale");
+        double yb = _bookModel()->getDataDouble(curveIdx,"CurveYBias");
+        QString bmyu = _bookModel()->getDataString(curveIdx,"CurveYUnit");
         if ( curveModel ) {
-            curveModels.append(curveModel);
+            curveInfos.append({curveModel,xs,xb,ys,yb,bmyu});
         }
     }
 
-    CurveModel* curveModel = _sumCurveModels(curveModels);
+    CurveModel* curveModel = _sumCurveModels(curveInfos);
     if ( !curveModel ) {
         return;
     }
@@ -3299,21 +3304,21 @@ void CurvesView::_keyPressS()
 // If curve has a timestamp with a nan y-val, throw out the timestamp
 // If any curve model is not using seconds for time, bail
 // Handle case when there are duplicate timestamps
-CurveModel *CurvesView::_sumCurveModels(const QList<CurveModel *> &curveModels)
+CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
 {
-    if (curveModels.isEmpty()) {
+    if (curveInfos.isEmpty()) {
         return nullptr;
     }
 
     // Map all models
-    foreach (CurveModel* curveModel, curveModels) {
-        curveModel->map();
+    foreach (CurveInfo curveInfo, curveInfos) {
+        curveInfo.curveModel->map();
     }
 
     // Check if curve model times are all in seconds, if not bail
     bool isTimeInSeconds = true;
-    foreach (CurveModel* curveModel, curveModels) {
-        if ( curveModel->t()->unit() != "s" ) {
+    foreach (CurveInfo curveInfo, curveInfos) {
+        if ( curveInfo.curveModel->t()->unit() != "s" ) {
             isTimeInSeconds = false;
             break;
         }
@@ -3329,11 +3334,11 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveModel *> &curveModels)
 
     // Check if y units are all in same family for conversion
     QString yUnit;
-    foreach (CurveModel* curveModel, curveModels) {
+    foreach (CurveInfo curveInfo, curveInfos) {
         if ( yUnit.isEmpty() ) {
-            yUnit = curveModel->y()->unit();
+            yUnit = curveInfo.curveModel->y()->unit();
         } else {
-            if ( !Unit::canConvert(yUnit,curveModel->y()->unit()) ) {
+            if ( !Unit::canConvert(yUnit,curveInfo.curveModel->y()->unit()) ) {
                 yUnit.clear();
                 break;
             }
@@ -3345,12 +3350,12 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveModel *> &curveModels)
     QHash<ModelIterator*, QString> it2yUnit;
     // Map each curve and get iterators for each curve
     QList<ModelIterator*> iterators;
-    foreach (CurveModel* curveModel, curveModels) {
-        ModelIterator* it = curveModel->begin();
+    foreach (CurveInfo curveInfo, curveInfos) {
+        ModelIterator* it = curveInfo.curveModel->begin();
         it->start();
         iterators.append(it);
         it2prevPoint.insert(it,QPointF(qQNaN(),qQNaN()));
-        it2yUnit.insert(it,curveModel->y()->unit());
+        it2yUnit.insert(it,curveInfo.curveModel->y()->unit());
     }
 
     // Get time match tolerance for comparing timestamps
@@ -3525,8 +3530,8 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveModel *> &curveModels)
     qDeleteAll(iterators);
 
     // Unmap curve models
-    foreach (CurveModel* curveModel, curveModels) {
-        curveModel->unmap();
+    foreach (CurveInfo curveInfo, curveInfos) {
+        curveInfo.curveModel->unmap();
     }
 
     // Create curve model from points
