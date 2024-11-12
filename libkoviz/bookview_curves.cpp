@@ -3336,7 +3336,11 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
     QString yUnit;
     foreach (CurveInfo curveInfo, curveInfos) {
         if ( yUnit.isEmpty() ) {
-            yUnit = curveInfo.curveModel->y()->unit();
+            if ( !curveInfo.bmYUnit.isEmpty() ) {
+                yUnit = curveInfo.bmYUnit ;
+            } else {
+                yUnit = curveInfo.curveModel->y()->unit();
+            }
         } else {
             if ( !Unit::canConvert(yUnit,curveInfo.curveModel->y()->unit()) ) {
                 yUnit.clear();
@@ -3347,7 +3351,7 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
 
     // Hash to keep previous points and unit for each iterator
     QHash<ModelIterator*, QPointF> it2prevPoint;
-    QHash<ModelIterator*, QString> it2yUnit;
+    QHash<ModelIterator*, QString> it2cmYUnit; // it2curveModelYUnit
     // Map each curve and get iterators for each curve
     QList<ModelIterator*> iterators;
     foreach (CurveInfo curveInfo, curveInfos) {
@@ -3355,7 +3359,7 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
         it->start();
         iterators.append(it);
         it2prevPoint.insert(it,QPointF(qQNaN(),qQNaN()));
-        it2yUnit.insert(it,curveInfo.curveModel->y()->unit());
+        it2cmYUnit.insert(it,curveInfo.curveModel->y()->unit());
     }
 
     // Get time match tolerance for comparing timestamps
@@ -3431,8 +3435,8 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                 double unitScale = 1.0;
                 double unitBias = 0.0;
                 if ( !yUnit.isEmpty() ) {
-                    unitScale = Unit::scale(it2yUnit.value(it), yUnit);
-                    unitBias  = Unit::bias(it2yUnit.value(it), yUnit);
+                    unitScale = Unit::scale(it2cmYUnit.value(it), yUnit);
+                    unitBias  = Unit::bias(it2cmYUnit.value(it), yUnit);
                 }
                 double y = it->y()*unitScale + unitBias;
                 sumY += y;
@@ -3460,8 +3464,8 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                         double unitScale = 1.0;
                         double unitBias = 0.0;
                         if ( !yUnit.isEmpty() ) {
-                            unitScale = Unit::scale(it2yUnit.value(it),yUnit);
-                            unitBias  = Unit::bias(it2yUnit.value(it),yUnit);
+                            unitScale = Unit::scale(it2cmYUnit.value(it),yUnit);
+                            unitBias  = Unit::bias(it2cmYUnit.value(it),yUnit);
                         }
                         QPointF p0 = it2prevPoint.value(it);
                         QPointF p1 = QPointF(it->t(),
@@ -3492,8 +3496,8 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                         double unitScale = 1.0;
                         double unitBias = 0.0;
                         if ( !yUnit.isEmpty() ) {
-                            unitScale = Unit::scale(it2yUnit.value(it),yUnit);
-                            unitBias  = Unit::bias(it2yUnit.value(it),yUnit);
+                            unitScale = Unit::scale(it2cmYUnit.value(it),yUnit);
+                            unitBias  = Unit::bias(it2cmYUnit.value(it),yUnit);
                         }
                         sumY += it->y()*unitScale+unitBias;
                     } else {
@@ -3515,11 +3519,11 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                     double unitScale = 1.0;
                     double unitBias = 0.0;
                     if ( !yUnit.isEmpty() ) {
-                        unitScale = Unit::scale(it2yUnit.value(it),yUnit);
-                        unitBias  = Unit::bias(it2yUnit.value(it),yUnit);
+                        unitScale = Unit::scale(it2cmYUnit.value(it),yUnit);
+                        unitBias  = Unit::bias(it2cmYUnit.value(it),yUnit);
                     }
                     it2prevPoint.insert(it,QPointF(it->t(),
-                                               it->y()*unitScale+unitBias));
+                                                   it->y()*unitScale+unitBias));
                     it->next();
                 }
             }
