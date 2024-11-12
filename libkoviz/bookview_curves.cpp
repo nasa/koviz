@@ -949,7 +949,17 @@ void CurvesView::_paintErrorplot(const QTransform &T,
         QTransform I;
         painter.setTransform(I);
         QRectF tbox = T.mapRect(ebox);
-        painter.drawText(tbox.topLeft()-QPointF(0,5),label);
+        double top = tbox.y()-fontMetrics().ascent();
+        QPoint drawPt;
+        if ( top >= 0 ) {
+            // Draw label over curve
+            drawPt = tbox.topLeft().toPoint()-QPoint(0,5);
+        } else {
+            // Draw label under curve since it would drawn off page
+            drawPt = tbox.topLeft().toPoint()+
+                    QPoint(0,fontMetrics().ascent()) + QPoint(0,5);
+        }
+        painter.drawText(drawPt,label);
     } else if ( errorPath->elementCount() == 0 ) {
         // Empty plot
         QTransform I;
