@@ -955,9 +955,9 @@ void CurvesView::_paintErrorplot(const QTransform &T,
             // Draw label over curve
             drawPt = tbox.topLeft().toPoint()-QPoint(0,5);
         } else {
-            // Draw label under curve since it would drawn off page
-            drawPt = tbox.topLeft().toPoint()+
-                    QPoint(0,fontMetrics().ascent()) + QPoint(0,5);
+            // Draw label under curve since it would be drawn off page
+            drawPt = tbox.topLeft().toPoint() +
+                     QPoint(0,fontMetrics().ascent()) + QPoint(0,5);
         }
         painter.drawText(drawPt,label);
     } else if ( errorPath->elementCount() == 0 ) {
@@ -3361,15 +3361,15 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
 
     // Hash to keep previous points and unit for each iterator
     QHash<ModelIterator*, QPointF> it2prevPoint;
-    QHash<ModelIterator*, QString> it2cmYUnit; // it2curveModelYUnit
+    QHash<ModelIterator*, const CurveInfo*> it2curveInfo;
     // Map each curve and get iterators for each curve
     QList<ModelIterator*> iterators;
-    foreach (CurveInfo curveInfo, curveInfos) {
+    foreach (const CurveInfo& curveInfo, curveInfos) {
         ModelIterator* it = curveInfo.curveModel->begin();
         it->start();
         iterators.append(it);
         it2prevPoint.insert(it,QPointF(qQNaN(),qQNaN()));
-        it2cmYUnit.insert(it,curveInfo.curveModel->y()->unit());
+        it2curveInfo.insert(it,&curveInfo);
     }
 
     // Get time match tolerance for comparing timestamps
@@ -3445,8 +3445,9 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                 double unitScale = 1.0;
                 double unitBias = 0.0;
                 if ( !yUnit.isEmpty() ) {
-                    unitScale = Unit::scale(it2cmYUnit.value(it), yUnit);
-                    unitBias  = Unit::bias(it2cmYUnit.value(it), yUnit);
+                    QString cmu=it2curveInfo.value(it)->curveModel->y()->unit();
+                    unitScale = Unit::scale(cmu, yUnit);
+                    unitBias  = Unit::bias(cmu, yUnit);
                 }
                 double y = it->y()*unitScale + unitBias;
                 sumY += y;
@@ -3474,8 +3475,10 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                         double unitScale = 1.0;
                         double unitBias = 0.0;
                         if ( !yUnit.isEmpty() ) {
-                            unitScale = Unit::scale(it2cmYUnit.value(it),yUnit);
-                            unitBias  = Unit::bias(it2cmYUnit.value(it),yUnit);
+                            QString cmu = it2curveInfo.value(it)->
+                                                       curveModel->y()->unit();
+                            unitScale = Unit::scale(cmu,yUnit);
+                            unitBias  = Unit::bias(cmu,yUnit);
                         }
                         QPointF p0 = it2prevPoint.value(it);
                         QPointF p1 = QPointF(it->t(),
@@ -3506,8 +3509,10 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                         double unitScale = 1.0;
                         double unitBias = 0.0;
                         if ( !yUnit.isEmpty() ) {
-                            unitScale = Unit::scale(it2cmYUnit.value(it),yUnit);
-                            unitBias  = Unit::bias(it2cmYUnit.value(it),yUnit);
+                            QString cmu = it2curveInfo.value(it)->
+                                                        curveModel->y()->unit();
+                            unitScale = Unit::scale(cmu,yUnit);
+                            unitBias  = Unit::bias(cmu,yUnit);
                         }
                         sumY += it->y()*unitScale+unitBias;
                     } else {
@@ -3529,8 +3534,10 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                     double unitScale = 1.0;
                     double unitBias = 0.0;
                     if ( !yUnit.isEmpty() ) {
-                        unitScale = Unit::scale(it2cmYUnit.value(it),yUnit);
-                        unitBias  = Unit::bias(it2cmYUnit.value(it),yUnit);
+                        QString cmu = it2curveInfo.value(it)->
+                                                        curveModel->y()->unit();
+                        unitScale = Unit::scale(cmu,yUnit);
+                        unitBias  = Unit::bias(cmu,yUnit);
                     }
                     it2prevPoint.insert(it,QPointF(it->t(),
                                                    it->y()*unitScale+unitBias));
