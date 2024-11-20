@@ -1234,11 +1234,26 @@ QRectF PlotBookModel::calcCurvesBBox(const QModelIndex &curvesIdx) const
     }
 
     // Margin around box
-    double mw = bbox.width()*0.02;
-    double left = bbox.left()-mw;
-    double right = bbox.right()+mw;
+    double left;
+    double right;
     double top;
     double bot;
+    if ( bbox.width() == 0.0 ) {
+        // Curve is vertical line
+        left  = bbox.x()-1.0;
+        right = bbox.x()+1.0;
+    } else {
+        double mw;
+        if ( log10(abs(bbox.width())) > -17 ) {
+            // 2% margin (normal case)
+            mw = bbox.width()*0.02;
+        } else {
+            // Margin calc for very small values
+            mw = std::pow(10, 1+std::log10(abs(bbox.width())));
+        }
+        left  = bbox.left()-mw;
+        right = bbox.right()+mw;
+    }
     if ( bbox.height() == 0.0 ) {
         // Curve is flat
         top = bbox.y()+1.0;
