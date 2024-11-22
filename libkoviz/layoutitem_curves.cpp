@@ -124,11 +124,15 @@ void CurvesLayoutItem::paint(QPainter *painter,
                     pen.setColor(color);
                     pixmapPainter.setPen(pen);
 
-                    // Scale transform (e.g. for unit axis scaling)
-                    double xs = _bookModel->xScale(curveIdx);
-                    double ys = _bookModel->yScale(curveIdx);
-                    double xb = _bookModel->xBias(curveIdx);
-                    double yb = _bookModel->yBias(curveIdx);
+                    // Scale transform
+                    double xs = _bookModel->getDataDouble(curveIdx,
+                                                         "CurveXScale","Curve");
+                    double ys = _bookModel->getDataDouble(curveIdx,
+                                                         "CurveYScale","Curve");
+                    double xb = _bookModel->getDataDouble(curveIdx,
+                                                          "CurveXBias","Curve");
+                    double yb = _bookModel->getDataDouble(curveIdx,
+                                                          "CurveYBias","Curve");
                     QTransform Tscaled(T);
                     Tscaled = Tscaled.scale(xs,ys);
                     Tscaled = Tscaled.translate(xb/xs,yb/ys);
@@ -239,10 +243,34 @@ void CurvesLayoutItem::_printCoplot(const QTransform& T,
 
         if ( curveModel ) {
 
-            double xs = _bookModel->xScale(curveIdx);
-            double ys = _bookModel->yScale(curveIdx);
-            double xb = _bookModel->xBias(curveIdx);
-            double yb = _bookModel->yBias(curveIdx);
+            double xs = _bookModel->getDataDouble(curveIdx,
+                                                  "CurveXScale","Curve");
+            double ys = _bookModel->getDataDouble(curveIdx,
+                                                  "CurveYScale","Curve");
+            double xb = _bookModel->getDataDouble(curveIdx,
+                                                  "CurveXBias","Curve");
+            double yb = _bookModel->getDataDouble(curveIdx,
+                                                  "CurveYBias","Curve");
+
+            double xus = 1.0;
+            double xub = 0.0;
+            QString bookXUnit = _bookModel->getDataString(
+                                                 curveIdx,"CurveXUnit","Curve");
+            if ( !bookXUnit.isEmpty() && bookXUnit != "--" ) {
+                QString loggedXUnit = curveModel->x()->unit();
+                xus = Unit::scale(loggedXUnit, bookXUnit);
+                xub = Unit::bias(loggedXUnit, bookXUnit);
+            }
+
+            double yus = 1.0;
+            double yub = 0.0;
+            QString bookYUnit = _bookModel->getDataString(
+                                                 curveIdx,"CurveYUnit","Curve");
+            if ( !bookYUnit.isEmpty() && bookYUnit != "--" ) {
+                QString loggedYUnit = curveModel->y()->unit();
+                yus = Unit::scale(loggedYUnit, bookYUnit);
+                yub = Unit::bias(loggedYUnit, bookYUnit);
+            }
 
             QPainterPath* path = new QPainterPath;
             paths << path;
@@ -259,8 +287,14 @@ void CurvesLayoutItem::_printCoplot(const QTransform& T,
                     continue;
                 }
 
-                double x = it->x()*xs+xb;
-                double y = it->y()*ys+yb;
+                double x = it->x();
+                x = xus*x + xub;
+                x = xs*x+xb;
+
+                double y = it->y();
+                y = yus*y + yub;
+                y = ys*y + yb;
+
                 if ( isXLogScale ) {
                     if ( x == 0.0 ) {
                         it->next();

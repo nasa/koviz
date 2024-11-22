@@ -1994,13 +1994,33 @@ void PlotMainWindow::_liveTimeChanged(double liveTime)
 
         curveModel->map();
 
-        // Get curve index i of liveTime
-        double xs = _bookModel->xScale(idx);
-        double xb = _bookModel->xBias(idx);
-        int i = 0;
+        QString tag = _bookModel->data(idx.sibling(idx.row(),0)).toString();
+
         bool isXTime = (curveModel->x()->name() == curveModel->t()->name());
-        if ( isXTime ) {
-            i = curveModel->indexAtTime((liveTime-xb)/xs);
+
+        // Get curve index i of liveTime
+        // Curve x bias and x scale
+        double xs = 1.0;
+        double xb = 0.0;
+        if ( isXTime && tag == "Curve" ) {
+            xs = _bookModel->getDataDouble(idx,"CurveXScale","Curve");
+            xb = _bookModel->getDataDouble(idx,"CurveXBias","Curve");
+        }
+
+        int i = 0;
+        if ( isXTime && tag == "Curve" ) {
+            // Convert liveTime to logged/model time (undo units and scale/bias)
+            QString xunit = _bookModel->getDataString(idx,"CurveXUnit","Curve");
+            QString tunit = curveModel->t()->unit();
+            double tus = 1.0;
+            double tub = 0.0;
+            if ( !xunit.isEmpty() ) {
+                tus = Unit::scale(xunit,tunit);
+                tub = Unit::bias(xunit,tunit);
+            }
+            double logTime = (liveTime-xb)/xs;
+            logTime = tus*logTime + tub;
+            i = curveModel->indexAtTime(logTime);
         } else {
             // e.g. ball xy curve where x is position[0]
             i = curveModel->indexAtTime(liveTime);
@@ -2008,7 +2028,16 @@ void PlotMainWindow::_liveTimeChanged(double liveTime)
 
         ModelIterator* it = curveModel->begin();
         double t = it->at(i)->t();
-        if ( isXTime ) {
+        if ( isXTime && tag == "Curve" ) {
+            QString xunit = _bookModel->getDataString(idx,"CurveXUnit","Curve");
+            QString tunit = curveModel->t()->unit();
+            double tus = 1.0;
+            double tub = 0.0;
+            if ( !xunit.isEmpty() ) {
+                tus = Unit::scale(tunit,xunit);
+                tub = Unit::bias(tunit,xunit);
+            }
+            t = tus*t + tub;
             t = t*xs+xb;
         }
         delete it;
@@ -2025,7 +2054,6 @@ void PlotMainWindow::_liveTimeChanged(double liveTime)
         _timeInput->setLiveTime(t);
 
         // TODO: See getCurveModel() comment
-        QString tag = _bookModel->data(idx.sibling(idx.row(),0)).toString();
         if ( tag == "Plot" ) {
             delete curveModel;
         }
