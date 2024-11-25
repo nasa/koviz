@@ -592,7 +592,7 @@ void BookTableView::keyPressEvent(QKeyEvent *event)
 
 void BookTableView::wheelEvent(QWheelEvent *e)
 {
-    #if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 13, 0))
         QModelIndex tableVarIdx = indexAt(e->position().toPoint());
     #else
         QModelIndex tableVarIdx = indexAt(e->pos());
