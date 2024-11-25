@@ -150,13 +150,11 @@ bool PlotBookModel::setData(const QModelIndex &idx,
                 QModelIndex plotIdx = idx.parent().parent().parent();
                 QString plotXScale = getDataString(plotIdx,"PlotXScale","Plot");
                 QString plotYScale = getDataString(plotIdx,"PlotYScale","Plot");
-                if ( plotXScale == "log" || plotYScale == "log" ) {
-                    QString yUnit = value.toString();
-                    _createPainterPath(curveIdx,
-                                       false,0,false,0,false,0,
-                                       false,0,false,0,false,0,
-                                       "",yUnit,plotXScale,plotYScale);
-                }
+                QString yUnit = value.toString();
+                _createPainterPath(curveIdx,
+                                   false,0,false,0,false,0,
+                                   false,0,false,0,false,0,
+                                   "",yUnit,plotXScale,plotYScale);
             }
         }
     }
@@ -1153,12 +1151,12 @@ QRectF PlotBookModel::calcCurvesBBox(const QModelIndex &curvesIdx) const
             double xs = 1.0;
             double ys = 1.0;
             if ( plotXScale == "linear" ) {
-                xb = xBias(curveIdx);
-                xs = xScale(curveIdx);
+                xb = getDataDouble(curveIdx,"CurveXBias","Curve");
+                xs = getDataDouble(curveIdx,"CurveXScale","Curve");
             }
             if ( plotYScale == "linear" ) {
-                yb = yBias(curveIdx);
-                ys = yScale(curveIdx);
+                yb = getDataDouble(curveIdx,"CurveYBias","Curve");
+                ys = getDataDouble(curveIdx,"CurveYScale","Curve");
             }
             QRectF pathBox = path->boundingRect();
             double w = pathBox.width();
@@ -1234,11 +1232,26 @@ QRectF PlotBookModel::calcCurvesBBox(const QModelIndex &curvesIdx) const
     }
 
     // Margin around box
-    double mw = bbox.width()*0.02;
-    double left = bbox.left()-mw;
-    double right = bbox.right()+mw;
+    double left;
+    double right;
     double top;
     double bot;
+    if ( bbox.width() == 0.0 ) {
+        // Curve is vertical line
+        left  = bbox.x()-1.0;
+        right = bbox.x()+1.0;
+    } else {
+        double mw;
+        if ( log10(abs(bbox.width())) > -17 ) {
+            // 2% margin (normal case)
+            mw = bbox.width()*0.02;
+        } else {
+            // Margin calc for very small values
+            mw = std::pow(10, 1+std::log10(abs(bbox.width())));
+        }
+        left  = bbox.left()-mw;
+        right = bbox.right()+mw;
+    }
     if ( bbox.height() == 0.0 ) {
         // Curve is flat
         top = bbox.y()+1.0;
@@ -1347,6 +1360,8 @@ QRectF PlotBookModel::calcCurvesBBox(const QModelIndex &curvesIdx) const
 void PlotBookModel::__appendDataToPainterPath(CurveModel *curveModel,
                                               QPainterPath* path,
                                               double startTime,double stopTime,
+                                              double xus, double xub,
+                                              double yus, double yub,
                                               double xs, double xb,
                                               double ys, double yb,
                                               const QString &plotXScale,
@@ -1391,6 +1406,10 @@ void PlotBookModel::__appendDataToPainterPath(CurveModel *curveModel,
 
         double x = it->x();
         double y = it->y();
+
+        // Unit transform (paths always bake in unit conversion)
+        x = x*xus + xub;
+        y = y*yus + yub;
 
         if ( isXLogScale ) {
             x = x*xs + xb;
@@ -1553,13 +1572,13 @@ void PlotBookModel::_createPainterPath(const QModelIndex &curveIdx,
     double tb = 0.0;
     double ts = 1.0;
     if ( isXTime(plotIdx) ) {
-        tb = xBias(curveIdx,curveModel);
-        ts = xScale(curveIdx,curveModel);
+        tb = getDataDouble(curveIdx,"CurveXBias","Curve");
+        ts = getDataDouble(curveIdx,"CurveXScale","Curve");
     }
 
-    // X Curve Scale/bias
-    double xs = 1.0;
-    double xb = 0.0;
+    // X Unit scale/bias
+    double xus = 1.0;
+    double xub = 0.0;
     QString bookXUnit = xUnitIn;
     if ( bookXUnit.isEmpty() ) {
         QModelIndex curveXUnitIdx = getDataIndex(curveIdx,"CurveXUnit","Curve");
@@ -1567,27 +1586,23 @@ void PlotBookModel::_createPainterPath(const QModelIndex &curveIdx,
     }
     if ( !bookXUnit.isEmpty() && bookXUnit != "--" ) {
         QString loggedXUnit = curveModel->x()->unit();
-        xs = Unit::scale(loggedXUnit, bookXUnit);
-        xb = Unit::bias(loggedXUnit, bookXUnit);
-    }
-    double j = xScaleIn;
-    if ( !isUseXScaleIn ) {
-        j = getDataDouble(curveIdx,"CurveXScale","Curve");
-    }
-    if ( j != 1.0 ) {
-        xs *= j;
-    }
-    double a = xBiasIn;
-    if ( !isUseXBiasIn ) {
-        a = getDataDouble(curveIdx,"CurveXBias","Curve");
-    }
-    if ( a != 0.0 ) {
-        xb += a;
+        xus = Unit::scale(loggedXUnit, bookXUnit);
+        xub = Unit::bias(loggedXUnit, bookXUnit);
     }
 
-    // Y Curve Scale/Bias
-    double ys = 1.0;
-    double yb = 0.0;
+    // X scale/bias
+    double xs = getDataDouble(curveIdx,"CurveXScale","Curve");
+    double xb = getDataDouble(curveIdx,"CurveXBias","Curve");
+    if ( isUseXScaleIn ) {
+        xs = xScaleIn;
+    }
+    if ( isUseXBiasIn ) {
+        xb = xBiasIn;
+    }
+
+    // Y Unit scale/bias
+    double yus = 1.0;
+    double yub = 0.0;
     QString bookYUnit = yUnitIn;
     if ( bookYUnit.isEmpty() ) {
         QModelIndex curveYUnitIdx = getDataIndex(curveIdx,"CurveYUnit","Curve");
@@ -1595,22 +1610,18 @@ void PlotBookModel::_createPainterPath(const QModelIndex &curveIdx,
     }
     if ( !bookYUnit.isEmpty() && bookYUnit != "--" ) {
         QString loggedYUnit = curveModel->y()->unit();
-        ys = Unit::scale(loggedYUnit, bookYUnit);
-        yb = Unit::bias(loggedYUnit, bookYUnit);
+        yus = Unit::scale(loggedYUnit, bookYUnit);
+        yub = Unit::bias(loggedYUnit, bookYUnit);
     }
-    double k = yScaleIn;
-    if ( !isUseYScaleIn ) {
-        k = getDataDouble(curveIdx,"CurveYScale","Curve");
+
+    // Y scale/bias
+    double ys = getDataDouble(curveIdx,"CurveYScale","Curve");
+    double yb = getDataDouble(curveIdx,"CurveYBias","Curve");
+    if ( isUseYScaleIn ) {
+        ys =  yScaleIn;
     }
-    if ( k != 1.0 ) {
-        ys *= k;
-    }
-    double b = yBiasIn;
-    if ( !isUseYBiasIn ) {
-        b = getDataDouble(curveIdx,"CurveYBias","Curve");
-    }
-    if ( b != 0.0 ) {
-        yb += b;
+    if ( isUseYBiasIn ) {
+        yb =  yBiasIn;
     }
 
     // Get start/stop time
@@ -1648,6 +1659,7 @@ void PlotBookModel::_createPainterPath(const QModelIndex &curveIdx,
     }
     __appendDataToPainterPath(curveModel, path,
                               (start-tb)/ts,(stop-tb)/ts,
+                              xus, xub, yus, yub,
                               xs, xb, ys, yb,
                               plotXScale, plotYScale);
 }
@@ -1736,7 +1748,6 @@ QPainterPath* PlotBookModel::_createCurvesErrorPath(
         exit(-1);
     }
 
-    QString dpUnits0 = getDataString(idx0,"CurveYUnit","Curve");
     double ys0 = getDataDouble(idx0,"CurveYScale","Curve");
     double ys1 = getDataDouble(idx1,"CurveYScale","Curve");
     double yb0 = getDataDouble(idx0,"CurveYBias","Curve");
@@ -1745,14 +1756,20 @@ QPainterPath* PlotBookModel::_createCurvesErrorPath(
     double xb1 = getDataDouble(idx1,"CurveXBias","Curve");
     double xs0 = getDataDouble(idx0,"CurveXScale","Curve");
     double xs1 = getDataDouble(idx1,"CurveXScale","Curve");
+
+    double yus0 = 1.0;
+    double yub0 = 0.0;
+    double yus1 = 1.0;
+    double yub1 = 0.0;
+    QString dpUnits0 = getDataString(idx0,"CurveYUnit","Curve");
     if ( !dpUnits0.isEmpty() ) {
-        ys0 *= Unit::scale(c0->y()->unit(),dpUnits0);
-        yb0 += Unit::bias(c0->y()->unit(),dpUnits0);
-        ys1 *= Unit::scale(c1->y()->unit(),dpUnits0);
-        yb1 += Unit::bias(c1->y()->unit(),dpUnits0);
+        yus0 = Unit::scale(c0->y()->unit(),dpUnits0);
+        yub0 = Unit::bias(c0->y()->unit(),dpUnits0);
+        yus1 = Unit::scale(c1->y()->unit(),dpUnits0);
+        yub1 = Unit::bias(c1->y()->unit(),dpUnits0);
     } else {
-        ys1 *= Unit::scale(c1->y()->unit(),c0->y()->unit());
-        yb1 += Unit::bias(c1->y()->unit(),c0->y()->unit());
+        yus1 = Unit::scale(c1->y()->unit(),c0->y()->unit());
+        yub1 = Unit::bias(c1->y()->unit(),c0->y()->unit());
     }
 
     // By default the tolerance is 0.000001
@@ -1783,7 +1800,11 @@ QPainterPath* PlotBookModel::_createCurvesErrorPath(
     while ( !i0->isDone() && !i1->isDone() ) {
         double t0 = xs0*i0->t()+xb0;
         double t1 = xs1*i1->t()+xb1;
-        double yy = (ys0*i0->y()+yb0) - (ys1*i1->y()+yb1);
+        double y0 = yus0*i0->y()+yub0;  // Unit conversion first
+        double y1 = yus1*i1->y()+yub1;
+        y0 = ys0*y0 + yb0;              // Followed by scale/bias
+        y1 = ys1*y1 + yb1;
+        double yy = y0 - y1;
         // Match timestamps as close as possible (freq not used)
         if ( t0 == t1 ) {
             i0->next();
@@ -1795,7 +1816,11 @@ QPainterPath* PlotBookModel::_createCurvesErrorPath(
                 double dtt = qAbs(t1-t00);
                 if ( dtt < qAbs(t0-t1) ) {
                     t0 = t00;
-                    yy = (ys0*i0->y()+yb0) - (ys1*i1->y()+yb1);
+                    y0 = yus0*i0->y()+yub0;
+                    y1 = yus1*i1->y()+yub1;
+                    y0 = ys0*y0 + yb0;
+                    y1 = ys1*y1 + yb1;
+                    yy = y0 - y1;
                     i0->next();
                 } else {
                     break;
@@ -1809,7 +1834,11 @@ QPainterPath* PlotBookModel::_createCurvesErrorPath(
                 double dtt = qAbs(t0-t11);
                 if ( dtt < qAbs(t1-t0) ) {
                     t1 = t11;
-                    yy = (ys0*i0->y()+yb0) - (ys1*i1->y()+yb1);
+                    y0 = yus0*i0->y()+yub0;
+                    y1 = yus1*i1->y()+yub1;
+                    y0 = ys0*y0 + yb0;
+                    y1 = ys1*y1 + yb1;
+                    yy = y0 - y1;
                     i1->next();
                 } else {
                     break;
@@ -2851,17 +2880,40 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
 
         curveModel->map();
 
+        QString tag = data(idx.sibling(idx.row(),0)).toString();
+
         ModelIterator* it = curveModel->begin();
 
+        bool isXTime = (curveModel->x()->name() == curveModel->t()->name());
+
         // Curve x bias and x scale
-        double xs = xScale(idx);
-        double xb = xBias(idx);
+        double xs = 1.0;
+        double xb = 0.0;
+        if ( isXTime && tag == "Curve" ) {
+            xs = getDataDouble(idx,"CurveXScale","Curve");
+            xb = getDataDouble(idx,"CurveXBias","Curve");
+        }
 
         // Calculate curve time index
         int i = 0;
         QModelIndex liveIdx = getDataIndex(QModelIndex(), "LiveCoordTime");
         double liveTime = data(liveIdx).toDouble();
-        i = curveModel->indexAtTime((liveTime-xb)/xs);
+        if ( isXTime && tag == "Curve" ) {
+            // Convert liveTime to logged/model time (undo units and scale/bias)
+            QString xunit = getDataString(idx,"CurveXUnit","Curve");
+            QString tunit = curveModel->t()->unit();
+            double tus = 1.0;
+            double tub = 0.0;
+            if ( !xunit.isEmpty() ) {
+                tus = Unit::scale(xunit,tunit);
+                tub = Unit::bias(xunit,tunit);
+            }
+            double logTime = (liveTime-xb)/xs;
+            logTime = tus*logTime + tub;
+            i = curveModel->indexAtTime(logTime);
+        } else {
+            i = curveModel->indexAtTime(liveTime);
+        }
 
         /* Timestamps may duplicate, go to first in series */
         double itTime = it->at(i)->t();
@@ -2878,12 +2930,21 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
         int ii = getDataInt(QModelIndex(), "LiveCoordTimeIndex","");
 
         // Calculate nextTime after liveTime
-        bool isXTime = (curveModel->x()->name() == curveModel->t()->name());
         double nextTime = liveTime;
         it = it->at(i+1+ii);
         while ( !it->isDone() ) {
-            if ( isXTime ) {
-                nextTime = it->x()*xs+xb;
+            if ( isXTime && tag == "Curve" ) {
+                QString xunit = getDataString(idx,"CurveXUnit","Curve");
+                QString tunit = curveModel->t()->unit();
+                double tus = 1.0;
+                double tub = 0.0;
+                if ( !xunit.isEmpty() ) {
+                    tus = Unit::scale(tunit,xunit);
+                    tub = Unit::bias(tunit,xunit);
+                }
+                nextTime = it->t();
+                nextTime = tus*nextTime + tub;
+                nextTime = xs*nextTime + xb;
             } else {
                 nextTime = it->t();
             }
@@ -2914,7 +2975,6 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
 
         curveModel->unmap();
 
-        QString tag = data(idx.sibling(idx.row(),0)).toString();
         if ( tag == "Plot" ) {
             delete curveModel;
         }
@@ -2933,16 +2993,38 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
 
         curveModel->map();
 
+        QString tag = data(idx.sibling(idx.row(),0)).toString();
+
+        bool isXTime = (curveModel->x()->name() == curveModel->t()->name());
+
         // Curve x bias and x scale
-        double xs = xScale(idx);
-        double xb = xBias(idx);
+        double xs = 1.0;
+        double xb = 0.0;
+        if ( isXTime && tag == "Curve" ) {
+            xs = getDataDouble(idx,"CurveXScale","Curve");
+            xb = getDataDouble(idx,"CurveXBias","Curve");
+        }
 
         // Calculate curve time index
         int i = 0;
         QModelIndex liveIdx = getDataIndex(QModelIndex(), "LiveCoordTime");
         double liveTime = data(liveIdx).toDouble();
-        bool isXTime = (curveModel->x()->name() == curveModel->t()->name());
-        i = curveModel->indexAtTime((liveTime-xb)/xs);
+        if ( isXTime && tag == "Curve" ) {
+            // Convert liveTime to logged/model time (undo units and scale/bias)
+            QString xunit = getDataString(idx,"CurveXUnit","Curve");
+            QString tunit = curveModel->t()->unit();
+            double tus = 1.0;
+            double tub = 0.0;
+            if ( !xunit.isEmpty() ) {
+                tus = Unit::scale(xunit,tunit);
+                tub = Unit::bias(xunit,tunit);
+            }
+            double logTime = (liveTime-xb)/xs;
+            logTime = tus*logTime + tub;
+            i = curveModel->indexAtTime(logTime);
+        } else {
+            i = curveModel->indexAtTime(liveTime);
+        }
 
         double prevTime = liveTime;
         ModelIterator* it = curveModel->begin();
@@ -2958,13 +3040,23 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
         }
 
         /* Get current index for possible duplicate timestamps (ii) */
-        QModelIndex idx = getDataIndex(QModelIndex(), "LiveCoordTimeIndex","");
+        QModelIndex lctIdx = getDataIndex(QModelIndex(), "LiveCoordTimeIndex","");
         int ii = getDataInt(QModelIndex(), "LiveCoordTimeIndex","");
 
         while ( i+ii > 0 ) {
             it = it->at(i+ii-1);
-            if ( isXTime ) {
-                prevTime = it->x()*xs+xb;
+            if ( isXTime && tag == "Curve" ) {
+                QString xunit = getDataString(idx,"CurveXUnit","Curve");
+                QString tunit = curveModel->t()->unit();
+                double tus = 1.0;
+                double tub = 0.0;
+                if ( !xunit.isEmpty() ) {
+                    tus = Unit::scale(tunit,xunit);
+                    tub = Unit::bias(tunit,xunit);
+                }
+                prevTime = it->t();
+                prevTime = tus*prevTime + tub;
+                prevTime = xs*prevTime + xb;
             } else {
                 prevTime = it->t();
             }
@@ -2972,7 +3064,7 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
             if ( dt == 0 ) {
                 // Multiple points for same timestamp,
                 // move to prev point on this curve for this same timestamp
-                setData(idx,--ii);
+                setData(lctIdx,--ii);
                 break;
             } else {
                 int jj = 0;  // Last index of possible duplicate timestamps
@@ -2986,7 +3078,7 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
                         break;
                     }
                 }
-                setData(idx,jj);
+                setData(lctIdx,jj);
             }
             if ( dt > 1.0e-16 ) {
                 break;
@@ -3004,7 +3096,6 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
 
         curveModel->unmap();
 
-        QString tag = data(idx.sibling(idx.row(),0)).toString();
         if ( tag == "Plot" ) {
             delete curveModel;
         }

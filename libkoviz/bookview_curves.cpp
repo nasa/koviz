@@ -263,19 +263,19 @@ void CurvesView::_paintCurve(const QModelIndex& curveIdx,
         QString plotYScale = _bookModel()->getDataString(plotIdx,
                                                          "PlotYScale","Plot");
 
-        // Scale transform (e.g. for unit axis scaling)
+        // Scale transform
         // If logscale, scale/bias done in _createPainterPath
         double xs = 1.0;
         double ys = 1.0;
         double xb = 0.0;
         double yb = 0.0;
         if ( plotXScale == "linear" ) {
-            xs = _bookModel()->xScale(curveIdx);
-            xb = _bookModel()->xBias(curveIdx);
+            xs = _bookModel()->getDataDouble(curveIdx,"CurveXScale","Curve");
+            xb = _bookModel()->getDataDouble(curveIdx,"CurveXBias","Curve");
         }
         if ( plotYScale == "linear" ) {
-            ys = _bookModel()->yScale(curveIdx);
-            yb = _bookModel()->yBias(curveIdx);
+            ys = _bookModel()->getDataDouble(curveIdx,"CurveYScale","Curve");
+            yb = _bookModel()->getDataDouble(curveIdx,"CurveYBias","Curve");
         }
         QTransform Tscaled(T);
         Tscaled = Tscaled.scale(xs,ys);
@@ -568,12 +568,14 @@ void CurvesView::_paintMarkers(QPainter &painter)
             QModelIndex curveIdx = marker->modelIdx();
             if ( !isXLogScale ) {
                 // With logscale, scale/bias already done foreach path element
-                xs = _bookModel()->xScale(curveIdx);
-                xb = _bookModel()->xBias(curveIdx);
+                xs = _bookModel()->getDataDouble(curveIdx,
+                                                 "CurveXScale","Curve");
+                xb = _bookModel()->getDataDouble(curveIdx,"CurveXBias","Curve");
             }
             if ( !isYLogScale ) {
-                ys = _bookModel()->yScale(curveIdx);
-                yb = _bookModel()->yBias(curveIdx);
+                ys = _bookModel()->getDataDouble(curveIdx,
+                                                 "CurveYScale","Curve");
+                yb = _bookModel()->getDataDouble(curveIdx,"CurveYBias","Curve");
             }
         }
 
@@ -643,8 +645,10 @@ void CurvesView::_paintMarkers(QPainter &painter)
                 // since the path does not have time
                 //
                 // i is a best guess
-                double xb = _bookModel()->xBias(curveIdx);
-                double xs = _bookModel()->xScale(curveIdx);
+                double xb = _bookModel()->getDataDouble(curveIdx,
+                                                        "CurveXBias","Curve");
+                double xs = _bookModel()->getDataDouble(curveIdx,
+                                                        "CurveXScale","Curve");
                 if ( _bookModel()->isXTime(plotIdx) ) {
                     // Take time shift and scale into account
                     i = curveModel->indexAtTime((marker->time()-xb)/xs);
@@ -661,19 +665,49 @@ void CurvesView::_paintMarkers(QPainter &painter)
                     //    3) Start/stop time given, points lopped off ends
                     // Search for first element that matches curve point at time
                     ModelIterator* it = curveModel->begin();
-                    double x = it->at(i)->x(); // scale/bias only done if log
+                    double x = it->at(i)->x();
                     double y = it->at(i)->y();
+
+                    // Since X unit scale baked in path, need to unit scale
+                    double xus = 1.0;
+                    double xub = 0.0;
+                    QString bookXUnit = _bookModel()->getDataString(
+                                curveIdx,
+                                "CurveXUnit","Curve");
+                    if ( !bookXUnit.isEmpty() && bookXUnit != "--" ) {
+                        QString loggedXUnit = curveModel->x()->unit();
+                        xus = Unit::scale(loggedXUnit, bookXUnit);
+                        xub = Unit::bias(loggedXUnit, bookXUnit);
+                    }
+                    x = xus*x + xub;    // X Unit scale
+
+                    // Since Y unit scale baked in path, need to unit scale
+                    double yb = _bookModel()->getDataDouble(curveIdx,
+                                                            "CurveYBias","Curve");
+                    double ys = _bookModel()->getDataDouble(curveIdx,
+                                                            "CurveYScale","Curve");
+                    double yus = 1.0;
+                    double yub = 0.0;
+                    QString bookYUnit = _bookModel()->getDataString(
+                                curveIdx,
+                                "CurveYUnit","Curve");
+                    if ( !bookYUnit.isEmpty() && bookYUnit != "--" ) {
+                        QString loggedYUnit = curveModel->y()->unit();
+                        yus = Unit::scale(loggedYUnit, bookYUnit);
+                        yub = Unit::bias(loggedYUnit, bookYUnit);
+                    }
+                    y = yus*y + yub;  // Y Unit scale
+
                     if ( isXLogScale ) {
                         // If logscale, scale and bias baked in path
                         // Otherwise, scale and bias in path transform
                         // not in path
-                        double xs = _bookModel()->xScale(curveIdx);
-                        x = log10(x*xs+xb);
+                        x = xs*x + xb;
+                        x = log10(x);
                     }
                     if ( isYLogScale ) {
-                        double ys = _bookModel()->yScale(curveIdx);
-                        double yb = _bookModel()->yBias(curveIdx);
-                        y = log10(y*ys+yb);
+                        y = ys*y + yb;    // Book scale
+                        y = log10(y);
                     }
                     int j = (i < nels) ? i : nels - 1;
                     while ( j >= 0 ) {
@@ -839,10 +873,28 @@ void CurvesView::_keyPressPeriod()
         curveModel->map();
 
         // Calculate liveCoord based on model liveCoordTime
-        double xs = _bookModel()->xScale(curveIdx);
-        double ys = _bookModel()->yScale(curveIdx);
-        double xb = _bookModel()->xBias(curveIdx);
-        double yb = _bookModel()->yBias(curveIdx);
+        double xs = _bookModel()->getDataDouble(curveIdx,"CurveXScale","Curve");
+        double ys = _bookModel()->getDataDouble(curveIdx,"CurveYScale","Curve");
+        double xb = _bookModel()->getDataDouble(curveIdx,"CurveXBias","Curve");
+        double yb = _bookModel()->getDataDouble(curveIdx,"CurveYBias","Curve");
+        double xus = 1.0;
+        double xub = 0.0;
+        QString bookXUnit = _bookModel()->getDataString(curveIdx,
+                                                        "CurveXUnit","Curve");
+        if ( !bookXUnit.isEmpty() && bookXUnit != "--" ) {
+            QString loggedXUnit = curveModel->x()->unit();
+            xus = Unit::scale(loggedXUnit, bookXUnit);
+            xub = Unit::bias(loggedXUnit, bookXUnit);
+        }
+        double yus = 1.0;
+        double yub = 0.0;
+        QString bookYUnit = _bookModel()->getDataString(curveIdx,
+                                                        "CurveYUnit","Curve");
+        if ( !bookYUnit.isEmpty() && bookYUnit != "--" ) {
+            QString loggedYUnit = curveModel->y()->unit();
+            yus = Unit::scale(loggedYUnit, bookYUnit);
+            yub = Unit::bias(loggedYUnit, bookYUnit);
+        }
         QModelIndex liveIdx = _bookModel()->getDataIndex(QModelIndex(),
                                                          "LiveCoordTime");
         double liveTime = model()->data(liveIdx).toDouble();
@@ -854,12 +906,18 @@ void CurvesView::_keyPressPeriod()
             i = curveModel->indexAtTime(liveTime);
         }
         ModelIterator* it = curveModel->begin();
-        QPointF coord(it->at(i)->x()*xs+xb, it->at(i)->y()*ys+yb);
+        double x = it->at(i)->x();
+        x = xus*x + xub;
+        x = xs*x + xb;
+        double y = it->at(i)->y();
+        y = yus*y + yub;
+        y = ys*y + yb;
+        QPointF coord(x,y);
         delete it;
 
-        QString x = _format(coord.x());
-        QString y = _format(coord.y());
-        QString coordStr = QString("coord=(%1,%2)").arg(x).arg(y);
+        QString xStr = _format(coord.x());
+        QString yStr = _format(coord.y());
+        QString coordStr = QString("coord=(%1,%2)").arg(xStr).arg(yStr);
         fprintf(stderr,"%-40s",coordStr.toLatin1().constData());
 
         if ( _isLastPoint ) {
@@ -1369,12 +1427,12 @@ QModelIndex CurvesView::_chooseCurveNearMousePoint(const QPoint &pt)
         double ys = 1.0;
         double yb = 0.0;
         if ( plotXScale == "linear" ) {
-            xs = _bookModel()->xScale(curveIdx);
-            xb = _bookModel()->xBias(curveIdx);
+            xs = _bookModel()->getDataDouble(curveIdx,"CurveXScale","Curve");
+            xb = _bookModel()->getDataDouble(curveIdx,"CurveXBias","Curve");
         }
         if ( plotYScale == "linear" ) {
-            ys = _bookModel()->yScale(curveIdx);
-            yb = _bookModel()->yBias(curveIdx);
+            ys = _bookModel()->getDataDouble(curveIdx,"CurveYScale","Curve");
+            yb = _bookModel()->getDataDouble(curveIdx,"CurveYBias","Curve");
         }
         QTransform Tscaled(T);
         Tscaled = Tscaled.scale(xs,ys);
@@ -1568,13 +1626,14 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                 double ys = 1.0;
                 double xb = 0.0;
                 double yb = 0.0;
-                if ( plotXScale == "linear" ) {
-                    xb = _bookModel()->xBias(currentIndex());
-                    xs = _bookModel()->xScale(currentIndex());
+                QModelIndex idx = currentIndex();
+                if ( plotXScale == "linear" && tag == "Curve" ) {
+                    xb = _bookModel()->getDataDouble(idx,"CurveXBias","Curve");
+                    xs = _bookModel()->getDataDouble(idx,"CurveXScale","Curve");
                 }
-                if ( plotYScale == "linear" ) {
-                    yb = _bookModel()->yBias(currentIndex());
-                    ys = _bookModel()->yScale(currentIndex());
+                if ( plotYScale == "linear" && tag == "Curve" ) {
+                    yb = _bookModel()->getDataDouble(idx,"CurveYBias","Curve");
+                    ys = _bookModel()->getDataDouble(idx,"CurveYScale","Curve");
                 }
 
                 if ( curveModel->x()->name() == curveModel->t()->name() ) {
@@ -1589,7 +1648,7 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                     } else if ( rc == 1 ) {
 
                         QPainterPath::Element el = path->elementAt(0);
-                        liveCoord = QPointF(el.x,el.y);
+                        liveCoord = QPointF(el.x*xs+xb,el.y*ys+yb);
 
                     } else if ( rc == 2 ) {
                         QPainterPath::Element el0 = path->elementAt(0);
@@ -1623,11 +1682,11 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                         int j = i;
                         int k = i;
                         int nels = path->elementCount();
-                        double iTime = path->elementAt(i).x;
+                        double iTime = path->elementAt(i).x*xs+xb;
                         double startTime = iTime - Mr;
                         double endTime = iTime + Mr;
                         for ( int l = i ; l >= 0; --l ) {
-                            double lTime = path->elementAt(l).x;
+                            double lTime = path->elementAt(l).x*xs+xb;
                             if ( lTime > startTime ) {
                                 j = l;
                             } else {
@@ -1635,7 +1694,7 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                             }
                         }
                         for ( int l = i ; l < nels; ++l ) {
-                            double lTime = path->elementAt(l).x;
+                            double lTime = path->elementAt(l).x*xs+xb;
                             if ( lTime < endTime ) {
                                 k = l;
                             } else {
@@ -1813,10 +1872,34 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                                                              "StartTime");
                     double stop = _bookModel()->getDataDouble(QModelIndex(),
                                                             "StopTime");
-                    double xb = _bookModel()->xBias(currentIndex());
-                    double xs = _bookModel()->xScale(currentIndex());
-                    double yb = _bookModel()->yBias(currentIndex());
-                    double ys = _bookModel()->yScale(currentIndex());
+                    double xb = _bookModel()->getDataDouble(currentIndex(),
+                                                          "CurveXBias","Curve");
+                    double xs = _bookModel()->getDataDouble(currentIndex(),
+                                                         "CurveXScale","Curve");
+                    double yb = _bookModel()->getDataDouble(currentIndex(),
+                                                          "CurveYBias","Curve");
+                    double ys = _bookModel()->getDataDouble(currentIndex(),
+                                                         "CurveYScale","Curve");
+                    double xus = 1.0;
+                    double xub = 0.0;
+                    QString bookXUnit = _bookModel()->getDataString(
+                                                          currentIndex(),
+                                                          "CurveXUnit","Curve");
+                    if ( !bookXUnit.isEmpty() && bookXUnit != "--" ) {
+                        QString loggedXUnit = curveModel->x()->unit();
+                        xus = Unit::scale(loggedXUnit, bookXUnit);
+                        xub = Unit::bias(loggedXUnit, bookXUnit);
+                    }
+                    double yus = 1.0;
+                    double yub = 0.0;
+                    QString bookYUnit = _bookModel()->getDataString(
+                                                          currentIndex(),
+                                                          "CurveYUnit","Curve");
+                    if ( !bookYUnit.isEmpty() && bookYUnit != "--" ) {
+                        QString loggedYUnit = curveModel->y()->unit();
+                        yus = Unit::scale(loggedYUnit, bookYUnit);
+                        yub = Unit::bias(loggedYUnit, bookYUnit);
+                    }
                     bool isXLogScale = (plotXScale=="log") ? true : false;
                     bool isYLogScale = (plotYScale=="log") ? true : false;
                     double liveTime = DBL_MAX;
@@ -1826,7 +1909,9 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                     ModelIterator* it = curveModel->begin();
                     while ( !it->isDone() ) {
                         // find closest point on curve to mouse
-                        double x = it->x()*xs+xb;
+                        double x = it->x();
+                        x = xus*x + xub;
+                        x = xs*x + xb;
                         if ( isXLogScale ) {
                             if ( x > 0 ) {
                                 x = log10(x);
@@ -1841,7 +1926,9 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                                 continue;
                             }
                         }
-                        double y = it->y()*ys+yb;
+                        double y = it->y();
+                        y = yus*y + yub;
+                        y = ys*y + yb;
                         if ( isYLogScale ) {
                             if ( y > 0 ) {
                                 y = log10(y);
@@ -3001,7 +3088,7 @@ void CurvesView::_keyPressD()
             IntegCurveCache* curveCache = plotCache->curveCaches.at(i++);
             QModelIndex yUnitIdx = _bookModel()->getDataIndex(curveIdx,
                                                           "CurveYUnit","Curve");
-            _bookModel()->setData(yUnitIdx,curveCache->yUnit());
+            _bookModel()->setData(yUnitIdx,""); // Unset units
             QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
                                                            "CurveData","Curve");
             CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
@@ -3011,6 +3098,7 @@ void CurvesView::_keyPressD()
             QVariant v=PtrToQVariant<CurveModel>::convert(
                                                       curveCache->curveModel());
             _bookModel()->setData(curveDataIdx,v);
+            _bookModel()->setData(yUnitIdx,curveCache->yUnit()); // Reset units
 
             QModelIndex yNameIdx = _bookModel()->getDataIndex(curveIdx,
                                                          "CurveYName","Curve");
@@ -3198,7 +3286,7 @@ void CurvesView::_keyPressI()
             DerivCurveCache* curveCache = plotCache->curveCaches.at(i++);
             QModelIndex yUnitIdx = _bookModel()->getDataIndex(curveIdx,
                                                           "CurveYUnit","Curve");
-            _bookModel()->setData(yUnitIdx,curveCache->yUnit());
+            _bookModel()->setData(yUnitIdx,"");  // Unset units
             QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
                                                            "CurveData","Curve");
             CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
@@ -3208,6 +3296,8 @@ void CurvesView::_keyPressI()
             QVariant v=PtrToQVariant<CurveModel>::convert(
                                                       curveCache->curveModel());
             _bookModel()->setData(curveDataIdx,v);
+
+            _bookModel()->setData(yUnitIdx,curveCache->yUnit());// Reset units
 
             QModelIndex yNameIdx = _bookModel()->getDataIndex(curveIdx,
                                                          "CurveYName","Curve");

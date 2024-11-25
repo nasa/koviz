@@ -385,10 +385,12 @@ bool CsvModel::isValid(const QString &csvFile, const QStringList &timeNames)
 
     // Sanity check second line to ensure num cols is same as num header cols
     QString line1 = in.readLine();
-    items = line1.split(',',KeepEmptyParts);
-    if ( items.size() != names.size() ) {
-        file.close();
-        return false;
+    if ( !line1.isEmpty() ) {  // A single line header with no data is valid
+        items = line1.split(',',KeepEmptyParts);
+        if ( items.size() != names.size() ) {
+            file.close();
+            return false;
+        }
     }
 
     file.close();

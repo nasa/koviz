@@ -204,6 +204,8 @@ private:
     void __appendDataToPainterPath(CurveModel *curveModel,
                                    QPainterPath *path,
                                    double startTime, double stopTime,
+                                   double xus, double xub,
+                                   double yus, double yub,
                                    double xs, double xb,
                                    double ys, double yb,
                                    const QString& plotXScale,
