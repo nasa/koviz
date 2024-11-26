@@ -3522,7 +3522,7 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
 
         bool isTimeMatch = true;
         foreach (ModelIterator* it, iterators) {
-            if (qAbs(it->t()-minTime) > tmt) {
+            if (it->isDone() || qAbs(it->t()-minTime) > tmt) {
                 isTimeMatch = false;
                 break;
             }
@@ -3540,6 +3540,8 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                     unitBias  = Unit::bias(cmu, yUnit);
                 }
                 double y = it->y()*unitScale + unitBias;
+                y *= it2curveInfo.value(it)->yScale;
+                y += it2curveInfo.value(it)->yBias;
                 sumY += y;
                 it2prevPoint.insert(it,QPointF(it->t(),y));
             }
@@ -3570,9 +3572,12 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                             unitScale = Unit::scale(cmu,yUnit);
                             unitBias  = Unit::bias(cmu,yUnit);
                         }
+                        double ys = it2curveInfo.value(it)->yScale;
+                        double yb = it2curveInfo.value(it)->yBias;
+                        double y = unitScale*it->y()+unitBias;
+                        y = ys*y + yb;
                         QPointF p0 = it2prevPoint.value(it);
-                        QPointF p1 = QPointF(it->t(),
-                                             it->y()*unitScale+unitBias);
+                        QPointF p1 = QPointF(it->t(),y);
                         double t0 = p0.x();
                         double y0 = p0.y();
                         double t1 = p1.x();
@@ -3604,7 +3609,10 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                             unitScale = Unit::scale(cmu,yUnit);
                             unitBias  = Unit::bias(cmu,yUnit);
                         }
-                        sumY += it->y()*unitScale+unitBias;
+                        double y = it->y()*unitScale+unitBias;
+                        y *= it2curveInfo.value(it)->yScale;
+                        y += it2curveInfo.value(it)->yBias;
+                        sumY += y;
                     } else {
                         isSumOK = false;
                         break;
@@ -3629,8 +3637,10 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                         unitScale = Unit::scale(cmu,yUnit);
                         unitBias  = Unit::bias(cmu,yUnit);
                     }
-                    it2prevPoint.insert(it,QPointF(it->t(),
-                                                   it->y()*unitScale+unitBias));
+                    double y = it->y()*unitScale+unitBias;
+                    y *= it2curveInfo.value(it)->yScale;
+                    y += it2curveInfo.value(it)->yBias;
+                    it2prevPoint.insert(it,QPointF(it->t(),y));
                     it->next();
                 }
             }
