@@ -48,17 +48,21 @@ struct CurveInfo
     CurveInfo(CurveModel* cm,
               double xs, double xb,
               double ys, double yb,
+              const QString& bmxu,
               const QString& bmyu)
             : curveModel(cm),
               xScale(xs), xBias(xb),
               yScale(ys), yBias(yb),
-              bmYUnit(bmyu) {}
+              bmXUnit(bmxu), bmYUnit(bmyu)
+              {}
 
     CurveModel* curveModel;
     double xScale;
     double xBias;
     double yScale;
     double yBias;
+    QString bmXUnit; // Book model's x unit (possibly from DP file)
+                     // The curveModel->x()->unit() may not be same as bm unit
     QString bmYUnit; // Book model's y unit (possibly from DP file)
                      // The curveModel->y()->unit() may not be same as bm unit
 };
@@ -272,6 +276,8 @@ private:
     IntegCache _integCache ;
 
     CurveModel* _sumCurveModels(const QList<CurveInfo>& curveInfos);
+    double _getTime(bool isXTime, const QString& xUnit,
+                    ModelIterator* it, const CurveInfo* curveInfo);
 
 private slots:
     void _keyPressBSliderChanged(int value);

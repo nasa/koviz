@@ -3346,9 +3346,10 @@ void CurvesView::_keyPressS()
         double xb = _bookModel()->getDataDouble(curveIdx,"CurveXBias");
         double ys = _bookModel()->getDataDouble(curveIdx,"CurveYScale");
         double yb = _bookModel()->getDataDouble(curveIdx,"CurveYBias");
+        QString bmxu = _bookModel()->getDataString(curveIdx,"CurveXUnit");
         QString bmyu = _bookModel()->getDataString(curveIdx,"CurveYUnit");
         if ( curveModel ) {
-            curveInfos.append({curveModel,xs,xb,ys,yb,bmyu});
+            curveInfos.append({curveModel,xs,xb,ys,yb,bmxu,bmyu});
         }
     }
 
@@ -3400,10 +3401,10 @@ void CurvesView::_keyPressS()
     _bookModel()->setPlotMathRect(M,plotIdx);
 } 
 
-// Sums up yvalues against time (x is not used)
+// Sums up yvalues against time
 // If curve has a timestamp with a nan y-val, throw out the timestamp
-// If any curve model is not using seconds for time, bail
 // Handle case when there are duplicate timestamps
+// If times do not match, interpolate
 CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
 {
     if (curveInfos.isEmpty()) {
@@ -3415,21 +3416,26 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
         curveInfo.curveModel->map();
     }
 
-    // Check if curve model times are all in seconds, if not bail
-    bool isTimeInSeconds = true;
+    bool isXTime = true;
     foreach (CurveInfo curveInfo, curveInfos) {
-        if ( curveInfo.curveModel->t()->unit() != "s" ) {
-            isTimeInSeconds = false;
+        if ( curveInfo.curveModel->t()->name() !=
+             curveInfo.curveModel->x()->name() ) {
+            isXTime = false;
             break;
         }
     }
-    if ( !isTimeInSeconds ) {
-        QMessageBox msgBox;
-        QString msg = QString("Attempting to sum curves with time units that "
-                              "are not seconds.  Bailing!");
-        msgBox.setText(msg);
-        msgBox.exec();
-        return nullptr;
+
+    // Choose x time unit
+    QString xUnit;
+    if ( isXTime ) {
+        foreach (CurveInfo curveInfo, curveInfos) {
+            if ( !curveInfo.bmXUnit.isEmpty() ) {
+                xUnit = curveInfo.bmXUnit ;
+                break;  // Choose first book model x unit (if it exists)
+            } else {
+                xUnit = curveInfo.curveModel->x()->unit();
+            }
+        }
     }
 
     // Check if y units are all in same family for conversion
@@ -3475,11 +3481,12 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
         double minTime = DBL_MAX;
         double maxTime = -DBL_MAX;
         while ( !it->isDone() ) {
-            if ( it->t() < minTime && !qIsNaN(it->y()) ) {
-                minTime = it->t();
+            double t = _getTime(isXTime,xUnit,it,it2curveInfo.value(it));
+            if ( t < minTime && !qIsNaN(it->y()) ) {
+                minTime = t;
             }
-            if ( it->t() > maxTime && !qIsNaN(it->y()) ) {
-                maxTime = it->t();
+            if ( t > maxTime && !qIsNaN(it->y()) ) {
+                maxTime = t;
             }
             it->next();
         }
@@ -3515,14 +3522,22 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
 
         double minTime = DBL_MAX;
         foreach (ModelIterator* it, iterators) {
-            if ( !it->isDone() && it->t() < minTime ) {
-                minTime = it->t();
+            if ( !it->isDone() ) {
+                double t = _getTime(isXTime,xUnit,it,it2curveInfo.value(it));
+                if ( t < minTime ) {
+                    minTime = t;
+                }
             }
         }
 
         bool isTimeMatch = true;
         foreach (ModelIterator* it, iterators) {
-            if (it->isDone() || qAbs(it->t()-minTime) > tmt) {
+            if (it->isDone()) {
+                isTimeMatch = false;
+                break;
+            }
+            double t = _getTime(isXTime,xUnit,it,it2curveInfo.value(it));
+            if (qAbs(t-minTime) > tmt) {
                 isTimeMatch = false;
                 break;
             }
@@ -3532,6 +3547,7 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
             // Sum the y-values for matching timestamps
             double sumY = 0.0;
             foreach (ModelIterator* it, iterators) {
+                double t = _getTime(isXTime,xUnit,it,it2curveInfo.value(it));
                 double unitScale = 1.0;
                 double unitBias = 0.0;
                 if ( !yUnit.isEmpty() ) {
@@ -3543,7 +3559,7 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                 y *= it2curveInfo.value(it)->yScale;
                 y += it2curveInfo.value(it)->yBias;
                 sumY += y;
-                it2prevPoint.insert(it,QPointF(it->t(),y));
+                it2prevPoint.insert(it,QPointF(t,y));
             }
 
             // Accept/load point
@@ -3559,7 +3575,11 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
             double isSumOK = true;
             double sumY = 0.0;
             foreach (ModelIterator* it, iterators) {
-                if (!it->isDone() && qAbs(it->t()-minTime) > tmt ) {
+                double t = 0.0;
+                if ( !it->isDone() ) {
+                    t = _getTime(isXTime,xUnit,it,it2curveInfo.value(it));
+                }
+                if (!it->isDone() && qAbs(t-minTime) > tmt ) {
                     // Iterator time doesn't match, try to interpolate
                     // Note: No extrapolation, time inside intersection of time
                     //       domains of all curves
@@ -3577,7 +3597,7 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                         double y = unitScale*it->y()+unitBias;
                         y = ys*y + yb;
                         QPointF p0 = it2prevPoint.value(it);
-                        QPointF p1 = QPointF(it->t(),y);
+                        QPointF p1 = QPointF(t,y);
                         double t0 = p0.x();
                         double y0 = p0.y();
                         double t1 = p1.x();
@@ -3598,7 +3618,7 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                         isSumOK = false;
                         break;
                     }
-                } else if (!it->isDone() && qAbs(it->t()-minTime) <= tmt ) {
+                } else if (!it->isDone() && qAbs(t-minTime) <= tmt ) {
                     // Iterator time matches
                     if ( !qIsNaN(it->y()) ) {
                         double unitScale = 1.0;
@@ -3628,7 +3648,11 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
 
             // Step iterators that are sitting on minTime
             foreach (ModelIterator* it, iterators) {
-                if (!it->isDone() && qAbs(it->t()-minTime) <= tmt ) {
+                double t = 0.0;
+                if ( !it->isDone() ) {
+                    t = _getTime(isXTime,xUnit,it,it2curveInfo.value(it));
+                }
+                if (!it->isDone() && qAbs(t-minTime) <= tmt ) {
                     double unitScale = 1.0;
                     double unitBias = 0.0;
                     if ( !yUnit.isEmpty() ) {
@@ -3640,7 +3664,7 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                     double y = it->y()*unitScale+unitBias;
                     y *= it2curveInfo.value(it)->yScale;
                     y += it2curveInfo.value(it)->yBias;
-                    it2prevPoint.insert(it,QPointF(it->t(),y));
+                    it2prevPoint.insert(it,QPointF(t,y));
                     it->next();
                 }
             }
@@ -3669,6 +3693,25 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
     CurveModel* sumCurveModel = new CurveModel(dataModel,0,0,1);
 
     return sumCurveModel;
+}
+
+double CurvesView::_getTime(bool isXTime,
+                          const QString& xUnit,
+                          ModelIterator* it,
+                          const CurveInfo* curveInfo)
+{
+    double t = it->t();
+    if ( isXTime ) {
+        QString xu = curveInfo->curveModel->x()->unit();
+        double xus = Unit::scale(xu,xUnit);
+        double xub = Unit::bias(xu,xUnit);
+        t = it->x();
+        t = xus*t + xub;
+        double xs = curveInfo->xScale;
+        double xb = curveInfo->xBias;
+        t = xs*t + xb;
+    }
+    return t;
 }
 
 void CurvesView::_keyPressGChange(int window, int degree)
