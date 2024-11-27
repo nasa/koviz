@@ -3337,6 +3337,7 @@ void CurvesView::_keyPressS()
     QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,"Curves","Plot");
     QModelIndexList curveIdxs = _bookModel()->getIndexList(curvesIdx,
                                                            "Curve","Curves");
+    int nCurvesToSum = curveIdxs.size();
 
     // Get list of curves to sum
     QList<CurveInfo> curveInfos;
@@ -3382,9 +3383,9 @@ void CurvesView::_keyPressS()
     _bookModel()->addChild(curveItem, "CurveXMaxRange",  DBL_MAX);
     _bookModel()->addChild(curveItem, "CurveYMinRange", -DBL_MAX);
     _bookModel()->addChild(curveItem, "CurveYMaxRange",  DBL_MAX);
-
     _bookModel()->addChild(curveItem, "CurveSymbolSize", "");
-    _bookModel()->addChild(curveItem, "CurveColor","green"); // TODOOOOOOOOOOOOOOOOOO
+    QColor color = (nCurvesToSum == 3) ? QColor(177,77,0) : QColor(35,106,26);
+    _bookModel()->addChild(curveItem, "CurveColor",color);
     _bookModel()->addChild(curveItem, "CurveLineStyle", "plain");
     _bookModel()->addChild(curveItem, "CurveSymbolStyle", "none");
     _bookModel()->addChild(curveItem, "CurveSymbolSize", "");
