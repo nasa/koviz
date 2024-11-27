@@ -3686,9 +3686,13 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
         yUnit = "--";
     }
     QScopedPointer<QVector<QPointF>> pointsPtr(points);
+    QString xUnitSum("s");
+    if ( isXTime ) {
+        xUnitSum = xUnit;
+    }
     DataModel* dataModel = new PointsModel(pointsPtr.take(),
                                            QString("sys.exec.out.time"),
-                                           QString("s"),
+                                           xUnitSum,
                                            QString("sum"),
                                            yUnit);
     CurveModel* sumCurveModel = new CurveModel(dataModel,0,0,1);
