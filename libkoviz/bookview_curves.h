@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <float.h>
 #include <math.h>
+#include <numeric>
 #include "bookidxview.h"
 #include "unit.h"
 #include "curvemodel.h"
@@ -65,6 +66,19 @@ struct CurveInfo
                      // The curveModel->x()->unit() may not be same as bm unit
     QString bmYUnit; // Book model's y unit (possibly from DP file)
                      // The curveModel->y()->unit() may not be same as bm unit
+};
+
+class CurveOperation {
+public:
+    virtual double compute(const QVector<double>& values) const = 0;
+    virtual ~CurveOperation() = default;
+};
+
+class SumOperation : public CurveOperation {
+public:
+    double compute(const QVector<double>& values) const override {
+        return std::accumulate(values.begin(), values.end(), 0.0);
+    }
 };
 
 class TimeAndIndex
@@ -275,7 +289,8 @@ private:
     DerivCache _derivCache ;
     IntegCache _integCache ;
 
-    CurveModel* _sumCurveModels(const QList<CurveInfo>& curveInfos);
+    CurveModel* _combineCurveModels(const QList<CurveInfo>& curveInfos,
+                                CurveOperation& curveOp);
     double _getTime(bool isXTime, const QString& xUnit,
                     ModelIterator* it, const CurveInfo* curveInfo);
 

@@ -3354,7 +3354,8 @@ void CurvesView::_keyPressS()
         }
     }
 
-    CurveModel* curveModel = _sumCurveModels(curveInfos);
+    SumOperation curveOp;
+    CurveModel* curveModel = _combineCurveModels(curveInfos,curveOp);
     if ( !curveModel ) {
         return;
     }
@@ -3406,7 +3407,8 @@ void CurvesView::_keyPressS()
 // If curve has a timestamp with a nan y-val, throw out the timestamp
 // Handle case when there are duplicate timestamps
 // If times do not match, interpolate
-CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
+CurveModel *CurvesView::_combineCurveModels(const QList<CurveInfo> &curveInfos,
+                                            CurveOperation &curveOp)
 {
     if (curveInfos.isEmpty()) {
         return nullptr;
@@ -3546,7 +3548,7 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
 
         if (isTimeMatch) {
             // Sum the y-values for matching timestamps
-            double sumY = 0.0;
+            QVector<double> yvals;
             foreach (ModelIterator* it, iterators) {
                 double t = _getTime(isXTime,xUnit,it,it2curveInfo.value(it));
                 double unitScale = 1.0;
@@ -3559,13 +3561,14 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                 double y = it->y()*unitScale + unitBias;
                 y *= it2curveInfo.value(it)->yScale;
                 y += it2curveInfo.value(it)->yBias;
-                sumY += y;
+                yvals.append(y);
                 it2prevPoint.insert(it,QPointF(t,y));
             }
 
             // Accept/load point
-            if ( !qIsNaN(sumY) ) {
-                points->append(QPointF(minTime,sumY));
+            double result = curveOp.compute(yvals);
+            if ( !qIsNaN(result) ) {
+                points->append(QPointF(minTime,result));
             }
 
             // Move all iterators to the next point
@@ -3573,8 +3576,8 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                 it->next();
             }
         } else {
-            double isSumOK = true;
-            double sumY = 0.0;
+            double isOK = true;
+            QVector<double> yvals;
             foreach (ModelIterator* it, iterators) {
                 double t = 0.0;
                 if ( !it->isDone() ) {
@@ -3605,18 +3608,18 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                         double y1 = p1.y();
                         if ( qIsNaN(t0) || qIsNaN(t1) ||
                              qIsNaN(y0) || qIsNaN(y1) ) {
-                            isSumOK = false;
+                            isOK = false;
                             break;
                         } else if ( t1-t0 != 0.0 ) {
                             double m = (y1-y0)/(t1-t0);
                             double y = m*(minTime-t0)+y0;
-                            sumY += y;
+                            yvals.append(y);
                         } else {
-                            isSumOK = false;
+                            isOK = false;
                             break;
                         }
                     } else {
-                        isSumOK = false;
+                        isOK = false;
                         break;
                     }
                 } else if (!it->isDone() && qAbs(t-minTime) <= tmt ) {
@@ -3633,19 +3636,22 @@ CurveModel *CurvesView::_sumCurveModels(const QList<CurveInfo> &curveInfos)
                         double y = it->y()*unitScale+unitBias;
                         y *= it2curveInfo.value(it)->yScale;
                         y += it2curveInfo.value(it)->yBias;
-                        sumY += y;
+                        yvals.append(y);
                     } else {
-                        isSumOK = false;
+                        isOK = false;
                         break;
                     }
                 } else {
-                    isSumOK = false;
+                    isOK = false;
                     break;
                 }
             }
-            if ( isSumOK ) {
-                points->append(QPointF(minTime,sumY));
-           }
+            if ( isOK ) {
+                double result = curveOp.compute(yvals);
+                if ( !qIsNaN(result) ) {
+                    points->append(QPointF(minTime,result));
+                }
+            }
 
             // Step iterators that are sitting on minTime
             foreach (ModelIterator* it, iterators) {
