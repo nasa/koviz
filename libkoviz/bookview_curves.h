@@ -70,14 +70,27 @@ struct CurveInfo
 
 class CurveOperation {
 public:
+    virtual QString name() const = 0;
     virtual double compute(const QVector<double>& values) const = 0;
     virtual ~CurveOperation() = default;
 };
 
 class SumOperation : public CurveOperation {
 public:
+    QString name() const override { return "sum"; }
     double compute(const QVector<double>& values) const override {
         return std::accumulate(values.begin(), values.end(), 0.0);
+    }
+};
+
+class MagnitudeOperation : public CurveOperation {
+public:
+    QString name() const override { return "magnitude"; }
+    double compute(const QVector<double>& values) const override {
+        double sumOfSquares = std::accumulate(values.begin(), values.end(), 0.0,
+                                      [](double acc, double val)
+                                      { return acc + val * val; });
+        return std::sqrt(sumOfSquares);
     }
 };
 
@@ -270,6 +283,7 @@ private:
     void _keyPressD();
     void _keyPressI();
     void _keyPressS();
+    void _keyPressM();
     void _keyPressMinus();
 
     QFrame* _bw_frame;
@@ -289,8 +303,7 @@ private:
     DerivCache _derivCache ;
     IntegCache _integCache ;
 
-    CurveModel* _combineCurveModels(const QList<CurveInfo>& curveInfos,
-                                CurveOperation& curveOp);
+    void _combinePlotCurves(CurveOperation& curveOp);
     double _getTime(bool isXTime, const QString& xUnit,
                     ModelIterator* it, const CurveInfo* curveInfo);
 

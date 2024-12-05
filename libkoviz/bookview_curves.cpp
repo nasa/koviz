@@ -2222,6 +2222,7 @@ void CurvesView::keyPressEvent(QKeyEvent *event)
     case Qt::Key_D: _keyPressD();break;
     case Qt::Key_I: _keyPressI();break;
     case Qt::Key_S: _keyPressS();break;
+    case Qt::Key_M: _keyPressM();break;
     case Qt::Key_Minus: _keyPressMinus();break;
     default: ; // do nothing
     }
@@ -3333,6 +3334,27 @@ void CurvesView::_keyPressI()
 
 void CurvesView::_keyPressS()
 {
+    SumOperation curveOp;
+    _combinePlotCurves(curveOp);
+}
+
+void CurvesView::_keyPressM()
+{
+    MagnitudeOperation curveOp;
+    _combinePlotCurves(curveOp);
+}
+
+// Takes curves of curve's view plot and generates a new curve on the plot
+// by combining the curves using the given "curveOp".
+// For example, if curveOp is a summation,
+// a new curve is generated on the plot that is the sum of all the
+// curves point by point foreach timestamp.
+// Notes:
+// If curve has a timestamp with a nan y-val, throw out the timestamp
+// Handle case when there are duplicate timestamps
+// If times do not match, interpolate
+void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
+{
     QModelIndex plotIdx = rootIndex();
     QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,"Curves","Plot");
     QModelIndexList curveIdxs = _bookModel()->getIndexList(curvesIdx,
@@ -3354,64 +3376,8 @@ void CurvesView::_keyPressS()
         }
     }
 
-    SumOperation curveOp;
-    CurveModel* curveModel = _combineCurveModels(curveInfos,curveOp);
-    if ( !curveModel ) {
-        return;
-    }
-
-    bool block = _bookModel()->blockSignals(true);
-    QStandardItem* curvesItem = _bookModel()->itemFromIndex(curvesIdx);
-    QStandardItem *curveItem = _bookModel()->addChild(curvesItem,"Curve");
-
-    _bookModel()->addChild(curveItem, "CurveRunID", -1);
-    _bookModel()->addChild(curveItem, "CurveRunPath",QString("koviz:memory"));
-    _bookModel()->addChild(curveItem, "CurveTimeName",curveModel->t()->name());
-    _bookModel()->addChild(curveItem, "CurveTimeUnit",curveModel->t()->unit());
-
-    _bookModel()->addChild(curveItem, "CurveXName", curveModel->x()->name());
-    _bookModel()->addChild(curveItem, "CurveXUnit", curveModel->x()->unit());
-    _bookModel()->addChild(curveItem, "CurveXScale", 1.0);
-    _bookModel()->addChild(curveItem, "CurveXBias", 0.0);
-
-    _bookModel()->addChild(curveItem, "CurveYName", curveModel->y()->name());
-    _bookModel()->addChild(curveItem, "CurveYLabel", curveModel->y()->name());
-    _bookModel()->addChild(curveItem, "CurveYUnit", curveModel->y()->unit());
-    _bookModel()->addChild(curveItem, "CurveYScale", 1.0);
-    _bookModel()->addChild(curveItem, "CurveYBias", 0.0);
-
-    _bookModel()->addChild(curveItem, "CurveXMinRange", -DBL_MAX);
-    _bookModel()->addChild(curveItem, "CurveXMaxRange",  DBL_MAX);
-    _bookModel()->addChild(curveItem, "CurveYMinRange", -DBL_MAX);
-    _bookModel()->addChild(curveItem, "CurveYMaxRange",  DBL_MAX);
-    _bookModel()->addChild(curveItem, "CurveSymbolSize", "");
-    QColor color = (nCurvesToSum == 3) ? QColor(177,77,0) : QColor(35,106,26);
-    _bookModel()->addChild(curveItem, "CurveColor",color);
-    _bookModel()->addChild(curveItem, "CurveLineStyle", "plain");
-    _bookModel()->addChild(curveItem, "CurveSymbolStyle", "none");
-    _bookModel()->addChild(curveItem, "CurveSymbolSize", "");
-    _bookModel()->addChild(curveItem, "CurveSymbolEnd", "none");
-
-    QVariant v = PtrToQVariant<CurveModel>::convert(curveModel);
-    _bookModel()->addChild(curveItem, "CurveData", v);
-
-    // Turn signals back on and reset bounding box
-    _bookModel()->blockSignals(block);
-    QRectF M = _bookModel()->calcCurvesBBox(curvesIdx);
-    QRectF E; // Empty set below to force redraw
-    _bookModel()->setPlotMathRect(E,plotIdx);
-    _bookModel()->setPlotMathRect(M,plotIdx);
-} 
-
-// Sums up yvalues against time
-// If curve has a timestamp with a nan y-val, throw out the timestamp
-// Handle case when there are duplicate timestamps
-// If times do not match, interpolate
-CurveModel *CurvesView::_combineCurveModels(const QList<CurveInfo> &curveInfos,
-                                            CurveOperation &curveOp)
-{
     if (curveInfos.isEmpty()) {
-        return nullptr;
+        return;
     }
 
     // Map all models
@@ -3508,7 +3474,7 @@ CurveModel *CurvesView::_combineCurveModels(const QList<CurveInfo> &curveInfos,
         it->start();
     }
 
-    // Load the sum into a vector of points
+    // Load the curve combination into a vector of points
     QVector<QPointF>* points = new QVector<QPointF>();
     while (true) {
 
@@ -3547,7 +3513,7 @@ CurveModel *CurvesView::_combineCurveModels(const QList<CurveInfo> &curveInfos,
         }
 
         if (isTimeMatch) {
-            // Sum the y-values for matching timestamps
+            // Combine the y-values for matching timestamps
             QVector<double> yvals;
             foreach (ModelIterator* it, iterators) {
                 double t = _getTime(isXTime,xUnit,it,it2curveInfo.value(it));
@@ -3699,11 +3665,54 @@ CurveModel *CurvesView::_combineCurveModels(const QList<CurveInfo> &curveInfos,
     DataModel* dataModel = new PointsModel(pointsPtr.take(),
                                            QString("sys.exec.out.time"),
                                            xUnitSum,
-                                           QString("sum"),
+                                           curveOp.name(),
                                            yUnit);
-    CurveModel* sumCurveModel = new CurveModel(dataModel,0,0,1);
+    CurveModel* curveModel = new CurveModel(dataModel,0,0,1);
 
-    return sumCurveModel;
+    //
+    // Add new curve to plot
+    //
+    bool block = _bookModel()->blockSignals(true);
+    QStandardItem* curvesItem = _bookModel()->itemFromIndex(curvesIdx);
+    QStandardItem *curveItem = _bookModel()->addChild(curvesItem,"Curve");
+
+    _bookModel()->addChild(curveItem, "CurveRunID", -1);
+    _bookModel()->addChild(curveItem, "CurveRunPath",QString("koviz:memory"));
+    _bookModel()->addChild(curveItem, "CurveTimeName",curveModel->t()->name());
+    _bookModel()->addChild(curveItem, "CurveTimeUnit",curveModel->t()->unit());
+
+    _bookModel()->addChild(curveItem, "CurveXName", curveModel->x()->name());
+    _bookModel()->addChild(curveItem, "CurveXUnit", curveModel->x()->unit());
+    _bookModel()->addChild(curveItem, "CurveXScale", 1.0);
+    _bookModel()->addChild(curveItem, "CurveXBias", 0.0);
+
+    _bookModel()->addChild(curveItem, "CurveYName", curveModel->y()->name());
+    _bookModel()->addChild(curveItem, "CurveYLabel", curveModel->y()->name());
+    _bookModel()->addChild(curveItem, "CurveYUnit", curveModel->y()->unit());
+    _bookModel()->addChild(curveItem, "CurveYScale", 1.0);
+    _bookModel()->addChild(curveItem, "CurveYBias", 0.0);
+
+    _bookModel()->addChild(curveItem, "CurveXMinRange", -DBL_MAX);
+    _bookModel()->addChild(curveItem, "CurveXMaxRange",  DBL_MAX);
+    _bookModel()->addChild(curveItem, "CurveYMinRange", -DBL_MAX);
+    _bookModel()->addChild(curveItem, "CurveYMaxRange",  DBL_MAX);
+    _bookModel()->addChild(curveItem, "CurveSymbolSize", "");
+    QColor color = (nCurvesToSum == 3) ? QColor(177,77,0) : QColor(35,106,26);
+    _bookModel()->addChild(curveItem, "CurveColor",color);
+    _bookModel()->addChild(curveItem, "CurveLineStyle", "plain");
+    _bookModel()->addChild(curveItem, "CurveSymbolStyle", "none");
+    _bookModel()->addChild(curveItem, "CurveSymbolSize", "");
+    _bookModel()->addChild(curveItem, "CurveSymbolEnd", "none");
+
+    QVariant v = PtrToQVariant<CurveModel>::convert(curveModel);
+    _bookModel()->addChild(curveItem, "CurveData", v);
+
+    // Turn signals back on and reset bounding box
+    _bookModel()->blockSignals(block);
+    QRectF M = _bookModel()->calcCurvesBBox(curvesIdx);
+    QRectF E; // Empty set below to force redraw
+    _bookModel()->setPlotMathRect(E,plotIdx);
+    _bookModel()->setPlotMathRect(M,plotIdx);
 }
 
 double CurvesView::_getTime(bool isXTime,
