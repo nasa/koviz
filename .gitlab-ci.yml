@@ -18,6 +18,7 @@ initialize:
    
 build-source:
    stage: build-source
+   needs: ["init"]
    script:
       - qmake-qt5
       - make
