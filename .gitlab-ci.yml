@@ -29,7 +29,7 @@ build-source:
          - ${CI_PROJECT_DIR}/bin
       expire_in: 1 week
    cache: []
-   image: ${CI_REGISTRY_IMAGE}
+   image: esgl-gitlab.jsc.nasa.gov:5005/koviz/koviz:rh8
    tags:
       - dind
 
@@ -37,7 +37,7 @@ build-rpm:
    stage: build-rpm
    cache: []
    needs: ["build-source"]
-   image: ${CI_REGISTRY_IMAGE}
+   image: esgl-gitlab.jsc.nasa.gov:5005/koviz/koviz:rh8
    tags:
       - dind
    variables:
