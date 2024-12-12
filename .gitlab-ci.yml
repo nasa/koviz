@@ -1,4 +1,5 @@
 stages:
+   - init
    - build-source
    - build-rpm
    - post
@@ -6,6 +7,15 @@ stages:
 variables:
    GIT_STRATEGY: clone
 
+initialize:
+   stage: init
+   script:
+      - echo "CI_REGISTRY_IMAGE: ${CI_REGISTRY_IMAGE}/koviz:rh8"
+   cache: []
+   image: registry.access.redhat.com/ubi8/ubi:latest
+   tags:
+      - dind
+   
 build-source:
    stage: build-source
    script:
