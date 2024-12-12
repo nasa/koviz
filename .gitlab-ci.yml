@@ -1,0 +1,77 @@
+stages:
+   - build-source
+   - build-rpm
+   - post
+
+variables:
+   GIT_STRATEGY: clone
+
+build-source:
+   stage: build-source
+   script:
+      - qmake-qt5
+      - make
+   artifacts:
+      paths:
+         # Koviz executable in bin directory
+         - ${CI_PROJECT_DIR}/bin
+      expire_in: 1 week
+   cache: []
+   image: ${CI_REGISTRY_IMAGE}/koviz:rh8
+   tags:
+      - dind
+
+build-rpm:
+   stage: build-rpm
+   cache: []
+   needs: ["build-source"]
+   image: ${CI_REGISTRY_IMAGE}/koviz:rh8
+   tags:
+      - dind
+   variables:
+      GIT_STRATEGY: none
+      GIT_SUBMODULE_STRATEGY: none
+   script:
+      - TAG="$(git --git-dir ${CI_PROJECT_DIR}/.git describe --long --tags | egrep -o '^[^-]+')"
+      - COMMIT="$(git --git-dir ${CI_PROJECT_DIR}/.git describe --long --tags | cut -f2 -d '-')"
+      - VERSION_ID="$(grep VERSION_ID /etc/os-release | sed 's/VERSION_ID="\(.*\)"/\1/' \
+                                                      | cut -d. -f1)"
+      
+      - rpmdev-setuptree
+      - mv ${CI_PROJECT_DIR}/bin/koviz $HOME/rpmbuild/BUILD
+      - rpmbuild -bb \
+           --define "_prefix /usr/bin" \
+           --define "_version ${TAG}" \
+           --define "_release ${COMMIT}.el${VERSION_ID}" \
+           ${CI_PROJECT_DIR}/rpm/koviz.spec
+
+      - mkdir ${CI_PROJECT_DIR}/artifacts
+      - mv ${HOME}/rpmbuild/RPMS/x86_64/koviz*.rpm ${CI_PROJECT_DIR}/artifacts
+      - echo ${CI_JOB_ID} > ${CI_PROJECT_DIR}/artifacts/build-rpm-job-id.txt
+      - rm -rf ${HOME}/rpmbuild
+      - du -h ${CI_PROJECT_DIR}/artifacts
+   artifacts:
+      paths:
+         - ${CI_PROJECT_DIR}/artifacts
+      expire_in: 1 week
+
+keep-tag-artifacts:
+   stage: post
+   variables:
+      GIT_STRATEGY: none
+      GIT_SUBMODULE_STRATEGY: none
+   script:
+      - RPM_JOB_ID="$(cat $CI_PROJECT_DIR/artifacts/build-rpm-job-id.txt)"
+      - |
+        if [[ -n "$CI_COMMIT_TAG" ]]; then
+           echo "This is a tagged commit ($CI_COMMIT_TAG). Marking artifacts to keep."
+           curl -X POST \
+                -H "PRIVATE-TOKEN: $KOVIZ_API" \
+                "https://esgl-gitlab.jsc.nasa.gov/api/v4/projects/$CI_PROJECT_ID/jobs/$RPM_JOB_ID/artifacts/keep"
+        else
+             echo "This is not a tagged commit. Artifacts will expire as usual."
+        fi
+   cache: []
+   tags:
+      - dind
+   image: registry.access.redhat.com/ubi8/ubi:latest
