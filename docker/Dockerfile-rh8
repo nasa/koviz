@@ -1,0 +1,5 @@
+FROM registry.access.redhat.com/ubi8/ubi:latest
+
+RUN dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+RUN dnf -y update
+RUN dnf -y install rpmdevtools qt5-qtbase-devel bison flex make gcc gcc-c++
