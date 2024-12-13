@@ -60,7 +60,7 @@ keep-tag-artifacts:
    stage: deploy
    variables:
       GIT_STRATEGY: none
-   dependendencies:
+   dependencies:
       - rh8-rpm
    script:
       - echo "MIMI=$MIMI"
