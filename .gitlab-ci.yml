@@ -32,11 +32,8 @@ rh8-rpm:
       - dind
    script:
       - TAG="$(git --git-dir ${CI_PROJECT_DIR}/.git describe --long --tags --always | egrep -o '^[^-]+')"
-      - echo "TAG = $TAG"
       - COMMIT="$(git --git-dir ${CI_PROJECT_DIR}/.git describe --long --tags --always | cut -f2 -d '-')"
-      - echo "COMMIT = $COMMIT"
       - VERSION_ID="$(grep VERSION_ID /etc/os-release | sed 's/VERSION_ID="\(.*\)"/\1/' | cut -d. -f1)"
-      - echo "VERSION_ID = $VERSION_ID"
       
       - rpmdev-setuptree
       - mv ${CI_PROJECT_DIR}/bin/koviz $HOME/rpmbuild/BUILD
@@ -66,9 +63,10 @@ keep-tag-artifacts:
       - |
         if [[ -n "$CI_COMMIT_TAG" ]]; then
            echo "This is a tagged commit ($CI_COMMIT_TAG). Marking artifacts to keep."
+           ESGL="https://esgl-gitlab.jsc.nasa.gov/api/v4/projects"
            curl -X POST \
                 -H "PRIVATE-TOKEN: $KOVIZ_API" \
-                "https://esgl-gitlab.jsc.nasa.gov/api/v4/projects/$CI_PROJECT_ID/jobs/$RPM_JOB_ID/artifacts/keep"
+                "$ESGL/$CI_PROJECT_ID/jobs/$RPM_JOB_ID/artifacts/keep"
         else
              echo "This is not a tagged commit. Artifacts will expire as usual."
         fi
