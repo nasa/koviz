@@ -1,10 +1,11 @@
 stages:
    - build
    - package
-   - post
+   - deploy
 
 variables:
    GIT_STRATEGY: clone
+   GIT_DEPTH: 0  # Non-shallow clone for git tags
 
 rh8-source:
    stage: build
@@ -51,7 +52,7 @@ rh8-rpm:
       expire_in: 1 week
 
 keep-tag-artifacts:
-   stage: post
+   stage: deploy
    variables:
       GIT_STRATEGY: none
    script:
