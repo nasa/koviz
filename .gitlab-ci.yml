@@ -33,6 +33,7 @@ rh8-rpm:
    variables:
       MIMI: "$CI_JOB_ID"
    script:
+      - MIMI="cat"
       - TAG="$(git --git-dir ${CI_PROJECT_DIR}/.git describe --long --tags --always | egrep -o '^[^-]+')"
       - echo "TAG = $TAG"
       - COMMIT="$(git --git-dir ${CI_PROJECT_DIR}/.git describe --long --tags --always | cut -f2 -d '-')"
