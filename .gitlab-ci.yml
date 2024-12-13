@@ -6,7 +6,7 @@ stages:
 variables:
    GIT_STRATEGY: clone
 
-rh8-source:
+build-rh8-source:
    stage: build
    script:
       #- qmake-qt5
@@ -23,17 +23,19 @@ rh8-source:
    tags:
       - dind
 
-rh8-rpm:
+package-rh8-rpm:
    stage: package
    cache: []
-   needs: ["rh8-source"]
+   needs: ["build-rh8-source"]
    image: ${CI_REGISTRY_IMAGE}:rh8
    tags:
       - dind
    script:
       - GIT_DIR="${CI_PROJECT_DIR}/.git"
-      - TAG="$(git --git-dir $GIT_DIR describe --long --tags --always | egrep -o '^[^-]+')"
-      - COMMIT="$(git --git-dir $GIT_DIR describe --long --tags --always | cut -f2 -d '-')"
+      - TAG="$(git --git-dir $GIT_DIR describe --long --tags --always 
+                        | egrep -o '^[^-]+')"
+      - COMMIT="$(git --git-dir $GIT_DIR describe --long --tags --always 
+                        | cut -f2 -d '-')"
       - VERSION_ID="$(grep VERSION_ID /etc/os-release 
                         | sed 's/VERSION_ID="\(.*\)"/\1/' 
                         | cut -d. -f1)"
@@ -41,10 +43,10 @@ rh8-rpm:
       - rpmdev-setuptree
       - mv ${CI_PROJECT_DIR}/bin/koviz $HOME/rpmbuild/BUILD
       - rpmbuild -bb 
-         --define "_prefix /usr/bin" 
-         --define "_version ${TAG}" 
-         --define "_release ${COMMIT}.el${VERSION_ID}" 
-         ${CI_PROJECT_DIR}/rpm/koviz.spec
+                 --define "_prefix /usr/bin" 
+                 --define "_version ${TAG}" 
+                 --define "_release ${COMMIT}.el${VERSION_ID}" 
+                 ${CI_PROJECT_DIR}/rpm/koviz.spec
 
       - mkdir ${CI_PROJECT_DIR}/artifacts
       - mv ${HOME}/rpmbuild/RPMS/x86_64/koviz*.rpm ${CI_PROJECT_DIR}/artifacts
@@ -58,7 +60,7 @@ rh8-rpm:
 
 keep-tag-artifacts:
    stage: deploy
-   needs: ["rh8-rpm"]
+   needs: ["package-rh8-rpm"]
    variables:
       GIT_STRATEGY: none
    script:
