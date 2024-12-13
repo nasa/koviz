@@ -9,8 +9,10 @@ variables:
 rh8-source:
    stage: build
    script:
-      - qmake-qt5
-      - make
+      #- qmake-qt5
+      #- make
+      - mkdir ${CI_PROJECT_DIR}/bin
+      - cat "Hello" >> ${CI_PROJECT_DIR}/bin/koviz
    artifacts:
       paths:
          # Koviz executable in bin directory
