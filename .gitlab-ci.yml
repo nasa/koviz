@@ -12,7 +12,7 @@ rh8-source:
       #- qmake-qt5
       #- make
       - mkdir ${CI_PROJECT_DIR}/bin
-      - cat "Hello" >> ${CI_PROJECT_DIR}/bin/koviz
+      - echo "Hello" >> ${CI_PROJECT_DIR}/bin/koviz
    artifacts:
       paths:
          # Koviz executable in bin directory
