@@ -26,7 +26,7 @@ rh8-source:
 rh8-rpm:
    stage: package
    variables:
-      GIT_STRATEGY: fetch # Fetch tags
+      GIT_STRATEGY: clone
    cache: []
    needs: ["rh8-source"]
    image: ${CI_REGISTRY_IMAGE}:rh8
