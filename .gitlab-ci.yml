@@ -40,7 +40,11 @@ rh8-rpm:
       
       - rpmdev-setuptree
       - mv ${CI_PROJECT_DIR}/bin/koviz $HOME/rpmbuild/BUILD
-      - rpmbuild -bb --define "_prefix /usr/bin" --define "_version ${TAG}" --define "_release ${COMMIT}.el${VERSION_ID}" ${CI_PROJECT_DIR}/rpm/koviz.spec
+      - rpmbuild -bb 
+         --define "_prefix /usr/bin" 
+         --define "_version ${TAG}" 
+         --define "_release ${COMMIT}.el${VERSION_ID}" 
+         ${CI_PROJECT_DIR}/rpm/koviz.spec
 
       - mkdir ${CI_PROJECT_DIR}/artifacts
       - mv ${HOME}/rpmbuild/RPMS/x86_64/koviz*.rpm ${CI_PROJECT_DIR}/artifacts
