@@ -31,9 +31,12 @@ rh8-rpm:
    tags:
       - dind
    script:
-      - TAG="$(git --git-dir ${CI_PROJECT_DIR}/.git describe --long --tags --always | egrep -o '^[^-]+')"
-      - COMMIT="$(git --git-dir ${CI_PROJECT_DIR}/.git describe --long --tags --always | cut -f2 -d '-')"
-      - VERSION_ID="$(grep VERSION_ID /etc/os-release | sed 's/VERSION_ID="\(.*\)"/\1/' | cut -d. -f1)"
+      GIT_DIR="${CI_PROJECT_DIR}/.git"
+      - TAG="$(git --git-dir $GIT_DIR/.git describe --long --tags --always | egrep -o '^[^-]+')"
+      - COMMIT="$(git --git-dir $GIT_DIR/.git describe --long --tags --always | cut -f2 -d '-')"
+      - VERSION_ID="$(grep VERSION_ID /etc/os-release 
+                        | sed 's/VERSION_ID="\(.*\)"/\1/' 
+                        | cut -d. -f1)"
       
       - rpmdev-setuptree
       - mv ${CI_PROJECT_DIR}/bin/koviz $HOME/rpmbuild/BUILD
