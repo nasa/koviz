@@ -58,6 +58,7 @@ keep-tag-artifacts:
       GIT_STRATEGY: none
    script:
       - RPM_JOB_ID="$(cat $CI_PROJECT_DIR/artifacts/rh8-rpm-job-id.txt)"
+      - rm $CI_PROJECT_DIR/artifacts/rh8-rpm-job-id.txt
       - |
         if [[ -n "$CI_COMMIT_TAG" ]]; then
            echo "This is a tagged commit ($CI_COMMIT_TAG). Marking artifacts to keep."
