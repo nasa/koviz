@@ -31,7 +31,7 @@ rh8-rpm:
    tags:
       - dind
    script:
-      GIT_DIR="${CI_PROJECT_DIR}/.git"
+      - GIT_DIR="${CI_PROJECT_DIR}/.git"
       - TAG="$(git --git-dir $GIT_DIR/.git describe --long --tags --always | egrep -o '^[^-]+')"
       - COMMIT="$(git --git-dir $GIT_DIR/.git describe --long --tags --always | cut -f2 -d '-')"
       - VERSION_ID="$(grep VERSION_ID /etc/os-release 
