@@ -33,7 +33,8 @@ rh8-rpm:
    variables:
       MIMI: "$CI_JOB_ID"
    script:
-      - MIMI="cat"
+      - export MIMI="cat"
+      - echo "MIMI=$MIMI"
       - TAG="$(git --git-dir ${CI_PROJECT_DIR}/.git describe --long --tags --always | egrep -o '^[^-]+')"
       - echo "TAG = $TAG"
       - COMMIT="$(git --git-dir ${CI_PROJECT_DIR}/.git describe --long --tags --always | cut -f2 -d '-')"
@@ -57,9 +58,10 @@ rh8-rpm:
 
 keep-tag-artifacts:
    stage: deploy
-   needs: ["rh8-rpm"]
    variables:
       GIT_STRATEGY: none
+   dependendencies:
+      - rh8-rpm
    script:
       - echo "MIMI=$MIMI"
       - RPM_JOB_ID="$(cat $CI_PROJECT_DIR/artifacts/rh8-rpm-job-id.txt)"
