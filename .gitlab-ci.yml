@@ -6,7 +6,7 @@ stages:
 variables:
    GIT_STRATEGY: clone
 
-compile-rh8-source:
+build-koviz-rh8:
    stage: build
    script:
       - qmake-qt5
@@ -21,10 +21,10 @@ compile-rh8-source:
    tags:
       - dind
 
-create-rh8-rpm:
+create-rpm-rh8:
    stage: package
    cache: []
-   needs: ["compile-rh8-source"]
+   needs: ["build-koviz-rh8"]
    image: ${CI_REGISTRY_IMAGE}:rh8
    tags:
       - dind
@@ -58,7 +58,7 @@ create-rh8-rpm:
 
 keep-tag-artifacts:
    stage: deploy
-   needs: ["create-rh8-rpm"]
+   needs: ["create-rpm-rh8"]
    variables:
       GIT_STRATEGY: none
    script:
