@@ -82,6 +82,6 @@ release-github-rh8:
    stage: deploy
    needs: ["create-rpm-rh8"]
    script:
-      - echo "Tagging GitHub repository with tag: $CI_COMMIT_TAG"
+      - echo "Hi"
    only:
      - tags
