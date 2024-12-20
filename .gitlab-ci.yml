@@ -83,8 +83,22 @@ release-github-rh8:
    needs: ["create-rpm-rh8"]
    script:
       - echo "Tagging GitHub repository with tag: ${CI_COMMIT_TAG}"
-      - curl -X POST -H "Authorization: token $KOVIZ_GITHUB_API" -d '{ "tag": "'"$CI_COMMIT_TAG"'", "message": "Release $CI_COMMIT_TAG", "object": "'"$CI_COMMIT_SHA"'", "type": "commit", "tagger": { "name": "JSC ESGL GitLab CI", "email": "keith.vetter@gmail.com", "date": "'"$(date --utc --iso-8601=seconds)"'" } }' https://api.github.com/repos/nasa/koviz/git/tags
-      - curl -X POST -H "Authorization: token $KOVIZ_GITHUB_API" -d '{ "ref": "refs/tags/'"$CI_COMMIT_TAG"'", "sha": "'"$CI_COMMIT_SHA"'" }' https://api.github.com/repos/nasa/koviz/git/refs
-
+      - |
+        curl -X POST -H "Authorization: token $KOVIZ_GITHUB_API" -d '{
+          "tag": "'"$CI_COMMIT_TAG"'",
+          "message": "Release $CI_COMMIT_TAG",
+          "object": "'"$CI_COMMIT_SHA"'",
+          "type": "commit",
+          "tagger": {
+            "name": "JSC ESGL GitLab CI",
+            "email": "keith.vetter@gmail.com",
+            "date": "'"$(date --utc --iso-8601=seconds)"'"
+          }
+        }' https://api.github.com/repos/nasa/koviz/git/tags
+      - |
+        curl -X POST -H "Authorization: token $KOVIZ_GITHUB_API" -d '{
+          "ref": "refs/tags/'"$CI_COMMIT_TAG"'",
+          "sha": "'"$CI_COMMIT_SHA"'"
+        }' https://api.github.com/repos/nasa/koviz/git/refs
    only:
      - tags
