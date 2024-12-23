@@ -13,8 +13,6 @@ build-koviz-rh8:
       #- make
       - mkdir -p ${CI_PROJECT_DIR}/bin
       - echo "Test" >> ${CI_PROJECT_DIR}/bin/koviz
-      - dnf install -y jq
-      - jq --help
    artifacts:
       paths:
          # Koviz executable in bin directory
