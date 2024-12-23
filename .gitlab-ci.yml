@@ -133,10 +133,10 @@ upload-to-github:
         
       - >
         RELEASE_ID=$(curl -X POST
-                          -H "Authorization: token $KOVIZ_GITHUB_API"
-                          -H "Content-Type: application/json"
-                          -d "$JSON"
-                          https://api.github.com/repos/nasa/koviz/releases | jq -r .id)
+        -H "Authorization: token $KOVIZ_GITHUB_API"
+        -H "Content-Type: application/json"
+        -d "$JSON"
+        https://api.github.com/repos/nasa/koviz/releases | jq -r .id)
           
       - echo "Uploading RPM to GitHub release $RELEASE_ID"
       - >
