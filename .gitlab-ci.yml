@@ -120,7 +120,7 @@ tag-github:
 
 upload-to-github:
    stage: deploy
-   needs: ["tag-github"]
+   needs: ["create-rpm-rh8"]
    script:
       - echo "Creating GitHub release for tag ${CI_COMMIT_TAG}"
       - dnf install -y jq curl
