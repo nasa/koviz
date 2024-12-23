@@ -11,6 +11,7 @@ build-koviz-rh8:
    script:
       #- qmake-qt5
       #- make
+      - mkdir -p ${CI_PROJECT_DIR}/bin
       - echo "Test" >> ${CI_PROJECT_DIR}/bin/koviz
       - jq --help
    artifacts:
