@@ -141,7 +141,9 @@ upload-to-github:
           
       - echo "Uploading RPM to GitHub release $RELEASE_ID"
       - |
-        for file in ${CI_PROJECT_DIR}/artifacts/*.rpm; do
+        for file in ${CI_PROJECT_DIR}/artifacts/*.rpm; do \
+            echo "Upload file=$file" \
+            ls -lh $file \
             curl -X POST -H "Authorization: token $KOVIZ_GITHUB_API" \
                  -H "Content-Type: application/octet-stream" \
                  --data-binary @"$file" \
