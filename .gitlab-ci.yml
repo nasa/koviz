@@ -105,6 +105,9 @@ tag-github:
         }' https://api.github.com/repos/nasa/koviz/git/refs
    only:
      - tags
+   tags:
+      - dind
+   image: registry.access.redhat.com/ubi8/ubi:latest
 
 upload-to-github:
    stage: deploy
@@ -132,3 +135,6 @@ upload-to-github:
         done
    only:
      - tags
+   tags:
+      - dind
+   image: registry.access.redhat.com/ubi8/ubi:latest
