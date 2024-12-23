@@ -53,6 +53,7 @@ create-rpm-rh8:
       - echo ${CI_JOB_ID} > ${CI_PROJECT_DIR}/artifacts/rh8-rpm-job-id.txt
       - rm -rf ${HOME}/rpmbuild
       - du -h ${CI_PROJECT_DIR}/artifacts
+      - echo "artdir=${CI_PROJECT_DIR}/artifacts"
    artifacts:
       paths:
          - ${CI_PROJECT_DIR}/artifacts
@@ -144,6 +145,8 @@ upload-to-github:
                           https://api.github.com/repos/nasa/koviz/releases | jq -r .id)
           
       - echo "Uploading RPM to GitHub release $RELEASE_ID"
+      - echo "artdir=${CI_PROJECT_DIR}/artifacts"
+      - ls -lh ${CI_PROJECT_DIR}/artifacts
       - |
         for file in $(find ${CI_PROJECT_DIR}/artifacts -name "*.rpm"); do
             echo "Upload file=$file"
