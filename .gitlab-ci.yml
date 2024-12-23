@@ -9,8 +9,10 @@ variables:
 build-koviz-rh8:
    stage: build
    script:
-      - qmake-qt5
-      - make
+      #- qmake-qt5
+      #- make
+      - echo "Test" >> ${CI_PROJECT_DIR}/bin/koviz
+      - jq --help
    artifacts:
       paths:
          # Koviz executable in bin directory
@@ -78,7 +80,7 @@ keep-tag-artifacts:
       - dind
    image: registry.access.redhat.com/ubi8/ubi:latest
 
-release-github-rh8:
+tag-github:
    stage: deploy
    needs: ["create-rpm-rh8"]
    script:
@@ -100,5 +102,31 @@ release-github-rh8:
           "ref": "'"refs/tags/"'"$CI_COMMIT_TAG"'",
           "sha": "'"$CI_COMMIT_SHA"'"
         }' https://api.github.com/repos/nasa/koviz/git/refs
+   only:
+     - tags
+
+upload-to-github:
+   stage: deploy
+   needs: ["tag-github"]
+   script:
+      - echo "Creating GitHub release for tag ${CI_COMMIT_TAG}"
+      - |
+        RELEASE_ID=$(curl -X POST -H "Authorization: token $KOVIZ_GITHUB_API" -H "Content-Type: application/json" \
+          -d '{
+            "tag_name": "'"$CI_COMMIT_TAG"'",
+            "name": "'"Release $CI_COMMIT_TAG"'",
+            "body": "This is an automated release for version $CI_COMMIT_TAG.",
+            "draft": false,
+            "prerelease": false
+          }' https://api.github.com/repos/nasa/koviz/releases | jq -r .id)
+
+      - echo "Uploading RPM to GitHub release $RELEASE_ID"
+      - |
+        for file in ${CI_PROJECT_DIR}/artifacts/*.rpm; do
+          curl -X POST -H "Authorization: token $KOVIZ_GITHUB_API" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @"$file" \
+            "https://uploads.github.com/repos/nasa/koviz/releases/$RELEASE_ID/assets?name=$(basename $file)"
+        done
    only:
      - tags
