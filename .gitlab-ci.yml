@@ -87,26 +87,30 @@ tag-github:
       - echo "Tagging GitHub repository with tag ${CI_COMMIT_TAG}"
       - dnf install -y curl
       - |
-        curl -X POST -H "Authorization: token $KOVIZ_GITHUB_API" -d '{
-          "tag": "'"$CI_COMMIT_TAG"'",
+        curl -X POST -H "Authorization: token $KOVIZ_GITHUB_API" -d @- https://api.github.com/repos/nasa/koviz/git/tags <<EOF
+        {
+          "tag": "$CI_COMMIT_TAG",
           "message": "Release $CI_COMMIT_TAG",
-          "object": "'"$CI_COMMIT_SHA"'",
+          "object": "$CI_COMMIT_SHA",
           "type": "commit",
           "tagger": {
             "name": "JSC ESGL GitLab CI",
             "email": "keith.vetter@gmail.com",
-            "date": "'"$(date --utc --iso-8601=seconds)"'"
+            "date": "$(date --utc --iso-8601=seconds)"
           }
-        }' https://api.github.com/repos/nasa/koviz/git/tags
+        }
+        EOF
       - |
-        curl -X POST -H "Authorization: token $KOVIZ_GITHUB_API" -d '{
-          "ref": "'"refs/tags/"'"$CI_COMMIT_TAG"'",
-          "sha": "'"$CI_COMMIT_SHA"'"
-        }' https://api.github.com/repos/nasa/koviz/git/refs
+        curl -X POST -H "Authorization: token $KOVIZ_GITHUB_API" -d @- https://api.github.com/repos/nasa/koviz/git/refs <<EOF
+        {
+          "ref": "refs/tags/$CI_COMMIT_TAG",
+          "sha": "$CI_COMMIT_SHA"
+        }
+        EOF
    only:
      - tags
    tags:
-      - dind
+     - dind
    image: registry.access.redhat.com/ubi8/ubi:latest
 
 upload-to-github:
@@ -117,14 +121,17 @@ upload-to-github:
       - dnf install -y jq curl
       - |
         RELEASE_ID=$(curl -X POST -H "Authorization: token $KOVIZ_GITHUB_API" -H "Content-Type: application/json" \
-          -d '{
-            "tag_name": "'"$CI_COMMIT_TAG"'",
-            "name": "'"Release $CI_COMMIT_TAG"'",
+          -d @- https://api.github.com/repos/nasa/koviz/releases <<EOF
+          {
+            "tag_name": "$CI_COMMIT_TAG",
+            "name": "Release $CI_COMMIT_TAG",
             "body": "This is an automated release for version $CI_COMMIT_TAG.",
             "draft": false,
             "prerelease": false
-          }' https://api.github.com/repos/nasa/koviz/releases | jq -r .id)
-
+          }
+          EOF
+        | jq -r .id)
+          
       - echo "Uploading RPM to GitHub release $RELEASE_ID"
       - |
         for file in ${CI_PROJECT_DIR}/artifacts/*.rpm; do
@@ -138,3 +145,4 @@ upload-to-github:
    tags:
       - dind
    image: registry.access.redhat.com/ubi8/ubi:latest
+
