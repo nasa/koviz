@@ -9,10 +9,11 @@ variables:
 build-koviz-rh8:
    stage: build
    script:
-      #- qmake-qt5
-      #- make
-      - mkdir -p ${CI_PROJECT_DIR}/bin
-      - echo "Test" >> ${CI_PROJECT_DIR}/bin/koviz
+      - qmake-qt5
+      - make
+      # For debugging without building koviz
+      #- mkdir -p ${CI_PROJECT_DIR}/bin
+      #- echo "Test" >> ${CI_PROJECT_DIR}/bin/koviz
    artifacts:
       paths:
          # Koviz executable in bin directory
@@ -53,7 +54,6 @@ create-rpm-rh8:
       - echo ${CI_JOB_ID} > ${CI_PROJECT_DIR}/artifacts/rh8-rpm-job-id.txt
       - rm -rf ${HOME}/rpmbuild
       - du -h ${CI_PROJECT_DIR}/artifacts
-      - echo "artdir=${CI_PROJECT_DIR}/artifacts"
    artifacts:
       paths:
          - ${CI_PROJECT_DIR}/artifacts
@@ -120,7 +120,9 @@ tag-github:
 
 upload-to-github:
    stage: deploy
-   needs: ["create-rpm-rh8"]
+   needs: 
+      - create-rpm-rh8
+      - tag-github
    script:
       - echo "Creating GitHub release for tag ${CI_COMMIT_TAG}"
       - dnf install -y jq curl
@@ -145,8 +147,7 @@ upload-to-github:
                           https://api.github.com/repos/nasa/koviz/releases | jq -r .id)
           
       - echo "Uploading RPM to GitHub release $RELEASE_ID"
-      - echo "artdir=${CI_PROJECT_DIR}/artifacts"
-      - ls -lh ${CI_PROJECT_DIR}/artifacts
+      - ls -lh ${CI_PROJECT_DIR}/artifacts/*.rpm
       - |
         for file in $(find ${CI_PROJECT_DIR}/artifacts -name "*.rpm"); do
             echo "Upload file=$file"
