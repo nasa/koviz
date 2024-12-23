@@ -13,6 +13,7 @@ build-koviz-rh8:
       #- make
       - mkdir -p ${CI_PROJECT_DIR}/bin
       - echo "Test" >> ${CI_PROJECT_DIR}/bin/koviz
+      - dnf install -y jq
       - jq --help
    artifacts:
       paths:
@@ -111,6 +112,7 @@ upload-to-github:
    needs: ["tag-github"]
    script:
       - echo "Creating GitHub release for tag ${CI_COMMIT_TAG}"
+      - dnf install -y jq
       - |
         RELEASE_ID=$(curl -X POST -H "Authorization: token $KOVIZ_GITHUB_API" -H "Content-Type: application/json" \
           -d '{
