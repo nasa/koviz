@@ -589,6 +589,10 @@ void CurvesView::_paintMarkers(QPainter &painter)
             QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,
                                                            "Curves","Plot");
             path = _bookModel()->getCurvesErrorPath(curvesIdx);
+        } else {
+            fprintf(stderr, "koviz [bad scoobs]: CurvesView::_paintMarkers : "
+                            "this case should not happen.\n");
+            exit(-1);
         }
         if ( path->elementCount() == 0 ) {
             if ( tag == "Plot" ) {
@@ -900,7 +904,8 @@ void CurvesView::_keyPressPeriod()
         double liveTime = model()->data(liveIdx).toDouble();
         int i = 0;
         if ( curveModel->x()->name() == curveModel->t()->name() ) {
-            i = curveModel->indexAtTime((liveTime-xb)/xs);
+            // xub not used below since time units have no bias
+            i = curveModel->indexAtTime((liveTime-xb)/xs/xus);
         } else {
             // e.g. ball xy curve where x is position[0]
             i = curveModel->indexAtTime(liveTime);
