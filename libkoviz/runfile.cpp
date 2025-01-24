@@ -3,6 +3,7 @@
 RunFile::RunFile(const QString &run,
                const QStringList &timeNames,
                const QHash<QString, QStringList> &varMap) :
+    _timeNames(timeNames),
     _varMap(varMap)
 {
     QFileInfo fi(run);
@@ -50,9 +51,25 @@ QStringList RunFile::params()
 DataModel *RunFile::dataModel(const QString &param)
 {
     DataModel* model = 0;
+
     if ( _params.contains(param) ) {
+        // Normal case
         model = _model;
-    } else {
+    }
+
+    if ( !model ) {
+        // Look in timeNames for param
+        if ( _timeNames.contains(param) ) {
+            foreach ( QString timeName, _timeNames ) {
+                if ( _params.contains(timeName) ) {
+                    model = _model;
+                    break;
+                }
+            }
+        }
+    }
+
+    if ( !model ) {
         // Look in varmap for param
         foreach (QString key, _varMap.keys()) {
             QStringList names;

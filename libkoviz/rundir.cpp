@@ -5,6 +5,7 @@ RunDir::RunDir(const QString &run,
                const QHash<QString, QStringList> &varMap,
                const QString &filterPattern,
                const QString &excludePattern) :
+    _timeNames(timeNames),
     _varMap(varMap)
 {
     if ( ! QFileInfo(run).exists() ) {
@@ -18,8 +19,9 @@ RunDir::RunDir(const QString &run,
 
     if ( files.empty() ) {
         fprintf(stderr, "koviz [error]: Either no *.trk/csv/mot files \n"
-                        "               in run dir: %s\n"
-                        "               or log files were filtered out.\n",
+             "               in run dir: %s\n"
+             "               or logs were filtered out\n"
+             "               or no logs that match -timeName\n",
                         run.toLatin1().constData());
         exit(-1);
     }
@@ -62,6 +64,19 @@ QStringList RunDir::params()
 DataModel *RunDir::dataModel(const QString &param)
 {
     DataModel* model = _param2model.value(param);
+
+    if ( !model ) {
+        // Look in timeNames for param
+        if ( _timeNames.contains(param) ) {
+            foreach ( QString timeName, _timeNames ) {
+                if ( _param2model.keys().contains(timeName) ) {
+                    model = _param2model.value(timeName);
+                    break;
+                }
+            }
+        }
+    }
+
     if ( !model ) {
         // Look in varmap for param (e.g. when DP does not use map key for var)
         foreach (QString key, _varMap.keys()) {
@@ -76,6 +91,7 @@ DataModel *RunDir::dataModel(const QString &param)
             }
         }
     }
+
     return model;
 }
 

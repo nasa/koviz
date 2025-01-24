@@ -30,6 +30,7 @@ public:
                         const QString& excludePattern);
 
 private:
+    QStringList _timeNames;
     const QHash<QString, QStringList> _varMap;
     QHash<QString,DataModel*> _param2model;
 

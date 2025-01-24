@@ -48,6 +48,7 @@ SOURCES += bookmodel.cpp \
            curvemodel_copy.cpp \
            datamodel_optitrack_csv.cpp \
            datamodel_points.cpp \
+           datamodel_xy.cpp \
            dp.cpp \
            run.cpp \
            rundir.cpp \
@@ -134,6 +135,7 @@ HEADERS  += bookmodel.h \
             curvemodel_copy.h \
             datamodel_optitrack_csv.h \
             datamodel_points.h \
+            datamodel_xy.h \
             dp.h \
             run.h \
             rundir.h \

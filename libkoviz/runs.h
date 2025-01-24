@@ -24,6 +24,7 @@
 #include "rundir.h"
 #include "runfile.h"
 #include "runtv.h"
+#include "datamodel_xy.h"
 
 class Runs : public QObject
 {
@@ -32,6 +33,7 @@ class Runs : public QObject
   public:
     Runs();
     Runs(const QStringList& timeNames,
+         double timeMatchTolerance,
          const QStringList &runPaths,
          const QHash<QString,QStringList> &varMap,
          const QString& filterPattern,
@@ -65,6 +67,7 @@ class Runs : public QObject
 
   private:
     QStringList _timeNames;
+    double _timeMatchTolerance;
     QStringList _runPaths;
     QString _montePath;
     QHash<QString,QStringList> _varMap;
@@ -73,7 +76,7 @@ class Runs : public QObject
     bool _isShowProgress;
     QStringList _params;
     QHash<QString,QList<DataModel*>* > _paramToModels;
-    QList<DataModel*> _models;
+    mutable QList<DataModel*> _xyModels;
     QHash<QString,int> _rundir2row;
     QStandardItemModel* _runsModel;
 

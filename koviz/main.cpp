@@ -428,6 +428,7 @@ int main(int argc, char *argv[])
         timeName = "sys.exec.out.time";
     }
     QStringList timeNames = getTimeNames(timeName);
+    timeName = timeNames.at(0);
 
     // Exclude and Filter patterns
     QString excludePattern = opts.excludePattern;
@@ -631,7 +632,17 @@ int main(int argc, char *argv[])
             isShowProgress = false;
         }
 
-        runs = new Runs(timeNames,runPaths,varMap,
+        // Time match tolerance
+        double tolerance = opts.timeMatchTolerance;
+        if ( tolerance == DBL_MAX ) {
+            if ( session ) {
+                tolerance = session->timeMatchTolerance();
+            } else {
+                tolerance = 0.0000001;  // 10th of a microsecond
+            }
+        }
+
+        runs = new Runs(timeNames,tolerance,runPaths,varMap,
                         filterPattern,
                         excludePattern,
                         isShowProgress);
@@ -910,16 +921,6 @@ int main(int argc, char *argv[])
             exit(-1);
         }
 #endif
-
-        // Time match tolerance
-        double tolerance = opts.timeMatchTolerance;
-        if ( tolerance == DBL_MAX ) {
-            if ( session ) {
-                tolerance = session->timeMatchTolerance();
-            } else {
-                tolerance = 0.0000001;  // 10th of a microsecond
-            }
-        }
 
         // Frequency
         double frequency = 0.0;

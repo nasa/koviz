@@ -11,12 +11,14 @@ Runs::Runs() :
 }
 
 Runs::Runs(const QStringList &timeNames,
+           double timeMatchTolerance,
            const QStringList &runPaths,
            const QHash<QString,QStringList>& varMap,
            const QString &filterPattern,
            const QString &excludePattern,
            bool isShowProgress) :
     _timeNames(timeNames),
+    _timeMatchTolerance(timeMatchTolerance),
     _runPaths(runPaths),
     _varMap(varMap),
     _filterPattern(filterPattern),
@@ -37,10 +39,10 @@ Runs::~Runs()
 
 void Runs::_delete()
 {
-    foreach ( DataModel* m, _models ) {
+    foreach ( DataModel* m, _xyModels ) {
         delete m;
     }
-    _models.clear();
+    _xyModels.clear();
 
     foreach ( QString p, _params ) {
         delete _paramToModels.value(p);
@@ -241,35 +243,33 @@ CurveModel *Runs::curveModel(int row,
         return 0;
     }
     Run* run = _runs.at(row);
-    DataModel* model = run->dataModel(yName);
-    if ( !model ) {
+    DataModel* yModel = run->dataModel(yName);
+    if ( !yModel ) {
         return 0;
+    }
+    DataModel* xModel = run->dataModel(xName);
+    if ( !xModel ) {
+        return 0;
+    }
+
+    DataModel* model = 0;
+    if ( xModel == yModel ) {
+        model = yModel;
+    } else {
+        // X&Y in different files
+        int xcol = _paramColumn(xModel,xName);
+        const Parameter* xParam = xModel->param(xcol);
+        int ycol = _paramColumn(yModel,yName);
+        const Parameter* yParam = yModel->param(ycol);
+        model = new XYModel(_timeNames,_timeMatchTolerance,
+                            xModel,xParam->name(),
+                            yModel,yParam->name());
+        _xyModels.append(model);
     }
 
     int tcol = _paramColumn(model,tName) ;
     int xcol = _paramColumn(model,xName) ;
     int ycol = _paramColumn(model,yName) ;
-
-    if ( tcol < 0 || xcol < 0 ) {
-        fprintf(stderr, "koviz [error]: Runs::curveModel() : koviz does not "
-                "support making a curve from parameters that reside in "
-                "separate files. Found:\n"
-                "    y=%s in file=%s\n"
-                "but could not find:\n",
-                yName.toLatin1().constData(),
-                model->fileName().toLatin1().constData());
-        if ( tcol < 0 ) {
-            fprintf(stderr, "   t=%s in file=%s\n",
-                    tName.toLatin1().constData(),
-                    model->fileName().toLatin1().constData());
-        }
-        if ( xcol < 0 ) {
-            fprintf(stderr, "   x=%s in file=%s\n",
-                    xName.toLatin1().constData(),
-                    model->fileName().toLatin1().constData());
-        }
-        exit(-1);
-    }
 
     curveModel = new CurveModel(model,tcol,xcol,ycol);
 
@@ -277,6 +277,17 @@ CurveModel *Runs::curveModel(int row,
     foreach (QString key, _varMap.keys() ) {
         foreach (QString val, _varMap.value(key)) {
             MapValue mapval(val);
+            if ( mapval.name() == curveModel->t()->name() ) {
+                if ( !mapval.unit().isEmpty() ) {
+                    curveModel->t()->setUnit(mapval.unit());
+                }
+                if ( mapval.bias() != 0.0 ) {
+                    curveModel->t()->setBias(mapval.bias());
+                }
+                if ( mapval.scale() != 1.0 ) {
+                    curveModel->t()->setScale(mapval.scale());
+                }
+            }
             if ( mapval.name() == curveModel->x()->name() ) {
                 if ( !mapval.unit().isEmpty() ) {
                     curveModel->x()->setUnit(mapval.unit());

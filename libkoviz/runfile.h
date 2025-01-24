@@ -25,6 +25,7 @@ public:
 
     static bool isValid(const QString& run, const QStringList &timeNames);
 private:
+    QStringList _timeNames;
     const QHash<QString, QStringList> _varMap;
     DataModel* _model;
     QStringList _params;
