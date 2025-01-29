@@ -261,7 +261,7 @@ CurveModel *Runs::curveModel(int row,
         const Parameter* xParam = xModel->param(xcol);
         int ycol = _paramColumn(yModel,yName);
         const Parameter* yParam = yModel->param(ycol);
-        model = new XYModel(_timeNames,_timeMatchTolerance,
+        model = new XYModel(_timeNames,_timeMatchTolerance, _varMap,
                             xModel,xParam->name(),
                             yModel,yParam->name());
         _xyModels.append(model);

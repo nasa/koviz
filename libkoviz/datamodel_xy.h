@@ -15,6 +15,7 @@
 #include "datamodel.h"
 #include "parameter.h"
 #include "unit.h"
+#include "mapvalue.h"
 
 class XYModel;
 class XYModelIterator;
@@ -29,6 +30,7 @@ class XYModel : public DataModel
 
     explicit XYModel(const QStringList &timeNames,
                      double timeMatchTolerance,
+                     const QHash<QString,QStringList>& varMap,
                      DataModel *xModel, const QString &xName,
                      DataModel *yModel, const QString &yName,
                      QObject *parent = 0);
@@ -50,6 +52,7 @@ class XYModel : public DataModel
 
     QStringList _timeNames;
     double _timeMatchTolerance;
+    const QHash<QString,QStringList> _varMap;
     DataModel* _xModel;
     const QString _xName;
     DataModel* _yModel;

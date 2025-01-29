@@ -31,6 +31,7 @@ using namespace std;
 #include "libkoviz/trick_types.h"
 #include "libkoviz/session.h"
 #include "libkoviz/versionnumber.h"
+#include "libkoviz/mapvalue.h"
 
 QStandardItemModel* createVarsModel(Runs* runs);
 bool writeTrk(const QString& ftrk, const QString &timeName,
@@ -429,6 +430,30 @@ int main(int argc, char *argv[])
     }
     QStringList timeNames = getTimeNames(timeName);
     timeName = timeNames.at(0);
+
+
+    // Check to ensure time isn't scaled or biased via the map
+    foreach (QString key, varMap.keys() ) {
+        foreach (QString val, varMap.value(key)) {
+            MapValue mapval(val);
+            foreach ( timeName, timeNames ) {
+                if ( mapval.name() == timeName ) {
+                    if ( mapval.bias() != 0.0 ) {
+                        fprintf(stderr, "koviz [error]: var map is attempting "
+                                "to bias time.  Koviz doesn't not "
+                                "support this.\n");
+                        exit(-1);
+                    }
+                    if ( mapval.scale() != 1.0 ) {
+                        fprintf(stderr, "koviz [error]: var map is attempting "
+                                "to scale time.  Koviz doesn't not "
+                                "support this.\n");
+                        exit(-1);
+                    }
+                }
+            }
+        }
+    }
 
     // Exclude and Filter patterns
     QString excludePattern = opts.excludePattern;

@@ -2,12 +2,14 @@
 
 XYModel::XYModel(const QStringList& timeNames,
                  double timeMatchTolerance,
+                 const QHash<QString,QStringList>& varMap,
                  DataModel *xModel, const QString& xName,
                  DataModel *yModel, const QString& yName,
                  QObject *parent) :
     DataModel(timeNames, QString(), QString(), parent),
     _timeNames(timeNames),
     _timeMatchTolerance(timeMatchTolerance),
+    _varMap(varMap),
     _xModel(xModel),_xName(xName),
     _yModel(yModel),_yName(yName),
     _nrows(0), _ncols(3), _iteratorTimeIndex(0), _data(0)
@@ -38,7 +40,7 @@ void XYModel::_init()
     _yParam->setUnit(_yModel->param(ycol)->unit());
 
     int xTimeCol = -1;
-    _tParam = new Parameter;
+    _tParam = new Parameter; // _tParam derived from xModel
     bool isXTimeFound = false;
     foreach (QString timeName, _timeNames) {
         int ncols = _xModel->columnCount();
@@ -59,6 +61,18 @@ void XYModel::_init()
     if ( !isXTimeFound ) {
         fprintf(stderr, "koviz [error]: Could not find associated time for "
                 "x parameter \"%s\"\n", _xName.toLatin1().constData());
+    }
+    foreach (QString key, _varMap.keys() ) {
+        foreach (QString val, _varMap.value(key)) {
+            MapValue mapval(val);
+            if ( mapval.name() == _tParam->name() ) {
+                // Note: mapval.scale/bias not used/supported for time
+                if ( _tParam->unit() == "--" && !mapval.unit().isEmpty() ) {
+                    // Override time unit with map unit
+                    _tParam->setUnit(mapval.unit());
+                }
+            }
+        }
     }
 
     int yTimeCol = -1;
@@ -84,6 +98,18 @@ void XYModel::_init()
     if ( !isYTimeFound ) {
         fprintf(stderr, "koviz [error]: Could not find associated time for "
                 "y parameter \"%s\"\n", _yName.toLatin1().constData());
+    }
+    foreach (QString key, _varMap.keys() ) {
+        foreach (QString val, _varMap.value(key)) {
+            MapValue mapval(val);
+            if ( mapval.name() == yTimeName ) {
+                // Note: mapval.scale/bias not used/supported for time
+                if ( yTimeUnit == "--" && !mapval.unit().isEmpty() ) {
+                    // Override time unit with map unit
+                    yTimeUnit = mapval.unit();
+                }
+            }
+        }
     }
 
     _iteratorTimeIndex = new XYModelIterator(0,this,0,1,2);
