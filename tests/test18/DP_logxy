@@ -1,0 +1,17 @@
+Koviz
+
+PLOTS:
+  Page 1: ""
+
+    Plot 1: ""
+      plot_x_scale: "log"
+      plot_y_scale: "log"
+      x_variable: "sys.exec.out.time"
+        units: "s"
+      y_variable: "pos"
+        units: "m"
+        symbol_style: "none"
+        symbol_end: "none"
+        label: "pos"
+
+

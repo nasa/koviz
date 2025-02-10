@@ -1,0 +1,14 @@
+Koviz
+
+PLOTS:
+  Page 1: ""
+
+    Plot 1: ""
+      x_variable: "sys.exec.out.time"
+        bias: 10
+        scale_factor: 2
+      y_variable: "val"
+        units: "F"
+        bias: 10
+        scale_factor: 2
+        symbol_style: "circle"

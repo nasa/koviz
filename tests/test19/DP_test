@@ -1,0 +1,13 @@
+Koviz
+
+PLOTS:
+  Page 1: ""
+
+    Plot 1: ""
+      x_variable: "sys.exec.out.time"
+        units: "s"
+      y_variable: "temperature"
+        scale_factor: 2
+        bias: 10
+        units: "F"
+        symbol_style: "circle"
