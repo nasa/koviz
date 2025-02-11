@@ -1,0 +1,3 @@
+time = sys.exec.out.time {s} = bx.t {ms} = by.t {us},
+x = ax {m} = bx {m},
+y = ay {m} = by {m}

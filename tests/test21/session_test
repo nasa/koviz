@@ -1,0 +1,7 @@
+Session - Jan 24, 2025
+
+RUN: RUN_a
+RUN: RUN_b
+PRODUCT: DP_test
+timeName: sys.exec.out.time=bx.t=by.t
+mapFile: map.kvz

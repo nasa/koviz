@@ -1,0 +1,3 @@
+time = a.t {min} = b.t {s},
+ax = a.x {m},
+by = b.y {m}

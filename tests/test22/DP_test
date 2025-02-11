@@ -1,0 +1,10 @@
+Koviz
+
+PLOTS:
+  Page 1: ""
+
+    Plot 1: ""
+      x_variable: "ax"
+          units: "cm"
+      y_variable: "by"
+          units: "cm"
