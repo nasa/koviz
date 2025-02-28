@@ -1968,11 +1968,12 @@ bool convert2csv(const QStringList& timeNames,
     //
     // Write param values
     //
+    QLocale cLocale(QLocale::C);
     int rc = m.rowCount();
     for ( int r = 0 ; r < rc; ++r ) {
         for ( int c = 0 ; c < cc; ++c ) {
             QModelIndex idx = m.index(r,c);
-            out << m.data(idx).toString();
+            out << cLocale.toString(m.data(idx).toDouble());
             if ( c < cc-1 ) {
                 out << ",";
             } else {
