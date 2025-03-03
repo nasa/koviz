@@ -335,6 +335,7 @@ bool SieListModel::__createSieDocument()
 
     // Read sie xml from Trick variable server
     QByteArray sieXML;
+    sieXML.append(sieSocket.readAll());
     while ( sieXML.size() < nbytes ) {
         bool isReady = sieSocket.waitForReadyRead();
         if ( !isReady ) {
