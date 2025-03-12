@@ -31,6 +31,7 @@ class XYModel : public DataModel
     explicit XYModel(const QStringList &timeNames,
                      double timeMatchTolerance,
                      const QHash<QString,QStringList>& varMap,
+                     const QString& runPath,
                      DataModel *xModel, const QString &xName,
                      DataModel *yModel, const QString &yName,
                      QObject *parent = 0);

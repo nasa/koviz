@@ -3,10 +3,11 @@
 XYModel::XYModel(const QStringList& timeNames,
                  double timeMatchTolerance,
                  const QHash<QString,QStringList>& varMap,
+                 const QString &runPath,
                  DataModel *xModel, const QString& xName,
                  DataModel *yModel, const QString& yName,
                  QObject *parent) :
-    DataModel(timeNames, QString(), QString(), parent),
+    DataModel(timeNames, runPath, QString(), parent),
     _timeNames(timeNames),
     _timeMatchTolerance(timeMatchTolerance),
     _varMap(varMap),

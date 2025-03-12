@@ -261,7 +261,11 @@ CurveModel *Runs::curveModel(int row,
         const Parameter* xParam = xModel->param(xcol);
         int ycol = _paramColumn(yModel,yName);
         const Parameter* yParam = yModel->param(ycol);
-        model = new XYModel(_timeNames,_timeMatchTolerance, _varMap,
+        QString runPath;
+        if ( xModel->runPath() == yModel->runPath() ) {
+            runPath = xModel->runPath();
+        }
+        model = new XYModel(_timeNames,_timeMatchTolerance, _varMap, runPath,
                             xModel,xParam->name(),
                             yModel,yParam->name());
         _xyModels.append(model);
