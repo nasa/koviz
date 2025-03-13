@@ -243,13 +243,29 @@ CurveModel *Runs::curveModel(int row,
         return 0;
     }
     Run* run = _runs.at(row);
+
     DataModel* yModel = run->dataModel(yName);
     if ( !yModel ) {
         return 0;
     }
-    DataModel* xModel = run->dataModel(xName);
+    DataModel* xModel = 0;
+    int nParamsInYModel = yModel->columnCount();
+    for ( int i = 0; i < nParamsInYModel; ++i ) {
+        // Search for param xName in yModel
+        if ( xName == yModel->param(i)->name() ) {
+            // Since xName also in yModel, set xModel to yModel
+            // This keeps the same file associated with both x&y when
+            // the RUN is a directory of files that can all have the same
+            // x param i.e. sys.exec.out.time
+            xModel = yModel;
+            break;
+        }
+    }
     if ( !xModel ) {
-        return 0;
+        xModel = run->dataModel(xName);
+        if ( !xModel ) {
+            return 0;
+        }
     }
 
     DataModel* model = 0;
