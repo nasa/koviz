@@ -1,0 +1,9 @@
+Koviz
+
+PLOTS:
+  Page 1: "Derek!"
+
+    Plot 1: "Value Curve"
+      x_variable: "sys.exec.out.time"
+      y_variable: "value"
+
