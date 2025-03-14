@@ -262,6 +262,13 @@ CurveModel *Runs::curveModel(int row,
         }
     }
     if ( !xModel ) {
+        // Search for xName in timenames
+        if ( _timeNames.contains(xName) ) {
+            // Since xName is time and yModel has time, set xModel to yModel
+            xModel = yModel;
+        }
+    }
+    if ( !xModel ) {
         xModel = run->dataModel(xName);
         if ( !xModel ) {
             return 0;
