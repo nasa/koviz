@@ -11,6 +11,7 @@
 #include <QHash>
 #include <QProcess>
 #include <QFileInfo>
+#include <QRegularExpression>
 
 #include "plotmainwindow.h"
 
@@ -1584,7 +1585,22 @@ void PlotMainWindow::_launchScript(QAction* action)
         }
     }
     if ( !runpath.isEmpty() ) {
-        QStringList fields = action->text().split(' ', _skipEmptyParts);
+        // Regular expression to capture words and make multiple words
+        // surrounded in single quotes a single word
+        // Example call using single quoted multiple words:
+        // koviz RUN_test -script "&koviz -t1 'Hello World'"
+        QRegularExpression regex(R"((?:'([^']*)')|(\S+))");
+        QStringList fields;
+        QRegularExpressionMatchIterator it = regex.globalMatch(action->text());
+        while (it.hasNext()) {
+            QRegularExpressionMatch match = it.next();
+            if (match.captured(1).isEmpty()) {
+                fields.append(match.captured(2)); // Unquoted words
+            } else {
+                fields.append(match.captured(1)); // Single quoted words
+            }
+        }
+
         QString program = fields.takeAt(0);
         program = program.remove('&');
         QStringList arguments;
