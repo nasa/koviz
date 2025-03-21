@@ -670,6 +670,7 @@ int main(int argc, char *argv[])
         runs = new Runs(timeNames,tolerance,runPaths,varMap,
                         filterPattern,
                         excludePattern,
+                        opts.beginRun,opts.endRun,
                         isShowProgress);
         monteInputsModel = runs->runsModel();
         varsModel = createVarsModel(runs);

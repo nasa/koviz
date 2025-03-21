@@ -16,6 +16,7 @@ Runs::Runs(const QStringList &timeNames,
            const QHash<QString,QStringList>& varMap,
            const QString &filterPattern,
            const QString &excludePattern,
+           uint begRun, uint endRun,
            bool isShowProgress) :
     _timeNames(timeNames),
     _timeMatchTolerance(timeMatchTolerance),
@@ -23,6 +24,8 @@ Runs::Runs(const QStringList &timeNames,
     _varMap(varMap),
     _filterPattern(filterPattern),
     _excludePattern(excludePattern),
+    _begRun(begRun),
+    _endRun(endRun),
     _isShowProgress(isShowProgress),
     _runsModel(new QStandardItemModel(this))
 {
@@ -147,7 +150,7 @@ void Runs::_init()
         QStringList runsList = _runsSubset(monteRuns,
                                            _filterPattern,
                                            _excludePattern,
-                                           0,UINT_MAX);
+                                           _begRun,_endRun);
         _runPaths.clear();
         foreach ( QString run, runsList ) {
             _runPaths << _montePath + "/" + run;

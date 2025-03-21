@@ -38,6 +38,7 @@ class Runs : public QObject
          const QHash<QString,QStringList> &varMap,
          const QString& filterPattern,
          const QString& excludePattern,
+         uint begRun, uint endRun,
          bool isShowProgress);
     virtual ~Runs();
     const QStringList& params() const { return _params; }
@@ -73,6 +74,8 @@ class Runs : public QObject
     QHash<QString,QStringList> _varMap;
     QString _filterPattern;
     QString _excludePattern;
+    uint _begRun;
+    uint _endRun;
     bool _isShowProgress;
     QStringList _params;
     QHash<QString,QList<DataModel*>* > _paramToModels;
