@@ -22,7 +22,7 @@ jobs:
 
   build-centos8:
     runs-on: ubuntu-latest
-    container: centos:latest
+    container: centos:8
     steps:
       - uses: actions/checkout@master
       - name: install dependencies
