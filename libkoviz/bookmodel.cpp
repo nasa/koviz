@@ -1700,13 +1700,6 @@ QPainterPath* PlotBookModel::_createCurvesErrorPath(
         exit(-1);
     }
 
-    if ( c0->t()->unit() != c1->t()->unit() ) {
-        fprintf(stderr,"koviz [bad scoobs]:4: "
-                       "PlotBookModel::_createErrorPath().  "
-                       "TODO: curveModels time units do not match.\n");
-        exit(-1);
-    }
-
     QModelIndex idx0 = index(0,0,curvesIdx);
     QModelIndex idx1 = index(1,0,curvesIdx);
 
@@ -1759,6 +1752,17 @@ QPainterPath* PlotBookModel::_createCurvesErrorPath(
     double xs0 = getDataDouble(idx0,"CurveXScale","Curve");
     double xs1 = getDataDouble(idx1,"CurveXScale","Curve");
 
+    // Get time unit scales (note: no time unit bias)
+    double tus0 = 1.0;
+    double tus1 = 1.0;
+    QString dpXUnits = getDataString(idx0,"CurveXUnit","Curve");
+    if ( !dpXUnits.isEmpty() ) {
+        tus0 = Unit::scale(c0->x()->unit(),dpXUnits);
+        tus1 = Unit::scale(c1->x()->unit(),dpXUnits);
+    } else {
+        tus1 = Unit::scale(c1->x()->unit(),c0->x()->unit());
+    }
+
     double yus0 = 1.0;
     double yub0 = 0.0;
     double yus1 = 1.0;
@@ -1800,8 +1804,10 @@ QPainterPath* PlotBookModel::_createCurvesErrorPath(
     double stop = getDataDouble(QModelIndex(),"StopTime");
     bool isFirst = true;
     while ( !i0->isDone() && !i1->isDone() ) {
-        double t0 = xs0*i0->t()+xb0;
-        double t1 = xs1*i1->t()+xb1;
+        double t0 = tus0*i0->t();  // Time unit conversion first
+        t0 = xs0*t0+xb0;           // Followed by scale/bias
+        double t1 = tus1*i1->t();
+        t1 = xs1*t1+xb1;
         double y0 = yus0*i0->y()+yub0;  // Unit conversion first
         double y1 = yus1*i1->y()+yub1;
         y0 = ys0*y0 + yb0;              // Followed by scale/bias

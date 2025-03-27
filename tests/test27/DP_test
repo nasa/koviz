@@ -1,0 +1,10 @@
+Koviz
+
+PLOTS:
+  Page 1: "Cid!"
+
+    Plot 1: "Cid!"
+      x_variable: "time"
+        units: "hr"
+      y_variable: "x"
+        units: "mm"
