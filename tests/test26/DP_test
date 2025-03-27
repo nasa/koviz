@@ -1,0 +1,14 @@
+Koviz
+
+PLOTS:
+  Page 1: "Go Go Gadget!"
+
+    Plot 1: "Go Astros!"
+      x_variable: "sys.exec.out.time"
+          scale_factor: 2
+          bias: 100.0
+          units: "min"
+      y_variable: "force"
+          units: "kN"
+          scale_factor: 3
+          bias: 1000

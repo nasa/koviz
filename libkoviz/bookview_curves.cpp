@@ -649,13 +649,27 @@ void CurvesView::_paintMarkers(QPainter &painter)
                 // since the path does not have time
                 //
                 // i is a best guess
+
+                double xus = 1.0;
+                double xub = 0.0;
+                QString bookXUnit = _bookModel()->getDataString(
+                            curveIdx,
+                            "CurveXUnit","Curve");
+                if ( !bookXUnit.isEmpty() && bookXUnit != "--" ) {
+                    QString loggedXUnit = curveModel->x()->unit();
+                    xus = Unit::scale(loggedXUnit, bookXUnit);
+                    xub = Unit::bias(loggedXUnit, bookXUnit);
+                }
+
                 double xb = _bookModel()->getDataDouble(curveIdx,
                                                         "CurveXBias","Curve");
                 double xs = _bookModel()->getDataDouble(curveIdx,
                                                         "CurveXScale","Curve");
                 if ( _bookModel()->isXTime(plotIdx) ) {
                     // Take time shift and scale into account
-                    i = curveModel->indexAtTime((marker->time()-xb)/xs);
+                    // Also take x time unit scale into account
+                    // and no need for x unit bias since time has no bias
+                    i = curveModel->indexAtTime((marker->time()-xb)/xs/xus);
                 } else {
                     i = curveModel->indexAtTime(marker->time());
                 }
@@ -673,16 +687,6 @@ void CurvesView::_paintMarkers(QPainter &painter)
                     double y = it->at(i)->y();
 
                     // Since X unit scale baked in path, need to unit scale
-                    double xus = 1.0;
-                    double xub = 0.0;
-                    QString bookXUnit = _bookModel()->getDataString(
-                                curveIdx,
-                                "CurveXUnit","Curve");
-                    if ( !bookXUnit.isEmpty() && bookXUnit != "--" ) {
-                        QString loggedXUnit = curveModel->x()->unit();
-                        xus = Unit::scale(loggedXUnit, bookXUnit);
-                        xub = Unit::bias(loggedXUnit, bookXUnit);
-                    }
                     x = xus*x + xub;    // X Unit scale
 
                     // Since Y unit scale baked in path, need to unit scale

@@ -1568,14 +1568,6 @@ void PlotBookModel::_createPainterPath(const QModelIndex &curveIdx,
         }
     }
 
-    // Get time shift (and scale)
-    double tb = 0.0;
-    double ts = 1.0;
-    if ( isXTime(plotIdx) ) {
-        tb = getDataDouble(curveIdx,"CurveXBias","Curve");
-        ts = getDataDouble(curveIdx,"CurveXScale","Curve");
-    }
-
     // X Unit scale/bias
     double xus = 1.0;
     double xub = 0.0;
@@ -1598,6 +1590,16 @@ void PlotBookModel::_createPainterPath(const QModelIndex &curveIdx,
     }
     if ( isUseXBiasIn ) {
         xb = xBiasIn;
+    }
+
+    // Get time shift, scale and time unit scale (no time unit bias!)
+    double tb = 0.0;
+    double ts = 1.0;
+    double tus = 1.0;
+    if ( isXTime(plotIdx) ) {
+        tb = xb;
+        ts = xs;
+        tus = xus;
     }
 
     // Y Unit scale/bias
@@ -1658,7 +1660,7 @@ void PlotBookModel::_createPainterPath(const QModelIndex &curveIdx,
         _curve2path.insert(curveModel,path);
     }
     __appendDataToPainterPath(curveModel, path,
-                              (start-tb)/ts,(stop-tb)/ts,
+                              (start-tb)/ts/tus,(stop-tb)/ts/tus,
                               xus, xub, yus, yub,
                               xs, xb, ys, yb,
                               plotXScale, plotYScale);
