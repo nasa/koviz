@@ -22,6 +22,7 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
         const QList<QPair<QString,double> >& videos,
         const QString& excludePattern,
         const QString& filterPattern,
+        bool isFilterOutFlatlineZeros,
         const QString& scripts,
         bool isDebug,
         bool isPlotAllVars,
@@ -45,6 +46,7 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
     _videos(videos),
     _excludePattern(excludePattern),
     _filterPattern(filterPattern),
+    _isFilterOutFlatlineZeros(isFilterOutFlatlineZeros),
     _scripts(scripts),
     _isDebug(isDebug),
     _timeNames(timeNames),
@@ -290,6 +292,10 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
         selectFirstCurve();
     }
 
+    if ( _isFilterOutFlatlineZeros ) {
+        _filterOutFlatLines();
+    }
+
     // Size main window
     QList<int> sizes;
     sizes << 420 << 1180;
@@ -344,6 +350,8 @@ void PlotMainWindow::createMenu()
     _plotAllVarsAction = _optsMenu->addAction(tr("PlotAllVars"));
     _enableDragDropAction = _optsMenu->addAction(tr("EnableDragAndDrop"));
     _enableDragDropAction->setCheckable(true);
+    _filterOutFlatLinesAction = _optsMenu->addAction(
+                                                  tr("FilterOutFlatlineZeros"));
     _showLiveCoordAction->setCheckable(true);
     _showLiveCoordAction->setChecked(true);
     _selectRunsHomeAction = _optsMenu->addAction(tr("SelectRunsHome"));
@@ -384,6 +392,8 @@ void PlotMainWindow::createMenu()
             this, SLOT(_plotAllVars()));
     connect(_enableDragDropAction, SIGNAL(toggled(bool)),
             this, SLOT(_toggleEnableDragDrop(bool)));
+    connect(_filterOutFlatLinesAction, SIGNAL(triggered()),
+            this, SLOT(_filterOutFlatLines()));
     connect(_selectRunsHomeAction, SIGNAL(triggered()),
             this, SLOT(_selectRunsHome()));
     setMenuWidget(_menuBar);
@@ -1957,6 +1967,91 @@ void PlotMainWindow::_toggleEnableDragDrop(bool isChecked )
     _varsWidget->setDragEnabled(isChecked);
     if ( _trickView ) {
         _trickView->setDragEnabled(isChecked);
+    }
+}
+
+void PlotMainWindow::_filterOutFlatLines()
+{
+    QModelIndex pagesIdx = _bookModel->getIndex(QModelIndex(),"Pages","");
+    QModelIndexList pageIdxs = _bookModel->pageIdxs();
+    int nPages = pageIdxs.size();
+    for (int i = nPages-1; i >= 0; --i) {
+        QModelIndex pageIdx = pageIdxs.at(i);
+        QModelIndex plotsIdx = _bookModel->getIndex(pageIdx,"Plots","Page");
+        QModelIndexList plotIdxs = _bookModel->plotIdxs(pageIdx);
+        int nplots = plotIdxs.size();
+        for (int j = nplots-1; j >= 0; --j) {
+            QModelIndex plotIdx = plotIdxs.at(j);
+            QString plotPres = _bookModel->getDataString(plotIdx,
+                                                    "PlotPresentation", "Plot");
+            QModelIndex curvesIdx = _bookModel->getIndex(plotIdx,
+                                                               "Curves","Plot");
+            if ( plotPres == "error" ) {
+                QPainterPath* errorPath = _bookModel->getCurvesErrorPath(
+                                                                     curvesIdx);
+                QRectF ebox = errorPath->boundingRect();
+                if ( ebox.height() == 0.0 && ebox.y() == 0.0 ) {
+                    _bookModel->removeRow(j,plotsIdx);
+                    if ( _bookModel->rowCount(plotsIdx) == 0 ) {
+                        // If all plots removed, remove page
+                        _bookModel->removeRow(i,pagesIdx);
+                    }
+                }
+                delete errorPath;
+            } else if ( plotPres == "compare" ) {
+                bool isFlat = true;
+                QString plotYScale = _bookModel->getDataString(plotIdx,
+                                                           "PlotYScale","Plot");
+
+                QModelIndexList curveIdxs = _bookModel->getIndexList(curvesIdx,
+                                                              "Curve","Curves");
+                foreach ( QModelIndex curveIdx, curveIdxs ) {
+                    QPainterPath* path = _bookModel->getPainterPath(curveIdx);
+                    QRectF cbox = path->boundingRect();
+                    if ( cbox.height() == 0.0 ) {
+
+                        // If logscale, scale/bias done in _createPainterPath
+                        double ys = 1.0;
+                        double yb = 0.0;
+                        if ( plotYScale == "linear" ) {
+                            ys = _bookModel->getDataDouble(curveIdx,
+                                                         "CurveYScale","Curve");
+                            yb = _bookModel->getDataDouble(curveIdx,
+                                                          "CurveYBias","Curve");
+                        }
+
+                        // Empty paths are considered "flat"
+                        double y = cbox.y()*ys+yb;
+                        if ( y != 0 ) {
+                            isFlat = false;
+                            break;
+                        }
+                    } else {
+                        isFlat = false;
+                        break;
+                    }
+                }
+
+                if ( isFlat ) {
+                    _bookModel->removeRow(j,plotsIdx);
+                    if ( _bookModel->rowCount(plotsIdx) == 0 ) {
+                        // If all plots removed, remove page
+                        _bookModel->removeRow(i,pagesIdx);
+                    }
+                }
+            } else {
+                // Do not filter when error+compare (TODO if ever needed)
+            }
+        }
+    }
+
+    nPages = _bookModel->rowCount(pagesIdx);
+    if ( nPages == 0 && QGuiApplication::platformName() != "offscreen" ) {
+        QMessageBox msgBox;
+        QString msg = QString("All pages filtered out "
+                              "since all plots flatline zero or empty!");
+        msgBox.setText(msg);
+        msgBox.exec();
     }
 }
 

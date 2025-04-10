@@ -160,6 +160,7 @@ class SnapOptions : public Options
     QString yaxislabel;
     QString vars;
     QString liveTime;
+    bool isFilterOutFlatlineZeros;
 };
 
 SnapOptions opts;
@@ -327,6 +328,9 @@ int main(int argc, char *argv[])
     opts.add("-liveTime",
              &opts.liveTime,"", "Select first curve and set live time arrow.  "
                                 "Videos will start paused at given time.");
+    opts.add("-z:{0,1}",
+             &opts.isFilterOutFlatlineZeros,false,
+             "Filter out flat line zero and empty plots");
 
     opts.parse(argc,argv, QString("koviz"), &ok);
 
@@ -1358,6 +1362,7 @@ int main(int argc, char *argv[])
                              videos,
                              excludePattern,
                              filterPattern,
+                             opts.isFilterOutFlatlineZeros,
                              opts.scripts,
                              opts.isDebug,
                              opts.isPlotAllVars,

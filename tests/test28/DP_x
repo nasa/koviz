@@ -1,0 +1,21 @@
+Koviz
+
+PLOTS:
+  Page 1: "Test Filter Out Flatline Zeros"
+
+    Plot 1: ""
+      x_variable: "sys.exec.out.time"
+      y_variable: "x1"
+
+    Plot 2: ""
+      x_variable: "sys.exec.out.time"
+      y_variable: "x2"
+
+  Page 2: ""
+
+    Plot 1: ""
+      x_variable: "sys.exec.out.time"
+      y_variable: "x3"
+    Plot 2: ""
+      x_variable: "sys.exec.out.time"
+      y_variable: "x4"

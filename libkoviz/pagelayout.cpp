@@ -216,11 +216,8 @@ QSize PageLayout::sizeHint() const
 
 QLayoutItem *PageLayout::takeAt(int index)
 {
-    Q_UNUSED(index);
-    fprintf(stderr, "koviz [bad scoobs]: PageLayout::takeAt() "
-                    "not implemented!\n");
-    exit(-1);
-    return 0;
+    QLayoutItem* item = _items.takeAt(index);
+    return item;
 }
 
 void PageLayout::setModelIndex(PlotBookModel *bookModel,

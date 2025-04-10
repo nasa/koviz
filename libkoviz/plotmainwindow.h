@@ -56,6 +56,7 @@ public:
                              const QList<QPair<QString,double> >& videos,
                              const QString& excludePattern,
                              const QString& filterPattern,
+                             bool isFilterOutFlatlineZeros,
                              const QString& scripts,
                              bool isDebug,
                              bool isPlotAllVars,
@@ -90,6 +91,7 @@ private:
     QList<QPair<QString,double> > _videos;
     QString _excludePattern;
     QString _filterPattern;
+    bool _isFilterOutFlatlineZeros;
     QString _scripts;
     bool _isDebug;
     QStringList _timeNames;
@@ -133,6 +135,7 @@ private:
     QAction *_clearRunsAction;
     QAction *_plotAllVarsAction;
     QAction *_enableDragDropAction;
+    QAction *_filterOutFlatLinesAction;
     QAction *_selectRunsHomeAction;
 
     QTabWidget* _nbDPVars;
@@ -189,6 +192,7 @@ private slots:
      void _launchScript(QAction *action);
      void _plotAllVars();
      void _toggleEnableDragDrop(bool isChecked);
+     void _filterOutFlatLines();
      void _selectRunsHome();
 
      void _runsRefreshed();

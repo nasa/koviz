@@ -1,0 +1,19 @@
+Koviz
+
+PLOTS:
+  Page 1: "Empty!"
+
+    Plot 1: ""
+      x_variable: "sys.exec.out.time"
+      y_variable: "x"
+    Plot 2: ""
+      x_variable: "sys.exec.out.time"
+      y_variable: "x"
+  Page 2: "Empty!"
+    Plot 1: ""
+      x_variable: "sys.exec.out.time"
+      y_variable: "x"
+    Plot 2: ""
+      x_variable: "sys.exec.out.time"
+      y_variable: "x"
+

@@ -161,6 +161,34 @@ void PageView::rowsInserted(const QModelIndex &pidx, int start, int end)
 
 }
 
+void PageView::rowsAboutToBeRemoved(const QModelIndex &parent,
+                                    int start, int end)
+{
+    if ( start != end ) {
+        fprintf(stderr, "koviz [bad scoobs]: PageView::rowsAboutToBeRemoved "
+                        "doesn't support removing multiple rows.");
+        exit(-1);
+    }
+
+    QString tag = _bookModel()->data(parent).toString();
+    if ( tag != "Plots" ) {
+        return;  // Only handle deletion of plots, otherwise ignore
+    }
+    QModelIndex plotsIdx = parent;
+
+    // If this pageView's rootIndex is not page with plot being removed, there
+    // is nothing to do, so simply return
+    QModelIndex pageIdx = plotsIdx.parent();
+    if ( pageIdx != rootIndex() ) {
+        return;
+    }
+
+    int i = start+1;  // _childViews.at(0) is title, rest are the plots
+    QAbstractItemView* childView =  _childViews.takeAt(i);
+    _grid->removeWidget(childView);
+    childView->deleteLater();
+}
+
 void PageView::_plotViewCurrentChanged(const QModelIndex &currIdx,
                                        const QModelIndex &prevIdx)
 {

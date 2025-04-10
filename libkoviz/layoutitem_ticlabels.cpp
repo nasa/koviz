@@ -220,6 +220,9 @@ QSize TicLabelsLayoutItem::_sizeHintLeft() const
 {
     QSize s(0,0);
 
+    if ( !_plotIdx.isValid() ) {
+        return s;
+    }
     QModelIndex pageIdx = _bookModel->getIndex(_plotIdx,"Plot").
                                       parent().parent();
     QModelIndexList plotIdxs = _bookModel->plotIdxs(pageIdx);
