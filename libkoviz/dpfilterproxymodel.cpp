@@ -31,7 +31,11 @@ bool DPFilterProxyModel::filterAcceptsRow(int row,
     }
 
     bool isAccept = false;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+    QRegularExpression rx(filterRegularExpression());
+#else
     QRegExp rx(filterRegExp());
+#endif
     QFileSystemModel* m = (QFileSystemModel*) sourceModel();
     int ncols = m->columnCount(pidx);
     for ( int col = 0; col < ncols ; ++col) {
@@ -57,7 +61,11 @@ bool DPFilterProxyModel::filterAcceptsColumn(int col,
     }
 
     bool isAccept = false;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+    QRegularExpression rx(filterRegularExpression());
+#else
     QRegExp rx(filterRegExp());
+#endif
     QFileSystemModel* m = (QFileSystemModel*) sourceModel();
     int nrows = m->rowCount(pidx);
     for ( int row = 0; row < nrows ; ++row) {
@@ -90,7 +98,12 @@ void DPFilterProxyModel::_sieModelLoaded()
 }
 
 bool DPFilterProxyModel::_isAccept(const QModelIndex &idx,
-                                   QFileSystemModel *m, const QRegExp &rx) const
+                                   QFileSystemModel *m,
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+                                   const QRegularExpression &rx) const
+#else
+                                   const QRegExp &rx) const
+#endif
 {
     bool isAccept = false ;
 

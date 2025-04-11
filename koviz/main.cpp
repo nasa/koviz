@@ -4,7 +4,7 @@
 #include <QHash>
 #include <QString>
 #include <QDate>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QStandardPaths>
 #include <QDir>
 
@@ -1499,7 +1499,7 @@ void presetRunsDPs(QStringList* defRunPaths,
 void postsetRunsDPs (QStringList* rundps, bool* ok)
 {
     Q_UNUSED(ok);
-    QStringList dirs = rundps->replaceInStrings(QRegExp("/*$"), "");
+    QStringList dirs = rundps->replaceInStrings(QRegularExpression("/*$"), "");
     Q_UNUSED(dirs);
 }
 

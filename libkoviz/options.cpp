@@ -25,7 +25,7 @@ void Quantifier::set(const QString &spec)
     QString s(spec);
 
     // Remove wspace
-    QRegExp rx("\\s");
+    QRegularExpression rx("\\s");
     s = s.remove(rx);
 
     _isValid = true;
@@ -185,7 +185,7 @@ QString Option::name()
     QString s = nameSpec();
 
     // Remove wspace
-    QRegExp rx("\\s");
+    QRegularExpression rx("\\s");
     s = s.remove(rx);
 
     if ( s.startsWith("<") && s.endsWith(">") ) {

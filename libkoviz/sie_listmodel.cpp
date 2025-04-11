@@ -15,7 +15,10 @@ void SieListModel::_init()
 {
     _connectToSim();
 
-    QFuture<void> ftr = QtConcurrent::run(this, &SieListModel::_createSIEModel);
+    QFuture<void> ftr = QtConcurrent::run([this]() {
+        _createSIEModel();
+    });
+
     Q_UNUSED(ftr);
 }
 
@@ -350,7 +353,15 @@ bool SieListModel::__createSieDocument()
     }
 
     QString errMsg;
-    isSIE = _sieDoc.setContent(sieXML,&errMsg) ;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    int errorLine = -1;
+    int errorColumn = -1;
+    QDomDocument::ParseResult result = _sieDoc.setContent(sieXML, &errMsg,
+                                                      &errorLine, &errorColumn);
+    isSIE = (result == QDomDocument::ParseResult::Ok);
+#else
+    isSIE = _sieDoc.setContent(sieXML, &errMsg);
+#endif
     if ( !isSIE ) {
         QString msg = QString("Could not load sieXML document! Error=%1").
                              arg(errMsg);

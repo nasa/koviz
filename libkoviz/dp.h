@@ -9,7 +9,6 @@
 #include <QTextStream>
 #include <QFile>
 #include <QFileInfo>
-#include <QRegExp>
 #include <QHash>
 #include <QRectF>
 #include <stdexcept>

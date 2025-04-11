@@ -27,7 +27,11 @@ void OptiTrackCsvModel::_init()
         throw std::runtime_error(_err_string.toLatin1().constData());
     }
     QTextStream in(&file);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    in.setEncoding(QStringConverter::Utf8);
+#else
     in.setCodec("UTF-8");
+#endif
 
     // Read header
     bool isFrameRate = false;

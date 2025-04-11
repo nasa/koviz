@@ -6,7 +6,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QTextStream>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <float.h>
 #include <stdlib.h>
 #include "options.h"

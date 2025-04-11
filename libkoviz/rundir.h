@@ -8,7 +8,7 @@
 #include <QDir>
 #include <QString>
 #include <QStringList>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QHash>
 
 class RunDir : public Run

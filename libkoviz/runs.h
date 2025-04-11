@@ -13,7 +13,7 @@
 #include <QList>
 #include <QStandardItemModel>
 #include <QProgressDialog>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QMessageBox>
 #include <stdexcept>
 #include <limits.h>

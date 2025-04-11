@@ -289,7 +289,6 @@ class TrickModelIterator : public ModelIterator
         _model(model),
         _row_count(model->rowCount()),
         _row_size(model->_row_size),_data(model->_data),
-        _tcol(tcol), _xcol(xcol), _ycol(ycol),
         _tco(_model->_col2offset.value(tcol)),
         _xco(_model->_col2offset.value(xcol)),
         _yco(_model->_col2offset.value(ycol)),
@@ -345,9 +344,6 @@ class TrickModelIterator : public ModelIterator
     int _row_count;
     int _row_size;
     ptrdiff_t _data;
-    int _tcol;
-    int _xcol;
-    int _ycol;
     qint64 _tco ;
     qint64 _xco ;
     qint64 _yco ;

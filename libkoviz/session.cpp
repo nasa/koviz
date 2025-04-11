@@ -175,8 +175,8 @@ Session::Session(const QString &sessionFileName) :
                         sessionFileName.toLatin1().constData());
                 exit(-1);
             }
-        } else if ( line.contains(QRegExp("[Tt][1-4]:")) ) {
-            int i = line.indexOf(QRegExp("[Tt][1-4]:"),0);
+        } else if ( line.contains(QRegularExpression("[Tt][1-4]:")) ) {
+            int i = line.indexOf(QRegularExpression("[Tt][1-4]:"),0);
             int titleId = QString(line.at(i+1)).toInt(); // 1-4
             QString title = line.mid(i+3).trimmed();
             if ( title.startsWith("\"") ) {
@@ -186,8 +186,8 @@ Session::Session(const QString &sessionFileName) :
                 title.chop(1);
             }
             _titles.replace(titleId-1,title);
-        } else if ( line.contains(QRegExp("[Cc][1-7]:")) ) {
-            int i = line.indexOf(QRegExp("[Cc][1-7]:"),0);
+        } else if ( line.contains(QRegularExpression("[Cc][1-7]:")) ) {
+            int i = line.indexOf(QRegularExpression("[Cc][1-7]:"),0);
             int colorId = QString(line.at(i+1)).toInt(); // 1-7
             QString color = line.mid(i+3).trimmed();
             if ( color.startsWith("\"") ) {
@@ -197,8 +197,8 @@ Session::Session(const QString &sessionFileName) :
                 color.chop(1);
             }
             _colors.replace(colorId-1,color);
-        } else if ( line.contains(QRegExp("[Ll][1-7]:")) ) {
-            int i = line.indexOf(QRegExp("[Ll][1-7]:"),0);
+        } else if ( line.contains(QRegularExpression("[Ll][1-7]:")) ) {
+            int i = line.indexOf(QRegularExpression("[Ll][1-7]:"),0);
             int legendId = QString(line.at(i+1)).toInt(); // 1-7
             QString label = line.mid(i+3).trimmed();
             if ( label.startsWith("\"") ) {
@@ -208,8 +208,8 @@ Session::Session(const QString &sessionFileName) :
                 label.chop(1);
             }
             _legendLabels.replace(legendId-1,label);
-        } else if ( line.contains(QRegExp("[Ll][Ss][1-7]:")) ) {
-            int i = line.indexOf(QRegExp("[Ll][Ss][1-7]:"),0);
+        } else if ( line.contains(QRegularExpression("[Ll][Ss][1-7]:")) ) {
+            int i = line.indexOf(QRegularExpression("[Ll][Ss][1-7]:"),0);
             int lsId = QString(line.at(i+2)).toInt(); // 1-7
             QString linestyle = line.mid(i+4).trimmed();
             if ( linestyle.startsWith("\"") ) {
@@ -219,8 +219,8 @@ Session::Session(const QString &sessionFileName) :
                 linestyle.chop(1);
             }
             _linestyles.replace(lsId-1,linestyle);
-        } else if ( line.contains(QRegExp("[Ss][1-7]:")) ) {
-            int i = line.indexOf(QRegExp("[Ss][1-7]:"),0);
+        } else if ( line.contains(QRegularExpression("[Ss][1-7]:")) ) {
+            int i = line.indexOf(QRegularExpression("[Ss][1-7]:"),0);
             int ssId = QString(line.at(i+1)).toInt(); // 1-7
             QString symbolstyle = line.mid(i+3).trimmed();
             if ( symbolstyle.startsWith("\"") ) {
@@ -230,8 +230,8 @@ Session::Session(const QString &sessionFileName) :
                 symbolstyle.chop(1);
             }
             _symbolstyles.replace(ssId-1,symbolstyle);
-        } else if ( line.contains(QRegExp("[Ss][Ee][1-7]:")) ) {
-            int i = line.indexOf(QRegExp("[Ss][Ee][1-7]:"),0);
+        } else if ( line.contains(QRegularExpression("[Ss][Ee][1-7]:")) ) {
+            int i = line.indexOf(QRegularExpression("[Ss][Ee][1-7]:"),0);
             int seId = QString(line.at(i+2)).toInt(); // 1-7
             QString symbolend = line.mid(i+4).trimmed();
             if ( symbolend.startsWith("\"") ) {
@@ -241,8 +241,8 @@ Session::Session(const QString &sessionFileName) :
                 symbolend.chop(1);
             }
             _symbolends.replace(seId-1,symbolend);
-        } else if ( line.contains(QRegExp("[Gg][1-7]:")) ) {
-            int i = line.indexOf(QRegExp("[Gg][1-7]:"),0);
+        } else if ( line.contains(QRegularExpression("[Gg][1-7]:")) ) {
+            int i = line.indexOf(QRegularExpression("[Gg][1-7]:"),0);
             int groupId = QString(line.at(i+1)).toInt(); // 1-7
             QString group = line.mid(i+3).trimmed();
             if ( group.startsWith("\"") ) {
@@ -252,8 +252,8 @@ Session::Session(const QString &sessionFileName) :
                 group.chop(1);
             }
             _groups.replace(groupId-1,group);
-        } else if ( line.contains(QRegExp("[Ff][Gg]:")) ) {
-            int i = line.indexOf(QRegExp("[Ff][Gg]:"),0);
+        } else if ( line.contains(QRegularExpression("[Ff][Gg]:")) ) {
+            int i = line.indexOf(QRegularExpression("[Ff][Gg]:"),0);
             QString color = line.mid(i+3).trimmed();
             if ( color.startsWith("\"") ) {
                 color = color.mid(1);
@@ -262,8 +262,8 @@ Session::Session(const QString &sessionFileName) :
                 color.chop(1);
             }
             _fg = color;
-        } else if ( line.contains(QRegExp("[Bb][Gg]:")) ) {
-            int i = line.indexOf(QRegExp("[Bb][Gg]:"),0);
+        } else if ( line.contains(QRegularExpression("[Bb][Gg]:")) ) {
+            int i = line.indexOf(QRegularExpression("[Bb][Gg]:"),0);
             QString color = line.mid(i+3).trimmed();
             if ( color.startsWith("\"") ) {
                 color = color.mid(1);

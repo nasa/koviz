@@ -216,8 +216,13 @@ void DPTreeWidget::_setupModel(const QString& dpSearchDir)
     _dpFilterModel = new DPFilterProxyModel(_timeName,_runs,_sieModel);
     _dpFilterModel->setDynamicSortFilter(true);
     _dpFilterModel->setSourceModel(_dpModel);
-    QRegExp dprx(QString(".*"));  // DP_ and SET_ are filtered by _dpModel
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+    QRegularExpression dprx(QString(".*")); // DP_ & SET_ filtered by _dpModel
+    _dpFilterModel->setFilterRegularExpression(dprx);
+#else
+    QRegExp dprx(QString(".*"));
     _dpFilterModel->setFilterRegExp(dprx);
+#endif
     _dpFilterModel->setFilterKeyColumn(0);
 }
 

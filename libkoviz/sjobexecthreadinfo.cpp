@@ -44,16 +44,16 @@ void SJobExecThreadInfo::_calcThreadInfo()
 
     bool isFinishedReading = false;
 
-    QRegExp typeRgx;
-    QRegExp cpuNumRgx;
+    QRegularExpression typeRgx;
+    QRegularExpression cpuNumRgx;
     QString threadName;
     if ( _trickVersion >= VersionNumber("13.4.dev-0") ) {
-        typeRgx = QRegExp(" *process_type = *");
-        cpuNumRgx = QRegExp("\\s*cpus\\s*=\\s*");
+        typeRgx = QRegularExpression(" *process_type = *");
+        cpuNumRgx = QRegularExpression("\\s*cpus\\s*=\\s*");
         threadName = QString("Trick::Threads");
     } else {
-        typeRgx = QRegExp(" *Type = *");
-        cpuNumRgx = QRegExp("\\s*rt_cpu_number\\s*=\\s*");
+        typeRgx = QRegularExpression(" *Type = *");
+        cpuNumRgx = QRegularExpression("\\s*rt_cpu_number\\s*=\\s*");
         threadName = QString("Thread %1").arg(_threadId);
     }
 
@@ -108,7 +108,7 @@ void SJobExecThreadInfo::_calcThreadInfo()
                 _freq = 0.0;  // may be set in next code block (advance sim time)
             } else if ( line.startsWith("asynchronous must finish") ) {
                 _kind = "AMF";
-                line = line.remove(QRegExp(".*= "));
+                line = line.remove(QRegularExpression(".*= "));
                 bool ok = true;
                 _freq = line.toDouble(&ok);
                 if ( !ok ) {

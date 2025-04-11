@@ -7,7 +7,7 @@
 #include <QTextStream>   // usage()
 #include <QHash>
 #include <QVariant>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <limits.h> // INT_MAX etc (editor will not pick it up)
 
 // Handles specs like  {2,3} or + or * or ? or {2}

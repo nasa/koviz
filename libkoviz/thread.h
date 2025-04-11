@@ -12,7 +12,6 @@
 #include <QStringList>
 #include <QTextStream>
 #include <QDataStream>
-#include <QRegExp>
 #include <QFileInfo>
 
 #include "datamodel.h"

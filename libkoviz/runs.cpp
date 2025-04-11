@@ -914,7 +914,7 @@ void Runs::_loadMonteInputModelTrick07(QStandardItemModel* model,
                     "on line number %d.\n\n"
                     "File:%s\n"
                     "Line:%s\n",
-                    vars.size(), dataVals.size(),
+                    int(vars.size()), int(dataVals.size()),
                     nDataLines,
                     monteInputFile.toLatin1().constData(),
                     dataLine.toLatin1().constData());
@@ -970,7 +970,7 @@ void Runs::_loadMonteInputModelTrick17(QStandardItemModel* model,
     while (!in.atEnd()) {
         line = in.readLine();
         if ( line.startsWith("#NAME:") ) {
-            QString var = line.split(QRegExp("\\s+")).at(1);
+            QString var = line.split(QRegularExpression("\\s+")).at(1);
             vars << var;
         }
     }
@@ -1040,7 +1040,7 @@ void Runs::_loadMonteInputModelTrick17(QStandardItemModel* model,
         #else
             const auto SkipEmptyParts = QString::SkipEmptyParts;
         #endif
-        QStringList vals = line.split(QRegExp("\\s+"),SkipEmptyParts);
+        QStringList vals = line.split(QRegularExpression("\\s+"),SkipEmptyParts);
         if ( vals.size() != vars.size() ) {
             fprintf(stderr, "koviz [error]: error parsing %s.  There "
                             "are %d variables specified in top line, "
@@ -1095,11 +1095,11 @@ QStringList Runs::_runsSubset(const QStringList& runsList,
 {
     QStringList subset;
 
-    QRegExp frgx(filterPattern);
-    QRegExp ergx(excludePattern);
+    QRegularExpression frgx(filterPattern);
+    QRegularExpression ergx(excludePattern);
 
     QStringList filteredRunsList = runsList;
-    if ( !frgx.isEmpty() ) {
+    if ( !frgx.pattern().isEmpty() ) {
         filteredRunsList = runsList.filter(frgx);
         if ( filteredRunsList.isEmpty() ) {
             // If the filter did not find a match,
@@ -1115,7 +1115,7 @@ QStringList Runs::_runsSubset(const QStringList& runsList,
         if ( ok && (runId < beginRun || runId > endRun) ) {
             continue;
         }
-        if (!ergx.isEmpty() &&
+        if (!ergx.pattern().isEmpty() &&
              QFileInfo(run).absoluteFilePath().contains(ergx)) {
             continue;
         }

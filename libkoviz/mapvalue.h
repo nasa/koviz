@@ -3,7 +3,6 @@
 
 #include <QString>
 #include <QStringList>
-#include <QRegExp>
 #include <stdlib.h>
 #include <stdio.h>
 

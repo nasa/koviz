@@ -3,13 +3,18 @@
 
 #include <QSortFilterProxyModel>
 #include <QFileSystemModel>
-#include <QRegExp>
 #include <QString>
 #include <QHash>
 
 #include "dp.h"
 #include "sie_listmodel.h"
 #include "runs.h"
+
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+    #include <QRegularExpression>
+#else
+    #include <QRegExp>
+#endif
 
 // The dp filter models uses a list of params that are common between runs.
 // i.e. Runs::params(). Only DP_files which have params which are in
@@ -42,12 +47,15 @@ private:
     SieListModel* _sieModel;
     static QHash<QString,bool> _acceptedDPFileCache; // static to get around const
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+    bool _isAccept(const QModelIndex& idx,
+                   QFileSystemModel* m,
+                   const QRegularExpression& rx) const;
+#else
     bool _isAccept(const QModelIndex& idx,
                    QFileSystemModel* m,
                    const QRegExp& rx) const;
-
-
-    
+#endif
 };
 
 #endif // DPFILTERPROXYMODEL_H

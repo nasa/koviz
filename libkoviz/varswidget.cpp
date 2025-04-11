@@ -21,8 +21,13 @@ VarsWidget::VarsWidget(const QString &timeName,
     _varsFilterModel = new TrickVarSortFilterProxyModel(this);
     _varsFilterModel->setDynamicSortFilter(true);
     _varsFilterModel->setSourceModel(_varsModel);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+    QRegularExpression rx(QString(".*"));
+    _varsFilterModel->setFilterRegularExpression(rx);
+#else
     QRegExp rx(QString(".*"));
     _varsFilterModel->setFilterRegExp(rx);
+#endif
     _varsFilterModel->setFilterKeyColumn(0);
     _varsSelectModel = new QItemSelectionModel(_varsFilterModel);
     _varsFilterModel->sort(0,Qt::AscendingOrder);
@@ -194,7 +199,11 @@ void VarsWidget::_runsRefreshed()
 
 void VarsWidget::_varsSearchBoxTextChanged(const QString &rx)
 {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+    _varsFilterModel->setFilterRegularExpression(rx);
+#else
     _varsFilterModel->setFilterRegExp(rx);
+#endif
 }
 
 QModelIndex VarsWidget::_findSinglePlotPageWithCurve(const QString& curveYName)

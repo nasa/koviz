@@ -2,6 +2,9 @@
 #define NUMSORTITEM_H
 
 #include <QStandardItem>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QMetaType>
+#endif
 
 class NumSortItem : public QStandardItem
 {
@@ -10,7 +13,11 @@ public:
 
     inline virtual int userType() const
     {
-        return QVariant::Double;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return QMetaType::Double;
+#else
+    return QVariant::Double;
+#endif
     }
 
     bool operator<(const QStandardItem &other) const

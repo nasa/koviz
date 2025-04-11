@@ -5,7 +5,7 @@
 #include <QString>
 #include <QStringList>
 #include <QTextStream>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QFile>
 #include "versionnumber.h"
 

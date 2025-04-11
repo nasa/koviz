@@ -123,8 +123,8 @@ QStringList RunDir::_fileList(const QString& run,
     QStringList filter;
     filter << "*.trk" << "*.csv" << "*.mot";
 
-    QRegExp filterRgx(filterPattern);
-    QRegExp excludeRgx(excludePattern);
+    QRegularExpression filterRgx(filterPattern);
+    QRegularExpression excludeRgx(excludePattern);
 
     QDir runDir(run);
     files = runDir.entryList(filter, QDir::Files);
@@ -138,13 +138,13 @@ QStringList RunDir::_fileList(const QString& run,
     if ( files.contains("_init_log.csv") ) {
         files.removeAll("_init_log.csv");
     }
-    if ( !excludeRgx.isEmpty() ) {
+    if ( !excludeRgx.pattern().isEmpty() ) {
         QStringList excludeFiles = files.filter(excludeRgx);
         foreach (QString excludeFile, excludeFiles) {
             files.removeAll(excludeFile);
         }
     }
-    if ( !filterRgx.isEmpty() ) {
+    if ( !filterRgx.pattern().isEmpty() ) {
         QStringList filterFiles = files.filter(filterRgx);
         if ( !filterFiles.isEmpty() ) {
             // If the filter has found a match, use filter,

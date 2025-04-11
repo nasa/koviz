@@ -1,6 +1,6 @@
 #include "job.h"
 
-#include <QRegExp>
+#include <QRegularExpression>
 #include <stdio.h>
 #include <cmath>
 #include <QtCore/qmath.h>
@@ -161,7 +161,7 @@ void Job::_parseJobId(const QString &jobId, const QString &fileName)
     QString name(jobId);
 
     name.replace("::","##");
-    name.replace(QRegExp("^JOB_"),"");
+    name.replace(QRegularExpression("^JOB_"),"");
     int idx1 = name.lastIndexOf (QChar('('));
     int idx2 = name.lastIndexOf (QChar(')'));
     int idx3 = name.lastIndexOf (QChar('_'));

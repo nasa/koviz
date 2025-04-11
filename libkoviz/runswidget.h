@@ -11,12 +11,34 @@
 #include <QTreeView>
 #include <QFileSystemModel>
 #include <QSortFilterProxyModel>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QStandardPaths>
 
 #include "bookmodel.h"
 #include "monteinputsview.h"
 #include "runs.h"
+
+class RunsWidgetFilterProxyModel : public QSortFilterProxyModel
+{
+    Q_OBJECT
+
+public:
+    explicit RunsWidgetFilterProxyModel(Runs* runs, QObject *parent = nullptr) :
+        QSortFilterProxyModel(parent),
+        _runs(runs)
+       {}
+
+protected:
+    bool filterAcceptsRow(int row,const QModelIndex &srcIdx) const;
+
+private:
+    Runs* _runs;
+
+    bool _isDirAccept(const QString &path,
+                        const QRegularExpression &rx,
+                        int depth) const;
+};
+
 
 class RunsWidget : public QWidget
 {
@@ -53,36 +75,6 @@ private:
 
 private slots:
      void _runsSearchBoxReturnPressed();
-};
-
-class RunsWidgetFilterProxyModel : public QSortFilterProxyModel
-{
-    Q_OBJECT
-
-public:
-    explicit RunsWidgetFilterProxyModel(Runs* runs, QObject *parent = nullptr) :
-        QSortFilterProxyModel(parent),
-        _runs(runs)
-       {}
-
-
-    /*
-    void setFilterRegExp(const QRegExp &regExp) {
-        _regExp = regExp;
-        invalidateFilter();
-    }
-    */
-
-protected:
-    bool filterAcceptsRow(int row,const QModelIndex &srcIdx) const;
-
-private:
-    QRegExp _regExp;
-    Runs* _runs;
-
-    bool _isDirAccept(const QString &path,
-                        const QRegularExpression &rx,
-                        int depth) const;
 };
 
 
