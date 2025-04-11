@@ -353,12 +353,10 @@ bool SieListModel::__createSieDocument()
     }
 
     QString errMsg;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    int errorLine = -1;
-    int errorColumn = -1;
-    QDomDocument::ParseResult result = _sieDoc.setContent(sieXML, &errMsg,
-                                                      &errorLine, &errorColumn);
-    isSIE = (result == QDomDocument::ParseResult::Ok);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    QDomDocument::ParseResult result = _sieDoc.setContent(sieXML);
+    errMsg = result.errorMessage;
+    isSIE = result();
 #else
     isSIE = _sieDoc.setContent(sieXML, &errMsg);
 #endif

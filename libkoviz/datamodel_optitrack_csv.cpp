@@ -282,7 +282,11 @@ bool OptiTrackCsvModel::isValid(const QString &fileName)
         return false;
     }
     QTextStream in(&file);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    in.setEncoding(QStringConverter::Utf8);
+#else
     in.setCodec("UTF-8");
+#endif
     QString line0 = in.readLine();
     QString line1 = in.readLine();
     if ( line0.startsWith("Format Version") &&

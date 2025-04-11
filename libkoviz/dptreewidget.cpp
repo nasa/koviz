@@ -237,7 +237,11 @@ void DPTreeWidget::_createDP(const QString &dpfile)
 void DPTreeWidget::_searchBoxTextChanged(const QString &rx)
 {
     _dpTreeView->expandAll();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+    _dpFilterModel->setFilterRegularExpression(rx);
+#else
     _dpFilterModel->setFilterRegExp(rx);
+#endif
 }
 
 void DPTreeWidget::_dpTreeViewCurrentChanged(const QModelIndex &currIdx,
