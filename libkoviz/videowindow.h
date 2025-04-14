@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <time.h>
 #include <math.h>
+#include <cstdlib>
 
 #include <QMainWindow>
 #include <QtGlobal>
@@ -35,7 +36,11 @@ class ClickFrame : public QFrame
 
   protected:
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    void enterEvent(QEnterEvent* event) override
+#else
     void enterEvent(QEvent* event) override
+#endif
     {
         Q_UNUSED(event);
         setStyleSheet("background-color: #6666aa;"

@@ -40,8 +40,9 @@ VideoWindow::VideoWindow(const QList<QPair<QString, double> > &videos,
     }
 
     _grid = new QGridLayout();
+    int nVideos = static_cast<int>(_videos.size());
     int ncols = ceil(sqrt(_videos.size()));
-    div_t q = div(_videos.size(),ncols);
+    std::div_t q = std::div(nVideos,ncols);
     int nrows = 0;
     if ( q.rem == 0 ) {
         nrows = q.quot;
@@ -117,8 +118,9 @@ bool VideoWindow::eventFilter(QObject *obj, QEvent *event)
             _grid->update();
 
             // Toggle to grid of videos
+            int nVideos = static_cast<int>(_videos.size());
             int ncols = ceil(sqrt(_videos.size()));
-            div_t q = div(_videos.size(),ncols);
+            std::div_t q = std::div(nVideos,ncols);
             int nrows = 0;
             if ( q.rem == 0 ) {
                 nrows = q.quot;
@@ -352,8 +354,9 @@ void VideoWindow::_resize_videos(const QList<QPair<QString, double> > &videos)
 
         // Redo layout with new number of videos
         if ( _videos.size() > 0 ) {
+            int nVideos = static_cast<int>(_videos.size());
             int ncols = ceil(sqrt(_videos.size()));
-            div_t q = div(_videos.size(),ncols);
+            std::div_t q = std::div(nVideos,ncols);
             int nrows = 0;
             if ( q.rem == 0 ) {
                 nrows = q.quot;
@@ -404,8 +407,9 @@ void VideoWindow::_resize_videos(const QList<QPair<QString, double> > &videos)
 
         // Redo layout with new number of videos
         if ( _videos.size() > 0 ) {
+            int nVideos = static_cast<int>(_videos.size());
             int ncols = ceil(sqrt(_videos.size()));
-            div_t q = div(_videos.size(),ncols);
+            std::div_t q = std::div(nVideos,ncols);
             int nrows = 0;
             if ( q.rem == 0 ) {
                 nrows = q.quot;
