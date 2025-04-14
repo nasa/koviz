@@ -1312,7 +1312,8 @@ void PlotMainWindow::_saveSession()
             QString videoOption;
             QPair<QString,double> video;
             foreach ( video, _videos ) {
-                videoOption += video.first + ":" + video.second + ",";
+                videoOption += video.first + ":" +
+                                            QString::number(video.second) + ",";
             }
             videoOption.chop(1); // take off trailing ','
 
