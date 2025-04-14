@@ -25,7 +25,11 @@ void MotModel::_init()
         throw std::runtime_error(_err_string.toLatin1().constData());
     }
     QTextStream in(&file);
-    in.setCodec("UTF-8");
+    #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        in.setEncoding(QStringConverter::Utf8);
+    #else
+        in.setCodec("UTF-8");
+    #endif
 
     // Header - skip until line with variables
     bool isEndHeader = false;
@@ -299,7 +303,12 @@ bool MotModel::isValid(const QString &motFile)
         return false;
     }
     QTextStream in(&file);
-    in.setCodec("UTF-8");
+    #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        in.setEncoding(QStringConverter::Utf8);
+    #else
+        in.setCodec("UTF-8");
+    #endif
+
 
     // Header - check for "endheader" line
     bool isEndHeader = false;

@@ -25,7 +25,11 @@ void CsvModel::_init()
         throw std::runtime_error(_err_string.toLatin1().constData());
     }
     QTextStream in(&file);
-    in.setCodec("UTF-8");
+    #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        in.setEncoding(QStringConverter::Utf8);
+    #else
+        in.setCodec("UTF-8");
+    #endif
 
     #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         const auto SkipEmptyParts = Qt::SkipEmptyParts ;
@@ -340,7 +344,11 @@ bool CsvModel::isValid(const QString &csvFile, const QStringList &timeNames)
         return false;
     }
     QTextStream in(&file);
-    in.setCodec("UTF-8");
+    #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        in.setEncoding(QStringConverter::Utf8);
+    #else
+        in.setCodec("UTF-8");
+    #endif
 
     #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         const auto KeepEmptyParts = Qt::KeepEmptyParts ;
