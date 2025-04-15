@@ -1,0 +1,25 @@
+Koviz
+
+PLOTS:
+  Page 1: "Test 1000 Microsecond Pause"
+
+    Plot 1: "Usleep"
+      x_variable: "sys.exec.out.time"
+      y_variable: "gtod.my.usleep(0.001)"
+        units: "us"
+        label: "gtod.my.usleep(0.001)"
+
+    Plot 2: "Nanosleep"
+      x_variable: "sys.exec.out.time"
+      y_variable: "gtod.my.nanosleep(0.001)"
+        units: "us"
+        label: "gtod.my.nanosleep(0.001)"
+
+    Plot 3: "Spin"
+      x_variable: "sys.exec.out.time"
+      y_variable: "gtod.my.spin(0.001)"
+        units: "us"
+        label: "gtod.my.spin(0.001)"
+
+
+

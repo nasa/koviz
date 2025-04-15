@@ -13,6 +13,12 @@ libkoviz/product_parser.h
 .qmake.stash
 .qtc_clangd
 
+*.swp
+profiler/koviz.o
+profiler/libkoviz.a
+profiler/testme
+profiler/koviz.trk
+
 S_main_*.exe
 S_sie.resource
 S_source.hh
