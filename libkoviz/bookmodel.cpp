@@ -2573,7 +2573,6 @@ void PlotBookModel::createCurves(QModelIndex curvesIdx,
 
     int nCurves = rowCount(curvesIdx);
     int ii = nCurves; // When alt+click adding curves, this is needed
-    int jj = 0;
     QString u0;
     for ( int r = 0; r < rc; ++r) {
 
@@ -2850,7 +2849,6 @@ void PlotBookModel::createCurves(QModelIndex curvesIdx,
         progress.setLabelText(msg);
 
         ++ii;
-        ++jj;
     }
 
     // Turn signals back on before adding curveModel
