@@ -2237,7 +2237,6 @@ void PlotMainWindow::_monteInputsHeaderViewClicked(int section)
             QModelIndex curvesIdx = _bookModel->getIndex(plotIdx,
                                                          "Curves", "Plot");
             QModelIndexList curveIdxs = _bookModel->curveIdxs(curvesIdx);
-            int r = 0;
             foreach ( QModelIndex curveIdx, curveIdxs ) {
                 int runId = _bookModel->getDataInt(curveIdx,
                                                    "CurveRunID",
@@ -2254,7 +2253,6 @@ void PlotMainWindow::_monteInputsHeaderViewClicked(int section)
                     changeColorTo   = nextColor;
                 }
                 _bookModel->setData(colorIdx,nextColor);
-                ++r;
             }
 
             // Set one curve color back to its original color

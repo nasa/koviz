@@ -647,7 +647,6 @@ void DPTreeWidget::_createDPTables(const QString &dpfile)
 
     DPProduct dp(dpfile);
     int numRuns = _runs->runPaths().size();
-    int tableNum = 0 ;
 
     // Tables
     QModelIndex tablesIdx = _bookModel->getIndex(QModelIndex(), "Tables");
@@ -756,8 +755,6 @@ void DPTreeWidget::_createDPTables(const QString &dpfile)
                 _addChild(varItem, "TableVarData",v);
             }
         }
-
-        tableNum++;
     }
 
     this->setCursor(currCursor);
