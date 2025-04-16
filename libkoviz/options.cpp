@@ -510,7 +510,7 @@ void Options::parse(int argc, char **argv, const QString& programName,
             if ( nVals == 0 ) {
                 // A boolean option may not have a "value"
                 // In this case, the value is implicitly true
-                if ( opt->type() == QVariant::Bool ) {
+                if ( opt->type() == QMetaType::Bool ) {
                     opt->setValue(QVariant(true),ok);
                 } else {
                     fprintf(stderr,"koviz [error]: Option=\"%s\" "
