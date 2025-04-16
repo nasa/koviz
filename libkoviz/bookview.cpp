@@ -22,10 +22,16 @@ BookView::BookView(QWidget *parent) :
     setLayout(_mainLayout);
 }
 
-void BookView::setModel(PlotBookModel *model)
+void BookView::setModel(QAbstractItemModel *model)
 {
-    _nb->setBookModel(model);
-    BookIdxView::setModel(model);
+    auto bookModel = qobject_cast<PlotBookModel*>(model);
+    if (!bookModel) {
+        fprintf(stderr, "koviz [bad scoobs]: BookView::setModel(model) "
+                        "expects model to be a PlotBookModel*\n");
+        exit(-1);
+    }
+    _nb->setBookModel(bookModel);
+    BookIdxView::setModel(bookModel);
 }
 
 
