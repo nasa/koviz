@@ -3666,12 +3666,12 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
     if ( yUnit.isEmpty() ) {
         yUnit = "--";
     }
-    QScopedPointer<QVector<QPointF>> pointsPtr(points);
+    std::unique_ptr<QVector<QPointF>> pointsPtr(points);
     QString xUnitSum("s");
     if ( isXTime ) {
         xUnitSum = xUnit;
     }
-    DataModel* dataModel = new PointsModel(pointsPtr.take(),
+    DataModel* dataModel = new PointsModel(pointsPtr.release(),
                                            QString("sys.exec.out.time"),
                                            xUnitSum,
                                            curveOp.name(),
