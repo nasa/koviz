@@ -16,7 +16,6 @@ public:
     virtual DataModel *dataModel(const QString& param);
 private:
     QString _host_port_path;
-    DataModel* _model;
     QStringList _params;
 };
 
