@@ -1,5 +1,4 @@
 #include "csv.h"
-#include <QTextDecoder>
 
 CSV::CSV(QIODevice * device)
 {
