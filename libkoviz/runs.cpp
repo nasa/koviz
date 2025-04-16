@@ -1046,7 +1046,7 @@ void Runs::_loadMonteInputModelTrick17(QStandardItemModel* model,
                             "are %d variables specified in top line, "
                             "but only %d values on line number %d.\n",
                            monteInputFile.toLatin1().constData(),
-                           vars.size(),vals.size(),lineNum);
+                           (int)vars.size(),(int)vals.size(),lineNum);
             exit(-1);
         }
 

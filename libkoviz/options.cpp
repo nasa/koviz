@@ -557,7 +557,7 @@ void Options::parse(int argc, char **argv, const QString& programName,
                             "values, but only %d present: \n",
                             rootOption->nameSpec().toLatin1().constData(),
                             min,
-                            rootStringVals.size());
+                            (int)rootStringVals.size());
                 } else if ( (uint) rootStringVals.size() > max ) {
                     *ok = false;
                     fprintf(stderr,"%s [error]: while parsing commandline. ",
