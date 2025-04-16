@@ -141,27 +141,32 @@ Option::Option(const QString &nameSpec,
         _quantifier = q;
     }
 
-    if ( _defaultValue.type() == QVariant::Double ) {
+    #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        int valType = _defaultValue.typeId();
+    #else
+        int valType = _defaultValue.type();
+    #endif
+    if ( valType == QMetaType::Double ) {
         _addrDouble = (double*) addr;
         _fpresetDouble = (FPresetDouble*)presetCB;
         _fpostsetDouble = (FPostsetDouble*)postsetCB;
-    } else if ( _defaultValue.type() == QVariant::Int ) {
+    } else if ( valType == QMetaType::Int ) {
         _addrInt = (int*) addr;
         _fpresetInt = (FPresetInt*)presetCB;
         _fpostsetInt = (FPostsetInt*)postsetCB;
-    } else if ( _defaultValue.type() == QVariant::UInt ) {
+    } else if ( valType == QMetaType::UInt ) {
         _addrUInt = (uint*) addr;
         _fpresetUInt = (FPresetUInt*)presetCB;
         _fpostsetUInt = (FPostsetUInt*)postsetCB;
-    } else if ( _defaultValue.type() == QVariant::String ) {
+    } else if ( valType == QMetaType::QString ) {
         _addrQString = (QString*) addr;
         _fpresetQString = (FPresetQString*)presetCB;
         _fpostsetQString = (FPostsetQString*)postsetCB;
-    } else if ( _defaultValue.type() == QVariant::Bool ) {
+    } else if ( valType == QMetaType::Bool ) {
         _addrBool = (bool*) addr;
         _fpresetBool = (FPresetBool*)presetCB;
         _fpostsetBool = (FPostsetBool*)postsetCB;
-    } else if ( _defaultValue.type() == QVariant::StringList ) {
+    } else if ( valType == QMetaType::QStringList ) {
         _addrQStringList = (QStringList*) addr;
         _fpresetQStringList = (FPresetQStringList*)presetCB;
         _fpostsetQStringList = (FPostsetQStringList*)postsetCB;
@@ -231,14 +236,25 @@ bool Option::isRootOption()
     return _isRootOption;
 }
 
-QVariant::Type Option::type()
+int Option::type()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return _defaultValue.typeId();
+#else
     return _defaultValue.type();
+#endif
 }
 
 void Option::setValue(const QVariant &val, bool* ok)
 {
-    if ( val.type() == QVariant::Int ) {
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    int valType = val.typeId();
+#else
+    int valType = val.type();
+#endif
+
+    if ( valType == QMetaType::Int ) {
         if ( _fpresetInt ) {
             _fpresetInt(_addrInt, val.toInt(), ok);
         }
@@ -246,7 +262,7 @@ void Option::setValue(const QVariant &val, bool* ok)
         if ( _fpostsetInt && *ok) {
             _fpostsetInt(_addrInt, ok);
         }
-    } else if ( val.type() == QVariant::UInt ) {
+    } else if ( valType == QMetaType::UInt ) {
         if (_fpresetUInt) {
             _fpresetUInt(_addrUInt, val.toUInt(), ok);
         }
@@ -254,7 +270,7 @@ void Option::setValue(const QVariant &val, bool* ok)
         if ( _fpostsetUInt && *ok) {
             _fpostsetUInt(_addrUInt, ok);
         }
-    } else if ( val.type() == QVariant::Double ) {
+    } else if ( valType == QMetaType::Double ) {
         if ( _fpresetDouble ) {
             _fpresetDouble(_addrDouble, val.toDouble(), ok);
         }
@@ -262,7 +278,7 @@ void Option::setValue(const QVariant &val, bool* ok)
         if ( _fpostsetDouble && *ok) {
             _fpostsetDouble(_addrDouble, ok);
         }
-    } else if ( val.type() == QVariant::String ) {
+    } else if ( valType == QMetaType::QString ) {
         if ( _fpresetQString ) {
             _fpresetQString(_addrQString, val.toString(), ok);
         }
@@ -270,7 +286,7 @@ void Option::setValue(const QVariant &val, bool* ok)
         if ( _fpostsetQString && *ok) {
             _fpostsetQString(_addrQString, ok);
         }
-    } else if ( val.type() == QVariant::Bool ) {
+    } else if ( valType == QMetaType::Bool ) {
         if ( _fpresetBool ) {
             _fpresetBool(_addrBool, val.toBool(), ok);
         }
@@ -278,7 +294,7 @@ void Option::setValue(const QVariant &val, bool* ok)
         if ( _fpostsetBool && *ok) {
             _fpostsetBool(_addrBool, ok);
         }
-    } else if ( val.type() == QVariant::StringList ) {
+    } else if ( valType == QMetaType::QStringList ) {
         if ( _fpresetQStringList ) {
             _fpresetQStringList(_addrQStringList, val.toStringList(), ok);
         }
@@ -564,16 +580,16 @@ void Options::parse(int argc, char **argv, const QString& programName,
         // Turn root values into a qvariant list
         QVariantList rootVals;
         foreach ( QString s, rootStringVals ) {
-            if ( rootOption->type() == QVariant::Int ) {
+            if ( rootOption->type() == QMetaType::Int ) {
                 int v = s.toInt(ok);
                 if ( *ok ) rootVals << QVariant(v);
-            } else if ( rootOption->type() == QVariant::UInt ) {
+            } else if ( rootOption->type() == QMetaType::UInt ) {
                 uint v = s.toUInt(ok);
                 if ( *ok ) rootVals << QVariant(v);
-            } else if ( rootOption->type() == QVariant::Double ) {
+            } else if ( rootOption->type() == QMetaType::Double ) {
                 double v = s.toDouble(ok);
                 if ( *ok ) rootVals << QVariant(v);
-            } else if ( rootOption->type() == QVariant::Bool ) {
+            } else if ( rootOption->type() == QMetaType::Bool ) {
                 bool v = stringToBool(s,ok);
                 if ( *ok ) rootVals << QVariant(v);
             } else {
@@ -588,7 +604,7 @@ void Options::parse(int argc, char **argv, const QString& programName,
     // Set the parsed value of the option to the
     // variable that is associated with the option
     foreach ( Option* opt, opt2vals.keys() ) {
-        if ( opt->type() == QVariant::StringList ) {
+        if ( opt->type() == QMetaType::QStringList ) {
             QStringList list;
             foreach ( QVariant v, opt2vals.value(opt) ) {
                 list.append(v.toString());
@@ -629,18 +645,18 @@ QVariantList Options::_extractOptValsFromArgs(Option *opt,
             break;
 
         }
-        if ( opt->type() == QVariant::Int ) {
+        if ( opt->type() == QMetaType::Int ) {
             int v = valString.toInt(ok);
             if ( *ok ) listVals << QVariant(v);
-        } else if ( opt->type() == QVariant::UInt ) {
+        } else if ( opt->type() == QMetaType::UInt ) {
             uint v = valString.toUInt(ok);
             if ( *ok ) listVals << QVariant(v);
-        } else if ( opt->type() == QVariant::Double ) {
+        } else if ( opt->type() == QMetaType::Double ) {
             double v = valString.toDouble(ok);
             if ( *ok ) listVals << QVariant(v);
-        } else if ( opt->type() == QVariant::StringList ) {
+        } else if ( opt->type() == QMetaType::QStringList ) {
             if ( *ok ) listVals << QVariant(valString);
-        } else if ( opt->type() == QVariant::Bool ) {
+        } else if ( opt->type() == QMetaType::Bool ) {
             bool v = stringToBool(valString,ok);
             if ( *ok ) listVals << QVariant(v);
         } else {

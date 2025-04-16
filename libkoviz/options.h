@@ -62,7 +62,7 @@ public:
     bool isRootOption();
 
     Quantifier valueQuantifier(); // how many (possible) values e.g. 1,{2,3},?,+
-    QVariant::Type type();
+    int type();
 
     void setValue(const QVariant& val, bool *ok);
     void setValue(const QVariantList& vals);
