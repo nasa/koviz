@@ -20,7 +20,7 @@ koviz a2.csv -a
 echo ""
 echo "Test three points a3.csv"
 echo "Action: Press i to integrate"
-echo "Expect: (0,0),(1,2),(2,5)"
+echo "Expect: (0,0),(1,2),(2,7)"
 koviz a3.csv -a
 echo ""
 echo "Test ten points a10.csv"

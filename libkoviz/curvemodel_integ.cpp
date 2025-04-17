@@ -144,67 +144,28 @@ void CurveModelIntegral::_init(CurveModel* curveModel, double initial_value)
     _nrows = curveModel->rowCount();
     _data = (double*)malloc(_nrows*_ncols*sizeof(double));
 
-    if ( _nrows == 0 ) {
-        // Nothing to do, empty
-    } else if ( _nrows == 1 ) {
-        _data[0*_ncols+0] = it->at(0)->t();
-        _data[0*_ncols+1] = it->at(0)->x();
-        _data[0*_ncols+2] = initial_value;
-    } else if ( _nrows == 2 ) {
-        double x0 = it->at(0)->x();
-        double x1 = it->at(1)->x();
-        double y0 = it->at(0)->y();
-        double y1 = it->at(1)->y();
-        double dx = x1-x0;
-        double area = (y0+y1)*dx/2.0;
-        _data[0*_ncols+0] = it->at(0)->t();
-        _data[0*_ncols+1] = it->at(0)->x();
-        _data[0*_ncols+2] = initial_value;
-        _data[1*_ncols+0] = it->at(1)->t();
-        _data[1*_ncols+1] = it->at(1)->x();
-        _data[1*_ncols+2] = area;
-    } else if ( _nrows == 3 ) {
-        double x0 = it->at(0)->x();
-        double y0 = it->at(0)->y();
-        double x1 = it->at(1)->x();
-        double y1 = it->at(1)->y();
-        double x2 = it->at(2)->x();
-        double y2 = it->at(2)->y();
-        double a0 = (y0+y1)*(x1-x0)/2.0;
-        double a1 = (y1+y2)*(x2-x1)/2.0;
-        _data[0*_ncols+0] = it->at(0)->t();
-        _data[0*_ncols+1] = it->at(0)->x();
-        _data[0*_ncols+2] = initial_value;
-        _data[1*_ncols+0] = it->at(1)->t();
-        _data[1*_ncols+1] = it->at(1)->x();
-        _data[1*_ncols+2] = a0;
-        _data[2*_ncols+0] = it->at(2)->t();
-        _data[2*_ncols+1] = it->at(2)->x();
-        _data[2*_ncols+2] = a1;
-    } else {
-        for (int i = 0; i < _nrows; ++i ) {
-            _data[i*_ncols+0] = it->at(i)->t();
-            _data[i*_ncols+1] = it->at(i)->x();
-            if ( i == 0 ) {
-                _data[i*_ncols+2] = initial_value;
-            } else {
-                double x0 = it->at(i-1)->x();
-                double y0 = it->at(i-1)->y();
-                double x1 = it->at(i)->x();
-                double y1 = it->at(i)->y();
-                for (int j = i-1; j >= 0; --j) {
-                    x0 = it->at(j)->x();
-                    y0 = it->at(j)->y();
-                    if ( !std::isnan(x0) && !std::isnan(y0) && x0 != x1 ) {
-                        break;
-                    }
+    for (int i = 0; i < _nrows; ++i ) {
+        _data[i*_ncols+0] = it->at(i)->t();
+        _data[i*_ncols+1] = it->at(i)->x();
+        if ( i == 0 ) {
+            _data[i*_ncols+2] = initial_value;
+        } else {
+            double x0 = it->at(i-1)->x();
+            double y0 = it->at(i-1)->y();
+            double x1 = it->at(i)->x();
+            double y1 = it->at(i)->y();
+            for (int j = i-1; j >= 0; --j) {
+                x0 = it->at(j)->x();
+                y0 = it->at(j)->y();
+                if ( !std::isnan(x0) && !std::isnan(y0) && x0 != x1 ) {
+                    break;
                 }
-                double area = (y0+y1)*(x1-x0)/2.0;
-                if ( x1 == x0 ) {
-                    area = 0.0;
-                }
-                _data[i*_ncols+2] = _data[(i-1)*_ncols+2] + area;
             }
+            double area = (y0+y1)*(x1-x0)/2.0;
+            if ( x1 == x0 ) {
+                area = 0.0;
+            }
+            _data[i*_ncols+2] = _data[(i-1)*_ncols+2] + area;
         }
     }
 
