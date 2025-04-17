@@ -25,7 +25,7 @@ class SieListModel : public QAbstractListModel
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index,
                   int role = Qt::DisplayRole) const override;
-    virtual QMimeData *mimeData(const QModelIndexList &indexes) const override;
+    QMimeData *mimeData(const QModelIndexList &indexes) const override;
 
     QString paramUnit(const QString &param);
     int paramSize(const QString& param);

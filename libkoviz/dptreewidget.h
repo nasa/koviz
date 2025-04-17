@@ -30,10 +30,10 @@ public:
     explicit DPTreeView(QWidget *parent = 0);
 
 protected:
-    virtual void currentChanged(const QModelIndex &current,
-                                const QModelIndex &previous);
-    virtual void selectionChanged(const QItemSelection &selected,
-                                  const QItemSelection &deselected);
+    void currentChanged(const QModelIndex &current,
+                        const QModelIndex &previous) override;
+    void selectionChanged(const QItemSelection &selected,
+                          const QItemSelection &deselected) override;
 };
 
 // Data Products TreeView with Search Box

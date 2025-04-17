@@ -17,13 +17,13 @@ public:
     explicit PageTitleView(QWidget *parent = 0);
 
 protected:
-    virtual void paintEvent(QPaintEvent * event);
-    virtual QSize sizeHint() const;
+    void paintEvent(QPaintEvent * event) override;
+    QSize sizeHint() const override;
 
 protected slots:
-    virtual void dataChanged(const QModelIndex &topLeft,
-                             const QModelIndex &bottomRight,
-                             const QVector<int> &roles = QVector<int>());
+    void dataChanged(const QModelIndex &topLeft,
+                     const QModelIndex &bottomRight,
+                     const QVector<int> &roles = QVector<int>()) override;
 };
 
 #endif // PAGETITLEVIEW_H

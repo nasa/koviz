@@ -4,7 +4,6 @@
 #include <QFontMetrics>
 #include "layoutitem_paintable.h"
 #include "layoutitem_plotcorner.h"
-#include "layoutitem_plottics.h"
 #include "bookmodel.h"
 
 class PlotTicsLayoutItem : public PaintableLayoutItem
@@ -14,16 +13,16 @@ public:
                        PlotBookModel* bookModel,
                        const QModelIndex& plotIdx);
     ~PlotTicsLayoutItem();
-    virtual Qt::Orientations expandingDirections() const;
-    virtual QRect  geometry() const;
-    virtual bool  isEmpty() const;
-    virtual QSize  maximumSize() const;
-    virtual QSize  minimumSize() const;
-    virtual void  setGeometry(const QRect &r);
-    virtual QSize  sizeHint() const;
-    virtual void paint(QPainter* painter,
-                       const QRect& R, const QRect& RG,
-                       const QRect& C, const QRectF& M);
+    Qt::Orientations expandingDirections() const override;
+    QRect  geometry() const override;
+    bool  isEmpty() const override;
+    QSize  maximumSize() const override;
+    QSize  minimumSize() const override;
+    void  setGeometry(const QRect &r) override;
+    QSize  sizeHint() const override;
+    void paint(QPainter* painter,
+               const QRect& R, const QRect& RG,
+               const QRect& C, const QRectF& M) override;
 
 
 

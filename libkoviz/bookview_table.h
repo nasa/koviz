@@ -36,34 +36,34 @@ public:
     explicit BookTableView(QWidget *parent = 0);
 
 public:
-    virtual QModelIndex indexAt( const QPoint& point) const;
-    virtual QRect visualRect(const QModelIndex &index) const;
-    virtual void scrollTo(const QModelIndex &index,
-                          ScrollHint hint = EnsureVisible);
+    QModelIndex indexAt( const QPoint& point) const override;
+    QRect visualRect(const QModelIndex &index) const override;
+    void scrollTo(const QModelIndex &index,
+                  ScrollHint hint = EnsureVisible) override;
 
 protected:
-    virtual void paintEvent(QPaintEvent * event);
-    virtual QSize minimumSizeHint() const;
-    virtual QSize sizeHint() const;
+    void paintEvent(QPaintEvent * event) override;
+    QSize minimumSizeHint() const override;
+    QSize sizeHint() const override;
 
 protected:
-    virtual QModelIndex moveCursor(CursorAction cursorAction,
-                                   Qt::KeyboardModifiers modifiers);
-    virtual int horizontalOffset() const;
-    virtual int verticalOffset() const;
-    virtual bool isIndexHidden(const QModelIndex &index) const;
-    virtual void setSelection(const QRect &rect,
-                              QItemSelectionModel::SelectionFlags command);
-    virtual QRegion visualRegionForSelection(
-                              const QItemSelection &selection) const;
-    virtual void keyPressEvent(QKeyEvent *event);
-    void wheelEvent(QWheelEvent *e);
+    QModelIndex moveCursor(CursorAction cursorAction,
+                           Qt::KeyboardModifiers modifiers) override;
+    int horizontalOffset() const override;
+    int verticalOffset() const override;
+    bool isIndexHidden(const QModelIndex &index) const override;
+    void setSelection(const QRect &rect,
+                      QItemSelectionModel::SelectionFlags command) override;
+    QRegion visualRegionForSelection(
+                              const QItemSelection &selection) const override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void wheelEvent(QWheelEvent *e) override;
 
 protected slots:
-    virtual void dataChanged(const QModelIndex &topLeft,
-                             const QModelIndex &bottomRight,
-                             const QVector<int> &roles = QVector<int>());
-    virtual void rowsInserted(const QModelIndex &parent, int start, int end);
+    void dataChanged(const QModelIndex &topLeft,
+                     const QModelIndex &bottomRight,
+                     const QVector<int> &roles = QVector<int>()) override;
+    void rowsInserted(const QModelIndex &parent, int start, int end) override;
 
 private:
     PlotBookModel* _bookModel() const;

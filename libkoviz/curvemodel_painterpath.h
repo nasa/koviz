@@ -26,21 +26,21 @@ class CurveModelPainterPath : public CurveModel
 
     ~CurveModelPainterPath();
 
-    CurveModelParameter* t() { return _t; }
-    CurveModelParameter* x() { return _x; }
-    CurveModelParameter* y() { return _y; }
+    CurveModelParameter* t() override { return _t; }
+    CurveModelParameter* x() override { return _x; }
+    CurveModelParameter* y() override { return _y; }
 
-    QString fileName() const { return ""; }
+    QString fileName() const override { return ""; }
 
-    void map() {}
-    void unmap() {}
-    ModelIterator* begin() const ;
-    int indexAtTime(double time);
+    void map() override {}
+    void unmap() override {}
+    ModelIterator* begin() const override ;
+    int indexAtTime(double time) override;
 
-    virtual int rowCount(const QModelIndex & pidx = QModelIndex() ) const;
-    virtual int columnCount(const QModelIndex & pidx = QModelIndex() ) const;
-    virtual QVariant data (const QModelIndex & index,
-                           int role = Qt::DisplayRole ) const ;
+    int rowCount(const QModelIndex & pidx = QModelIndex() ) const override;
+    int columnCount(const QModelIndex & pidx = QModelIndex() ) const override;
+    QVariant data (const QModelIndex & index,
+                   int role = Qt::DisplayRole ) const override;
 
   private:
 
@@ -75,40 +75,40 @@ class PainterPathModelIterator : public ModelIterator
 
     virtual ~PainterPathModelIterator() {}
 
-    virtual void start()
+    void start() override
     {
         i = 0;
     }
 
-    virtual void next()
+    void next() override
     {
         ++i;
     }
 
-    virtual bool isDone() const
+    bool isDone() const override
     {
         return ( i >= _model->rowCount() ) ;
     }
 
-    virtual PainterPathModelIterator* at(int n)
+    PainterPathModelIterator* at(int n) override
     {
         i = n;
         return this;
     }
 
-    inline double t() const
+    inline double t() const override
     {
         QPainterPath::Element el = _model->_painterPath->elementAt(i);
         return el.x;
     }
 
-    inline double x() const
+    inline double x() const override
     {
         QPainterPath::Element el = _model->_painterPath->elementAt(i);
         return el.x;
     }
 
-    inline double y() const
+    inline double y() const override
     {
         QPainterPath::Element el = _model->_painterPath->elementAt(i);
         return el.y;

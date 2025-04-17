@@ -45,11 +45,6 @@ class DataModel : public QAbstractTableModel
     virtual ModelIterator* begin(int tcol, int xcol, int ycol) const = 0;
     virtual int indexAtTime(double time) = 0 ;
 
-    virtual int rowCount(const QModelIndex& pidx=QModelIndex()) const = 0;
-    virtual int columnCount(const QModelIndex& pidx=QModelIndex()) const = 0;
-    virtual QVariant data(const QModelIndex& idx,
-                          int role=Qt::DisplayRole) const = 0;
-
   private:
 
     QStringList _timeNames;

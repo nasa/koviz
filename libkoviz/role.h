@@ -1,6 +1,8 @@
 #ifndef ROLE_H
 #define ROLE_H
 
+#include <QString>
+#include <QVariant>
 
 class Role
 {

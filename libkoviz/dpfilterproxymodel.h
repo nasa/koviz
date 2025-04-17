@@ -32,8 +32,8 @@ public:
                                 QObject *parent = 0);
 
 protected:
-    bool filterAcceptsRow(int row, const QModelIndex &pidx) const;
-    bool filterAcceptsColumn(int col, const QModelIndex &pidx) const;
+    bool filterAcceptsRow(int row, const QModelIndex &pidx) const override;
+    bool filterAcceptsColumn(int col, const QModelIndex &pidx) const override;
 signals:
     
 private slots:

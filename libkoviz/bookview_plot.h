@@ -26,14 +26,14 @@ class PlotView : public BookIdxView
 
 public:
     explicit PlotView(QWidget *parent = 0);
-    virtual void setModel(QAbstractItemModel *model);
+    void setModel(QAbstractItemModel *model) override;
 
 protected:
-    virtual bool eventFilter(QObject *obj, QEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 protected:
-    virtual QSize minimumSizeHint() const;
-    virtual QSize sizeHint() const;
+    QSize minimumSizeHint() const override;
+    QSize sizeHint() const override;
 
 private:
     PlotLayout* _grid;
@@ -58,13 +58,10 @@ private:
     Qt::MouseButton _buttonRubberBandZoom;
 
 protected slots:
-    virtual void dataChanged(const QModelIndex &topLeft,
-                             const QModelIndex &bottomRight,
-                             const QVector<int> &roles = QVector<int>());
-    virtual void rowsInserted(const QModelIndex &parent, int start, int end);
-    //virtual void rowsAboutToBeRemoved(const QModelIndex &parent, int start, int end);
-    //virtual void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
-    //virtual void currentChanged(const QModelIndex &current, const QModelIndex &previous);
+    void dataChanged(const QModelIndex &topLeft,
+                     const QModelIndex &bottomRight,
+                     const QVector<int> &roles = QVector<int>()) override;
+    void rowsInserted(const QModelIndex &parent, int start, int end) override;
 
 protected slots:
     void _childViewCurrentChanged(const QModelIndex& currIdx,

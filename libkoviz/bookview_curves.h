@@ -218,19 +218,19 @@ public:
     ~CurvesView();
 
 public:
-    virtual void setCurrentCurveRunID(int runID);
+    void setCurrentCurveRunID(int runID) override;
 
 protected:
-    virtual void paintEvent(QPaintEvent * event);
-    virtual QSize minimumSizeHint() const;
-    virtual QSize sizeHint() const;
-    virtual void mousePressEvent(QMouseEvent* event);
-    virtual void mouseReleaseEvent(QMouseEvent* event);
-    virtual void mouseMoveEvent(QMouseEvent* event);
-    virtual void keyPressEvent(QKeyEvent *event);
-    virtual void currentChanged(const QModelIndex& current,
-                                const QModelIndex& previous);
-    virtual void resizeEvent(QResizeEvent *event);
+    void paintEvent(QPaintEvent * event) override;
+    QSize minimumSizeHint() const override;
+    QSize sizeHint() const override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void currentChanged(const QModelIndex& current,
+                        const QModelIndex& previous) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 
 private:
@@ -316,9 +316,10 @@ private slots:
     void _keyPressIInitValueReturnPressed();
 
 protected slots:
-    virtual void dataChanged(const QModelIndex &topLeft,
-                             const QModelIndex &bottomRight);
-    virtual void rowsInserted(const QModelIndex &pidx, int start, int end);
+    void dataChanged(const QModelIndex &topLeft,
+                     const QModelIndex &bottomRight,
+                     const QVector<int> &roles = QVector<int>()) override;
+    void rowsInserted(const QModelIndex &pidx, int start, int end) override;
 
 
 };

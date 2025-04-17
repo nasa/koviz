@@ -12,8 +12,11 @@ PlotTitleView::PlotTitleView(QWidget *parent) :
 
 // TODO: For now and only handle single item changes
 void PlotTitleView::dataChanged(const QModelIndex &topLeft,
-                                const QModelIndex &bottomRight)
+                                const QModelIndex &bottomRight,
+                                const QVector<int> &roles)
 {
+    Q_UNUSED(roles);
+
     if ( topLeft.parent() != rootIndex() ) return;
     if ( topLeft.column() != 1 ) return;
     if ( topLeft != bottomRight ) return;

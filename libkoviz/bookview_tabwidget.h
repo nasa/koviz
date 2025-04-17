@@ -16,8 +16,8 @@ public:
     void setBookModel(PlotBookModel* bookModel);
 
 protected:
-    virtual void dropEvent(QDropEvent *event);
-    virtual void dragEnterEvent(QDragEnterEvent *event);
+    void dropEvent(QDropEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
 
 private:
     PlotBookModel* _bookModel;

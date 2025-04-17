@@ -34,17 +34,17 @@ class PointsModel : public DataModel
                          QObject *parent = 0);
     ~PointsModel();
 
-    virtual const Parameter* param(int col) const ;
-    virtual void map();
-    virtual void unmap();
-    virtual int paramColumn(const QString& paramName) const ;
-    virtual ModelIterator* begin(int tcol, int xcol, int ycol) const ;
-    int indexAtTime(double time);
+    const Parameter* param(int col) const override ;
+    void map() override;
+    void unmap() override;
+    int paramColumn(const QString& paramName) const override ;
+    ModelIterator* begin(int tcol, int xcol, int ycol) const override ;
+    int indexAtTime(double time) override;
 
-    virtual int rowCount(const QModelIndex & pidx = QModelIndex() ) const;
-    virtual int columnCount(const QModelIndex & pidx = QModelIndex() ) const;
-    virtual QVariant data (const QModelIndex & index,
-                           int role = Qt::DisplayRole ) const;
+    int rowCount(const QModelIndex & pidx = QModelIndex() ) const override;
+    int columnCount(const QModelIndex & pidx = QModelIndex() ) const override;
+    QVariant data (const QModelIndex & index,
+                           int role = Qt::DisplayRole ) const override;
 
   private:
 
@@ -78,38 +78,38 @@ class PointsModelIterator : public ModelIterator
 
     virtual ~PointsModelIterator() {}
 
-    virtual void start()
+    void start() override
     {
         i = 0;
     }
 
-    virtual void next()
+    void next() override
     {
         ++i;
     }
 
-    virtual bool isDone() const
+    bool isDone() const override
     {
         return ( i >= _model->rowCount() ) ;
     }
 
-    virtual PointsModelIterator* at(int n)
+    PointsModelIterator* at(int n) override
     {
         i = n;
         return this;
     }
 
-    inline double t() const
+    inline double t() const override
     {
         return _model->_points->at(i).x();
     }
 
-    inline double x() const
+    inline double x() const override
     {
         return _model->_points->at(i).x();
     }
 
-    inline double y() const
+    inline double y() const override
     {
         return _model->_points->at(i).y();
     }

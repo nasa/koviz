@@ -36,10 +36,10 @@ public:
         _size(0)
     {}
 
-    virtual void setName(const QString& name ) { _name = name; }
-    virtual void setUnit(const QString& unit ) { _unit = unit; }
-    virtual QString name() const { return _name; }
-    virtual QString unit() const { return _unit; }
+    void setName(const QString& name ) override { _name = name; }
+    void setUnit(const QString& unit ) override { _unit = unit; }
+    QString name() const override { return _name; }
+    QString unit() const override { return _unit; }
 
     void setType(int type) { _type = type; }
     void setSize(int size) { _size = size; }
@@ -75,23 +75,23 @@ class TrickModel : public DataModel
                        QObject *parent = 0);
     ~TrickModel();
 
-    virtual const Parameter* param(int col) const ;
+    const Parameter* param(int col) const override ;
 
-    virtual void map();
-    virtual void unmap();
-    virtual int paramColumn(const QString& param) const
+    void map() override;
+    void unmap() override;
+    int paramColumn(const QString& param) const override
     {
         return _param2column.value(param,-1);
     }
-    virtual ModelIterator* begin(int tcol, int xcol, int ycol) const ;
-    int indexAtTime(double time);
+    ModelIterator* begin(int tcol, int xcol, int ycol) const override ;
+    int indexAtTime(double time) override;
 
     static void writeTrkHeader(QDataStream &out, const QList<TrickParameter> &params);
 
-    virtual int rowCount(const QModelIndex & pidx = QModelIndex() ) const;
-    virtual int columnCount(const QModelIndex & pidx = QModelIndex() ) const;
-    virtual QVariant data (const QModelIndex & index,
-                           int role = Qt::DisplayRole ) const;
+    int rowCount(const QModelIndex & pidx = QModelIndex() ) const override;
+    int columnCount(const QModelIndex & pidx = QModelIndex() ) const override;
+    QVariant data (const QModelIndex & index,
+                   int role = Qt::DisplayRole ) const override;
 
   private:
 
@@ -300,39 +300,39 @@ class TrickModelIterator : public ModelIterator
 
     virtual ~TrickModelIterator() {}
 
-    virtual void start()
+    void start() override
     {
         i = 0;
         _row_count = _model->rowCount();
     }
 
-    virtual void next()
+    void next() override
     {
         ++i;
     }
 
-    virtual bool isDone() const
+    bool isDone() const override
     {
         return ( i >= _row_count ) ;
     }
 
-    virtual TrickModelIterator* at(int n)
+    TrickModelIterator* at(int n) override
     {
         i = n;
         return this;
     }
 
-    inline double t() const
+    inline double t() const override
     {
         return _model->_toDouble(_data+i*_row_size+_tco,_ttype);
     }
 
-    inline double x() const
+    inline double x() const override
     {
         return _model->_toDouble(_data+i*_row_size+_xco,_xtype);
     }
 
-    inline double y() const
+    inline double y() const override
     {
         return _model->_toDouble(_data+i*_row_size+_yco,_ytype);
     }

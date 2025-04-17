@@ -63,8 +63,11 @@ QSize LabeledRulerView::sizeHint() const
 }
 
 void LabeledRulerView::dataChanged(const QModelIndex &topLeft,
-                                   const QModelIndex &bottomRight)
+                                   const QModelIndex &bottomRight,
+                                   const QVector<int> &roles)
 {
+    Q_UNUSED(roles);
+
     if ( topLeft.parent() != rootIndex() ) return;
     if ( topLeft.column() != 1 ) return;
     if ( topLeft != bottomRight ) return;

@@ -15,9 +15,9 @@ public:
     explicit PlotTitleView(QWidget *parent = 0);
 
 protected:
-    virtual QSize minimumSizeHint() const;
-    virtual QSize sizeHint() const;
-    virtual void paintEvent(QPaintEvent * event);
+    QSize minimumSizeHint() const override;
+    QSize sizeHint() const override;
+    void paintEvent(QPaintEvent * event) override;
 
 private:
     QLabel* _label;
@@ -25,9 +25,11 @@ private:
     QPoint _mousePressPos;
 
 protected slots:
-    virtual void dataChanged(const QModelIndex &topLeft,
-                             const QModelIndex &bottomRight);
-    virtual void rowsInserted(const QModelIndex &parent, int start, int end);
+    void dataChanged(const QModelIndex &topLeft,
+                     const QModelIndex &bottomRight,
+                     const QVector<int> &roles = QVector<int>()) override;
+
+    void rowsInserted(const QModelIndex &parent, int start, int end) override;
 
 };
 

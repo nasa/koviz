@@ -182,7 +182,7 @@ class AnimationThread : public QThread
         _stop(stop)
     {}
 
-    void run()
+    void run() override
     {
         QEasingCurve ez(QEasingCurve::InQuad);
         _anim->setEasingCurve(ez);
@@ -214,7 +214,7 @@ class LoadThread : public QThread
     {
     }
 
-    void run()
+    void run() override
     {
         QPropertyAnimation* anim = new QPropertyAnimation(_snap,"progress");
         AnimationThread* t = new AnimationThread(anim,_duration,_start,_stop);

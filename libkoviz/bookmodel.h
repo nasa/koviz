@@ -39,8 +39,8 @@ public:
                             int rows, int columns, QObject * parent = 0 );
     ~PlotBookModel();
 
-    virtual bool setData(const QModelIndex &idx,
-                         const QVariant &value, int role=Qt::EditRole);
+    bool setData(const QModelIndex &idx,
+                 const QVariant &value, int role=Qt::EditRole) override;
 
 public:
     double xScale(const QModelIndex& curveIdx,CurveModel* curveModelIn=0) const;

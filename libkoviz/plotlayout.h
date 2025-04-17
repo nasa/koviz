@@ -17,16 +17,16 @@ public:
     PlotLayout();
     ~PlotLayout();
 
-    virtual void addItem(QLayoutItem *item);
-    virtual void addWidget(QWidget *widget);
-    virtual int count() const;
-    virtual QLayoutItem *itemAt(int index) const;
-    virtual void setGeometry(const QRect &rect);
-    virtual QRect geometry() const;
-    virtual QSize sizeHint() const;
-    virtual QLayoutItem *takeAt(int index);
-    virtual QLayout* layout() ;
+    void addItem(QLayoutItem *item) override;
+    int count() const override;
+    QLayoutItem *itemAt(int index) const override;
+    void setGeometry(const QRect &rect) override;
+    QRect geometry() const override;
+    QSize sizeHint() const override;
+    QLayoutItem *takeAt(int index) override;
+    QLayout* layout() override;
 
+    void addWidget(QWidget *widget);
     void setPlotRatio(const QString& plotRatio);
     QString plotRatio() const ;
 

@@ -1058,8 +1058,10 @@ QSize CurvesView::sizeHint() const
 }
 
 void CurvesView::dataChanged(const QModelIndex &topLeft,
-                             const QModelIndex &bottomRight)
+                             const QModelIndex &bottomRight,
+                             const QVector<int> &roles)
 {
+    Q_UNUSED(roles);
     Q_UNUSED(bottomRight);
 
     if ( topLeft.column() != 1 ) return;

@@ -402,8 +402,10 @@ void BookView::_pageViewCurrentChanged(const QModelIndex &currIdx,
 }
 
 void BookView::dataChanged(const QModelIndex &topLeft,
-                           const QModelIndex &bottomRight)
+                           const QModelIndex &bottomRight,
+                           const QVector<int> &roles)
 {
+    Q_UNUSED(roles);
     Q_UNUSED(topLeft);
     Q_UNUSED(bottomRight);
 }

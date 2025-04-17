@@ -31,8 +31,11 @@ TablePageView::~TablePageView()
 }
 
 void TablePageView::dataChanged(const QModelIndex &topLeft,
-                                const QModelIndex &bottomRight)
+                                const QModelIndex &bottomRight,
+                                const QVector<int> &roles)
 {
+    Q_UNUSED(roles);
+
     QModelIndex pidx = topLeft.parent();
     if ( pidx != bottomRight.parent() ) return;
 

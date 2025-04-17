@@ -33,10 +33,10 @@ class CurveModel : public QAbstractTableModel
     virtual ModelIterator* begin() const { return _datamodel->begin(_tcol,_xcol,_ycol);}
     virtual int indexAtTime(double time) { return _datamodel->indexAtTime(time); }
 
-    virtual int rowCount(const QModelIndex & pidx = QModelIndex() ) const;
-    virtual int columnCount(const QModelIndex & pidx = QModelIndex() ) const;
-    virtual QVariant data (const QModelIndex & index,
-                           int role = Qt::DisplayRole ) const ;
+    int rowCount(const QModelIndex & pidx = QModelIndex() ) const override;
+    int columnCount(const QModelIndex & pidx = QModelIndex() ) const override;
+    QVariant data (const QModelIndex & index,
+                   int role = Qt::DisplayRole ) const override;
 
     double* _real; // cache for fft
     double* _imag; // cache for fft

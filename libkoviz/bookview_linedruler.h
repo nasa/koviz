@@ -13,15 +13,16 @@ public:
     explicit LinedRulerView(Qt::Alignment alignment, QWidget *parent = 0);
 
 protected:
-    virtual void setModel(QAbstractItemModel* model);
-    virtual void paintEvent(QPaintEvent * event);
-    virtual QSize minimumSizeHint() const;
-    virtual QSize sizeHint() const;
+    void setModel(QAbstractItemModel* model) override;
+    void paintEvent(QPaintEvent * event) override;
+    QSize minimumSizeHint() const override;
+    QSize sizeHint() const override;
 
 protected slots:
-    virtual void dataChanged(const QModelIndex &topLeft,
-                             const QModelIndex &bottomRight);
-    virtual void rowsInserted(const QModelIndex &parent, int start, int end);
+    void dataChanged(const QModelIndex &topLeft,
+                     const QModelIndex &bottomRight,
+                     const QVector<int> &roles = QVector<int>()) override;
+    void rowsInserted(const QModelIndex &parent, int start, int end) override;
 
 
 };

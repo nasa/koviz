@@ -17,16 +17,18 @@ public:
     explicit XAxisLabelView(QWidget *parent = 0);
 
 protected:
-    virtual void paintEvent(QPaintEvent * event);
-    virtual QSize minimumSizeHint() const;
-    virtual QSize sizeHint() const;
-    virtual void wheelEvent(QWheelEvent* e);
-    virtual void dropEvent(QDropEvent *event);
+    void paintEvent(QPaintEvent * event) override;
+    QSize minimumSizeHint() const override;
+    QSize sizeHint() const override;
+    void wheelEvent(QWheelEvent* e) override;
+    void dropEvent(QDropEvent *event) override;
 
 protected slots:
-    virtual void dataChanged(const QModelIndex &topLeft,
-                             const QModelIndex &bottomRight);
-    virtual void rowsInserted(const QModelIndex &pidx, int start, int end);
+    void dataChanged(const QModelIndex &topLeft,
+                     const QModelIndex &bottomRight,
+                     const QVector<int> &roles = QVector<int>()) override;
+
+    void rowsInserted(const QModelIndex &pidx, int start, int end) override;
 };
 
 #endif // XAXISLABELVIEW_H

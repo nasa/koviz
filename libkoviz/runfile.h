@@ -20,8 +20,8 @@ public:
            const QHash<QString,QStringList> &varMap);
     ~RunFile() {}
 
-    virtual QStringList params();
-    virtual DataModel *dataModel(const QString& param);
+    QStringList params() override;
+    DataModel *dataModel(const QString& param) override;
 
     static bool isValid(const QString& run, const QStringList &timeNames);
 private:

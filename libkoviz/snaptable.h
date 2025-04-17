@@ -23,33 +23,34 @@ class SnapTable : public QAbstractTableModel
     explicit SnapTable(const QString &tableName=QString(), QObject *parent = 0);
     ~SnapTable();
 
-    virtual QModelIndex parent(const QModelIndex & index) const;
-    virtual QModelIndex index(int row, int column,
-                      const QModelIndex &pidx = QModelIndex()) const;
-
-    virtual int rowCount(const QModelIndex & pidx = QModelIndex() ) const;
-    virtual int columnCount(const QModelIndex & pidx = QModelIndex() ) const;
-    virtual QVariant data (const QModelIndex & index, int role = Qt::DisplayRole ) const;
-    virtual bool setData (const QModelIndex & idx,
+    QModelIndex parent(const QModelIndex & index) const override;
+    QModelIndex index(int row, int column,
+                      const QModelIndex &pidx = QModelIndex()) const override;
+    int rowCount(const QModelIndex & pidx = QModelIndex() ) const override;
+    int columnCount(const QModelIndex & pidx = QModelIndex() ) const override;
+    QVariant data (const QModelIndex & index,
+                   int role = Qt::DisplayRole ) const override;
+    bool setData (const QModelIndex & idx,
                   const QVariant & value,
-                  int role = Role::EditNoEmitDataChange );
+                  int role = Role::EditNoEmitDataChange ) override;
 
-    virtual bool insertRows(int row, int count,
-                       const QModelIndex &pidx = QModelIndex());
+    bool insertRows(int row, int count,
+                    const QModelIndex &pidx = QModelIndex()) override;
 
-    virtual bool removeRows(int row, int count,
-                       const QModelIndex &pidx = QModelIndex());
+    bool removeRows(int row, int count,
+                    const QModelIndex &pidx = QModelIndex()) override;
 
-    virtual bool insertColumns(int column, int count,
-                       const QModelIndex &pidx = QModelIndex());
+    bool insertColumns(int column, int count,
+                       const QModelIndex &pidx = QModelIndex()) override;
 
-    virtual bool removeColumns(int column, int count, const QModelIndex &pidx
-                                                               = QModelIndex());
+    bool removeColumns(int column, int count,
+                       const QModelIndex &pidx = QModelIndex()) override;
 
-    virtual QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const;
-    virtual bool setHeaderData(int sect, Qt::Orientation orientation,
-                       const QVariant &val, int role=Role::EditNoEmitDataChange);
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;
+    bool setHeaderData(int sect, Qt::Orientation orientation,
+                       const QVariant &val,
+                       int role=Role::EditNoEmitDataChange) override;
 
   protected:
     virtual bool _hasColumnRoles() { return true; }

@@ -29,7 +29,7 @@ public:
        {}
 
 protected:
-    bool filterAcceptsRow(int row,const QModelIndex &srcIdx) const;
+    bool filterAcceptsRow(int row,const QModelIndex &srcIdx) const override;
 
 private:
     Runs* _runs;

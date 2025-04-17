@@ -10,13 +10,13 @@ class CurveModelParameter : public Parameter
 public:
     CurveModelParameter();
 
-    virtual QString name() const;
-    virtual QString unit() const;
+    QString name() const override;
+    QString unit() const override;
+    void setName(const QString& name ) override;
+    void setUnit(const QString& unit ) override;
+
     double bias() const;
     double scale() const;
-
-    virtual void setName(const QString& name );
-    virtual void setUnit(const QString& unit );
     void setBias(double bias);
     void setScale(double scale);
 

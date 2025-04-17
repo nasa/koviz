@@ -92,8 +92,8 @@ public:
     void wrap_mpv_events();
 
 protected:
-    virtual void closeEvent(QCloseEvent *event);
-    bool eventFilter(QObject* obj, QEvent* event);
+    void closeEvent(QCloseEvent *event) override;
+    bool eventFilter(QObject* obj, QEvent* event) override;
 
 public slots:
     void on_mpv_events();

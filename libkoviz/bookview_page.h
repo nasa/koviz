@@ -18,12 +18,12 @@ class PageView : public BookIdxView
     Q_OBJECT
 public:
     explicit PageView(QWidget *parent = 0);
-    virtual void setModel(QAbstractItemModel *model);
-    virtual void setRootIndex(const QModelIndex &index);
+    void setModel(QAbstractItemModel *model) override;
+    void setRootIndex(const QModelIndex &index) override;
 
 protected:
-    virtual void paintEvent(QPaintEvent * event);
-    virtual bool eventFilter(QObject *obj, QEvent *event);
+    void paintEvent(QPaintEvent * event) override;
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
     PageLayout* _grid;
@@ -38,14 +38,12 @@ private:
 signals:
 
 protected slots:
-    virtual void dataChanged(const QModelIndex &topLeft,
-                             const QModelIndex &bottomRight,
-                             const QVector<int> &roles = QVector<int>());
-    virtual void rowsInserted(const QModelIndex &parent, int start, int end);
-    virtual void rowsAboutToBeRemoved(const QModelIndex &parent,
-                                      int start, int end);
-    //virtual void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
-    //virtual void currentChanged(const QModelIndex &current, const QModelIndex &previous);
+    void dataChanged(const QModelIndex &topLeft,
+                     const QModelIndex &bottomRight,
+                     const QVector<int> &roles = QVector<int>()) override;
+    void rowsInserted(const QModelIndex &parent, int start, int end) override;
+    void rowsAboutToBeRemoved(const QModelIndex &parent,
+                              int start, int end) override;
 
 protected slots:
     void _plotViewCurrentChanged(const QModelIndex& currIdx,

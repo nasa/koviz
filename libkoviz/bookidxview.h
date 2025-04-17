@@ -32,21 +32,21 @@ public:
     virtual void setCurrentCurveRunID(int runID);
 
 public:
-    virtual void setModel(QAbstractItemModel *model);
-    virtual void setRootIndex(const QModelIndex &index);
-    virtual QModelIndex indexAt( const QPoint& point) const;
-    virtual QRect visualRect(const QModelIndex &index) const;
-    virtual void scrollTo(const QModelIndex &index,
-                          ScrollHint hint = EnsureVisible);
+    void setModel(QAbstractItemModel *model) override;
+    void setRootIndex(const QModelIndex &index) override;
+    QModelIndex indexAt( const QPoint& point) const override;
+    QRect visualRect(const QModelIndex &index) const override;
+    void scrollTo(const QModelIndex &index,
+                          ScrollHint hint = EnsureVisible) override;
 
     // Necessary for ignoring events from middle mouse for rubberbanding
     // in PlotView.  If events are not ignored, the event filtering will
     // not catch mouse events.  This keeps from doing a
     // qApp->installEventFilter which would have to filter *all* app events
-    virtual void mousePressEvent(QMouseEvent* event);
-    virtual void mouseMoveEvent(QMouseEvent* event);
-    virtual void mouseReleaseEvent(QMouseEvent* event);
-    virtual void mouseDoubleClickEvent(QMouseEvent *event);
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
 
     QTransform _coordToPixelTransform() ;
 
@@ -54,15 +54,15 @@ public:
     QModelIndex _plotMathRectIdx(const QModelIndex& plotIdx) const;
 
 protected:
-    virtual QModelIndex moveCursor(CursorAction cursorAction,
-                                   Qt::KeyboardModifiers modifiers);
-    virtual int horizontalOffset() const;
-    virtual int verticalOffset() const;
-    virtual bool isIndexHidden(const QModelIndex &index) const;
-    virtual void setSelection(const QRect &rect,
-                              QItemSelectionModel::SelectionFlags command);
-    virtual QRegion visualRegionForSelection(
-                              const QItemSelection &selection) const;
+    QModelIndex moveCursor(CursorAction cursorAction,
+                                   Qt::KeyboardModifiers modifiers) override;
+    int horizontalOffset() const override;
+    int verticalOffset() const override;
+    bool isIndexHidden(const QModelIndex &index) const override;
+    void setSelection(const QRect &rect,
+                      QItemSelectionModel::SelectionFlags command) override;
+    QRegion visualRegionForSelection(
+                              const QItemSelection &selection) const override;
     Qt::Alignment _alignment;
 
 protected:
@@ -87,7 +87,7 @@ protected:
                              const QStringList& symbols,
                              const QStringList& labels,
                              QPainter& painter);
-    virtual void __paintSymbol(const QPointF &p, const QString& symbol,
+    void __paintSymbol(const QPointF &p, const QString& symbol,
                                QPainter& painter);
     void _paintGrid(QPainter& painter, const QModelIndex &plotIdx);
     void _paintHLines(QPainter& painter, const QModelIndex &plotIdx);
@@ -98,11 +98,7 @@ protected slots:
     void dataChanged(const QModelIndex &topLeft,
                      const QModelIndex &bottomRight,
                      const QVector<int> &roles = QVector<int>()) override;
-    virtual void rowsInserted(const QModelIndex &parent, int start, int end);
-    //virtual void rowsAboutToBeRemoved(const QModelIndex &parent, int start, int end);
-    //virtual void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
-    //virtual void currentChanged(const QModelIndex &current, const QModelIndex &previous);
-
+    void rowsInserted(const QModelIndex &parent, int start, int end) override;
 
 signals:
     void signalDropEvent(QDropEvent* dropEvent, const QModelIndex& idx);

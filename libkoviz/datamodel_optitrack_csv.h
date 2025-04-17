@@ -33,17 +33,17 @@ class OptiTrackCsvModel : public DataModel
                       QObject *parent = 0);
     ~OptiTrackCsvModel();
 
-    virtual const Parameter* param(int col) const ;
-    virtual void map();
-    virtual void unmap();
-    virtual int paramColumn(const QString& paramName) const ;
-    virtual ModelIterator* begin(int tcol, int xcol, int ycol) const ;
-    int indexAtTime(double time);
+    const Parameter* param(int col) const override ;
+    void map() override;
+    void unmap() override;
+    int paramColumn(const QString& paramName) const override ;
+    ModelIterator* begin(int tcol, int xcol, int ycol) const override ;
+    int indexAtTime(double time) override;
 
-    virtual int rowCount(const QModelIndex & pidx = QModelIndex() ) const;
-    virtual int columnCount(const QModelIndex & pidx = QModelIndex() ) const;
-    virtual QVariant data (const QModelIndex & index,
-                           int role = Qt::DisplayRole ) const;
+    int rowCount(const QModelIndex & pidx = QModelIndex() ) const override;
+    int columnCount(const QModelIndex & pidx = QModelIndex() ) const override;
+    QVariant data (const QModelIndex & index,
+                   int role = Qt::DisplayRole ) const override;
 
      static bool isValid(const QString &fileName);
 
@@ -91,36 +91,36 @@ class OptiTrackCsvModelIterator : public ModelIterator
 
     virtual ~OptiTrackCsvModelIterator() {}
 
-    virtual void start()
+    void start() override
     {
         i = 0;
     }
 
-    virtual void next()
+    void next() override
     {
         ++i;
     }
 
-    virtual bool isDone() const
+    bool isDone() const override
     {
         return ( i >= _model->rowCount() ) ;
     }
 
-    virtual OptiTrackCsvModelIterator* at(int n)
+    OptiTrackCsvModelIterator* at(int n) override
     {
         i = n;
         return this;
     }
 
     // Time is calculated from the data but not in _data
-    inline double t() const
+    inline double t() const override
     {
         // 2 is the column of the device frame
         double deviceFrame = _model->_data[i*(_model->_ncols-1)+2];
         return deviceFrame/(_model->_frameRate);
     }
 
-    inline double x() const
+    inline double x() const override
     {
         if ( _xcol == _model->_timeCol ) {
             return t();
@@ -129,7 +129,7 @@ class OptiTrackCsvModelIterator : public ModelIterator
         }
     }
 
-    inline double y() const
+    inline double y() const override
     {
         if ( _ycol == _model->_timeCol ) {
             return t();

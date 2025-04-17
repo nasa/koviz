@@ -42,13 +42,13 @@ class BookView : public BookIdxView
     Q_OBJECT
 public:
     explicit BookView(QWidget *parent = 0);
-    virtual void setModel(QAbstractItemModel *model);
+    void setModel(QAbstractItemModel *model) override;
 
 protected:
-    virtual void currentChanged(const QModelIndex& current,
-                                const QModelIndex & previous );
-    virtual void selectionChanged(const QItemSelection& selected,
-                                  const QItemSelection& deselected );
+    void currentChanged(const QModelIndex& current,
+                        const QModelIndex & previous ) override;
+    void selectionChanged(const QItemSelection& selected,
+                          const QItemSelection& deselected ) override;
 
 private:
     QVBoxLayout* _mainLayout;
@@ -67,11 +67,12 @@ protected slots:
     void _nbCloseRequested(int tabId);
     void _pageViewCurrentChanged(const QModelIndex& currIdx,
                                  const QModelIndex& prevIdx);
-    virtual void dataChanged(const QModelIndex &topLeft,
-                             const QModelIndex &bottomRight);
-    virtual void rowsInserted(const QModelIndex &parent, int start, int end);
-    virtual void rowsAboutToBeRemoved(const QModelIndex &pidx,
-                                      int start, int end);
+    void dataChanged(const QModelIndex &topLeft,
+                     const QModelIndex &bottomRight,
+                     const QVector<int> &roles = QVector<int>()) override;
+    void rowsInserted(const QModelIndex &parent, int start, int end) override;
+    void rowsAboutToBeRemoved(const QModelIndex &pidx,
+                              int start, int end) override;
 };
 
 #endif // BOOKVIEW_H

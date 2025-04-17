@@ -13,8 +13,8 @@ public:
     explicit TrickVarSortFilterProxyModel(QObject *parent = nullptr);
 
 protected:
-    virtual bool lessThan(const QModelIndex &left,
-                          const QModelIndex &right) const;
+    bool lessThan(const QModelIndex &left,
+                  const QModelIndex &right) const override;
 
 private:
     QList<QVariant> _nameAndIndices(const QString& s) const;

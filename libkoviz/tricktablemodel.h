@@ -21,12 +21,12 @@ public:
 
     virtual  ~TrickTableModel ();
 
-    virtual int  rowCount(const QModelIndex& pidx = QModelIndex() ) const;
-    virtual int  columnCount(const QModelIndex& pidx = QModelIndex()) const;
-    virtual QVariant  data (const QModelIndex & idx,
-                            int role = Qt::DisplayRole ) const;
-    virtual QVariant headerData(int section, Qt::Orientation orientation,
-                                int role = Qt::DisplayRole ) const;
+    int rowCount(const QModelIndex& pidx = QModelIndex() ) const override;
+    int columnCount(const QModelIndex& pidx = QModelIndex()) const override;
+    QVariant data (const QModelIndex & idx,
+                            int role = Qt::DisplayRole ) const override;
+    QVariant headerData(int section, Qt::Orientation orientation,
+                                int role = Qt::DisplayRole ) const override;
 
 signals:
     

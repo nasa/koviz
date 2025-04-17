@@ -16,8 +16,8 @@ class TablePageView : public BookIdxView
 public:
     explicit TablePageView(QWidget *parent = 0);
     ~TablePageView();
-    virtual void setModel(QAbstractItemModel *model);
-    virtual void setRootIndex(const QModelIndex &index);
+    void setModel(QAbstractItemModel *model) override;
+    void setRootIndex(const QModelIndex &index) override;
 
 private:
     QGridLayout* _grid;
@@ -27,8 +27,9 @@ private:
 signals:
 
 protected slots:
-    virtual void dataChanged(const QModelIndex &topLeft,
-                             const QModelIndex &bottomRight);
+    void dataChanged(const QModelIndex &topLeft,
+                     const QModelIndex &bottomRight,
+                     const QVector<int> &roles = QVector<int>()) override;
 
 signals:
     

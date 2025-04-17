@@ -16,12 +16,13 @@ public:
     explicit LabeledRulerView(Qt::Alignment alignment, QWidget *parent = 0);
 
 protected:
-    virtual void paintEvent(QPaintEvent * event);
-    virtual QSize minimumSizeHint() const;
-    virtual QSize sizeHint() const;
-    virtual void dataChanged(const QModelIndex &topLeft,
-                             const QModelIndex &bottomRight);
-    virtual void wheelEvent(QWheelEvent *e);
+    void paintEvent(QPaintEvent * event) override;
+    QSize minimumSizeHint() const override;
+    QSize sizeHint() const override;
+    void dataChanged(const QModelIndex &topLeft,
+                     const QModelIndex &bottomRight,
+                     const QVector<int> &roles = QVector<int>()) override;
+    void wheelEvent(QWheelEvent *e) override;
 };
 
 #endif // LABELEDRULERVIEW_H

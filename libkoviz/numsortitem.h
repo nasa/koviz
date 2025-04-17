@@ -20,7 +20,7 @@ public:
 #endif
     }
 
-    bool operator<(const QStandardItem &other) const
+    bool operator<(const QStandardItem &other) const override
     {
         const int role = model() ? model()->sortRole() : Qt::DisplayRole;
         const QVariant l = data(role), r = other.data(role);

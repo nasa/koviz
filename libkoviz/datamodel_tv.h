@@ -37,20 +37,20 @@ class TVModel : public DataModel
 
     ~TVModel();
 
-    virtual void map();
-    virtual void unmap();
-    virtual const Parameter* param(int col) const;
-    virtual int paramColumn(const QString& paramName) const;
-    virtual ModelIterator* begin(int tcol, int xcol, int ycol) const;
-    virtual int indexAtTime(double time);
+    void map() override;
+    void unmap() override;
+    const Parameter* param(int col) const override;
+    int paramColumn(const QString& paramName) const override;
+    ModelIterator* begin(int tcol, int xcol, int ycol) const override;
+    int indexAtTime(double time) override;
 
-    virtual int rowCount(const QModelIndex& pidx=QModelIndex()) const;
-    virtual int columnCount(const QModelIndex& pidx=QModelIndex()) const;
-    virtual QVariant data(const QModelIndex& idx,
-                          int role=Qt::DisplayRole) const;
+    int rowCount(const QModelIndex& pidx=QModelIndex()) const override;
+    int columnCount(const QModelIndex& pidx=QModelIndex()) const override;
+    QVariant data(const QModelIndex& idx,
+                          int role=Qt::DisplayRole) const override;
 
-    virtual bool insertRows(int row, int count,
-                            const QModelIndex &parent = QModelIndex());
+    bool insertRows(int row, int count,
+                    const QModelIndex &parent = QModelIndex()) override;
 
     void addParam(const QString& paramName, const QString &unit);
 
@@ -93,39 +93,39 @@ class TVModelIterator : public ModelIterator
 
     virtual ~TVModelIterator() {}
 
-    virtual void start()
+    void start() override
     {
         i = 0;
         _row_count = _model->rowCount();
     }
 
-    virtual void next()
+    void next() override
     {
         ++i;
     }
 
-    virtual bool isDone() const
+    bool isDone() const override
     {
         return ( i >= _row_count ) ;
     }
 
-    virtual TVModelIterator* at(int n)
+    TVModelIterator* at(int n) override
     {
         i = n;
         return this;
     }
 
-    inline double t() const
+    inline double t() const override
     {
         return _getValueAtColumn(_tcol);
     }
 
-    inline double x() const
+    inline double x() const override
     {
         return _getValueAtColumn(_xcol);
     }
 
-    inline double y() const
+    inline double y() const override
     {
         return _getValueAtColumn(_ycol);
     }

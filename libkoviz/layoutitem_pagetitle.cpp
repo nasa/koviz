@@ -3,7 +3,7 @@
 PageTitleLayoutItem::PageTitleLayoutItem(PlotBookModel* bookModel,
                                          const QModelIndex &pageIdx,
                                          const QFont& font) :
-    QLayoutItem(),
+    PaintableLayoutItem(),
     _bookModel(bookModel),
     _pageIdx(pageIdx),
     _font(font)

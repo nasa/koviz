@@ -17,14 +17,14 @@ public:
     PageLayout();
     ~PageLayout();
 
-    virtual void addItem(QLayoutItem *item);
-    virtual void addWidget(QWidget *widget);
-    virtual int count() const;
-    virtual QLayoutItem *itemAt(int index) const;
-    virtual void setGeometry(const QRect &rect);
-    virtual QSize sizeHint() const;
-    virtual QLayoutItem *takeAt(int index);
+    void addItem(QLayoutItem *item) override;
+    int count() const override;
+    QLayoutItem *itemAt(int index) const override;
+    void setGeometry(const QRect &rect) override;
+    QSize sizeHint() const override;
+    QLayoutItem *takeAt(int index) override;
 
+    void addWidget(QWidget *widget);
     void setModelIndex(PlotBookModel* bookModel, const QModelIndex& pageIdx);
 
 private:

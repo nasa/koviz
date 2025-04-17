@@ -23,7 +23,7 @@ signals:
     void prevTime();
 
   protected:
-    virtual void keyPressEvent(QKeyEvent *event);
+    void keyPressEvent(QKeyEvent *event) override;
 
 };
 
@@ -32,14 +32,14 @@ class StartDoubleValidator : public QDoubleValidator
 {
   public:
     StartDoubleValidator(QObject *parent = 0);
-    virtual void fixup(QString &input) const;
+    void fixup(QString &input) const override;
 };
 
 class StopDoubleValidator : public QDoubleValidator
 {
   public:
     StopDoubleValidator(QObject *parent = 0);
-    virtual void fixup(QString &input) const;
+    void fixup(QString &input) const override;
 };
 
 class TimeInput : public QFrame
@@ -47,7 +47,7 @@ class TimeInput : public QFrame
     Q_OBJECT
 public:
     explicit TimeInput(QWidget *parent = 0);
-    virtual QSize sizeHint() const;
+    QSize sizeHint() const override;
     
 signals:
     void startTimeChanged(double start);
