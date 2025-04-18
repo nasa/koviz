@@ -566,7 +566,7 @@ void Options::parse(int argc, char **argv, const QString& programName,
                             "a max of %d values. There are %d present: \n",
                             rootOption->nameSpec().toLatin1().constData(),
                             max,
-                            rootStringVals.size());
+                            (int)rootStringVals.size());
                 }
                 if ( !*ok ) {
                     foreach ( QString v, rootStringVals ) {
