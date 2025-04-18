@@ -30,7 +30,6 @@ public:
 private:
     PlotBookModel* _bookModel;
     QModelIndex _plotIdx;
-    QPixmap* _pixmap;
     QRect _rect;
 
     void _printCoplot(const QTransform& T,
