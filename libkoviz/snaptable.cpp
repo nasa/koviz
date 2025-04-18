@@ -91,7 +91,11 @@ QVariant SnapTable::data(const QModelIndex &idx, int role) const
                 QString str;
                 double d = val.toDouble();
                 val = str.asprintf(prole->format.toLatin1().constData(),d);
-                bool r = val.canConvert(QMetaType::Double); // sorting by double
+                #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                    bool r = val.canConvert<double>();
+                #else
+                    bool r = val.canConvert(QMetaType::Double);
+                #endif
                 if ( r == false ) {
                     // formatted val might not be a double e.g. 48%
                     val = str.asprintf(prole->format.toLatin1().constData(),d);
