@@ -82,7 +82,11 @@ void TrickView::slotDropEvent(QDropEvent *event, const QModelIndex &idx)
         if ( !valueMap.isEmpty() ) {
             QString dropString = valueMap.value(0).toString();
             if ( tag == "PlotXAxisLabel" ) {
-                Qt::KeyboardModifiers kmods = event->keyboardModifiers();
+                #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                    Qt::KeyboardModifiers kmods = event->modifiers();
+                #else
+                    Qt::KeyboardModifiers kmods = event->keyboardModifiers();
+                #endif
                 bool isCtl = (kmods & Qt::ControlModifier);
                 bool isAlt = (kmods & Qt::AltModifier);
                 QString unit = _sieModel->paramUnit(dropString);
