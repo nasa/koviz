@@ -162,6 +162,9 @@ QString Unit::next(const QString &unit)
     QString u;
 
     QString family = _family(unit);
+    fprintf(stderr, "u=%s f=%s\n",
+            unit.toLatin1().constData(),
+            family.toLatin1().constData());
 
     if ( family.isEmpty() ) {
         return u;  // return empty string if unit dne
@@ -512,6 +515,7 @@ QHash<QPair<QString, QString>, double> Unit::_initScales()
     map.insert(QPair<QString,QString>("m/s","M/s"),       1.0);
     map.insert(QPair<QString,QString>("m/s","cm/s"),      0.01);
     map.insert(QPair<QString,QString>("m/s","mm/s"),      0.001);
+    map.insert(QPair<QString,QString>("m/s","km/s"),   1000.0);
     map.insert(QPair<QString,QString>("m/s","in/s"),      0.0254);
     map.insert(QPair<QString,QString>("m/s","ft/s"),      0.3048);
     map.insert(QPair<QString,QString>("m/s","mph"),    1609.344/3600.0);
@@ -778,7 +782,7 @@ QStringList Unit::_sortUnits(const QStringList &unitsIn)
               << "in" << "ft" << "yd" << "mi";
     } else if ( units.contains("m/s") ) {
         units.clear();
-        units << "mm/s" << "cm/s" << "m/s" << "kmh"
+        units << "mm/s" << "cm/s" << "m/s" << "km/s" << "kmh"
               << "in/s" << "ft/s" << "mph" ;
     } else if ( units.contains("m/s2") ) {
         units.clear();
