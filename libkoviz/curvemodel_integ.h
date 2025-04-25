@@ -5,7 +5,6 @@
 #include <QString>
 #include <QtMath>
 #include <cmath>
-#include "parameter.h"
 #include "datamodel.h"
 #include "curvemodelparameter.h"
 #include "curvemodel.h"
@@ -22,7 +21,11 @@ class CurveModelIntegral : public CurveModel
 
   public:
 
-    explicit CurveModelIntegral(CurveModel* curveModel, double initial_value);
+    explicit CurveModelIntegral(CurveModel* curveModel,
+                                double start, double stop,
+                                QString xu, double xs, double xb,
+                                QString yu, double ys, double yb,
+                                double initial_value);
 
     ~CurveModelIntegral();
 
@@ -57,7 +60,11 @@ class CurveModelIntegral : public CurveModel
 
     IntegralModelIterator* _iteratorTimeIndex;
 
-    void _init(CurveModel *curveModel, double initial_value);
+    void _init(CurveModel *curveModel,
+               double start, double stop,
+               const QString &xu, double xs, double xb,
+               const QString &yu, double ys, double yb,
+               double initial_value);
     int _idxAtTimeBinarySearch (IntegralModelIterator *it,
                                 int low, int high, double time);
 };

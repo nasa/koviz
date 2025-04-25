@@ -136,21 +136,31 @@ class FFTCache
     QList<FFTCurveCache*> curveCaches;
 };
 
-class DerivCurveCache
+class CurveCache
 {
   public:
-    DerivCurveCache(CurveModel* curveModel,
-                    const QString& yUnit,
-                    const QString& yLabel);
+    CurveCache(CurveModel* curveModel,
+               double xs, double xb,
+               double ys, double yb,
+               const QString& yLabel,
+               const QString& yUnit);
     CurveModel* curveModel() const ;
+    double xScale() const;
+    double xBias() const;
+    double yScale() const;
+    double yBias() const;
+    QString yLabel() const ;
     QString yUnit() const ;
-    QString yLabel() const;
 
   private:
-    DerivCurveCache() {}
+    CurveCache() {}
     CurveModel*  _curveModel;
-    QString _yUnit;
+    double _xs;
+    double _xb;
+    double _ys;
+    double _yb;
     QString _yLabel;
+    QString _yUnit;
 };
 
 class DerivPlotCache
@@ -161,7 +171,7 @@ class DerivPlotCache
     QString yAxisLabel;
     QString yUnit;
     QRectF M;
-    QList<DerivCurveCache*> curveCaches;
+    QList<CurveCache*> curveCaches;
 };
 
 class DerivCache
@@ -170,23 +180,6 @@ class DerivCache
     DerivCache();
     ~DerivCache();
     QList<DerivPlotCache*> plotCaches;
-};
-
-class IntegCurveCache
-{
-  public:
-    IntegCurveCache(CurveModel* curveModel,
-                    const QString& yLabel,
-                    const QString& yUnit);
-    CurveModel* curveModel() const ;
-    QString yLabel() const ;
-    QString yUnit() const ;
-
-  private:
-    IntegCurveCache() {}
-    CurveModel*  _curveModel;
-    QString _yLabel;
-    QString _yUnit;
 };
 
 class IntegPlotCache
@@ -198,7 +191,7 @@ class IntegPlotCache
     QString yAxisLabel;
     QString yUnit;
     QRectF M;
-    QList<IntegCurveCache*> curveCaches;
+    QList<CurveCache*> curveCaches;
 };
 
 class IntegCache

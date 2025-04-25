@@ -22,7 +22,10 @@ class CurveModelDerivative : public CurveModel
 
   public:
 
-    explicit CurveModelDerivative(CurveModel* curveModel);
+    explicit CurveModelDerivative(CurveModel* curveModel,
+                                double start, double stop,
+                                QString xu, double xs, double xb,
+                                QString yu, double ys, double yb);
 
     ~CurveModelDerivative();
 
@@ -57,7 +60,10 @@ class CurveModelDerivative : public CurveModel
 
     DerivativeModelIterator* _iteratorTimeIndex;
 
-    void _init(CurveModel *curveModel);
+    void _init(CurveModel *curveModel,
+               double start, double stop,
+               QString xu, double xs, double xb,
+               QString yu, double ys, double yb);
     int _idxAtTimeBinarySearch (DerivativeModelIterator *it,
                                 int low, int high, double time);
 };

@@ -1,6 +1,9 @@
 #include "curvemodel_integ.h"
 
 CurveModelIntegral::CurveModelIntegral(CurveModel *curveModel,
+                                       double start, double stop,
+                                       QString xu, double xs, double xb,
+                                       QString yu, double ys, double yb,
                                        double initial_value) :
     _ncols(3),
     _nrows(0),
@@ -22,7 +25,11 @@ CurveModelIntegral::CurveModelIntegral(CurveModel *curveModel,
     _t->setName(curveModel->t()->name());
     _t->setUnit(curveModel->t()->unit());
     _x->setName(curveModel->x()->name());
-    _x->setUnit(curveModel->x()->unit());
+    if ( xu.isEmpty() || xu == "--" ) {
+        _x->setUnit(curveModel->x()->unit());
+    } else {
+        _x->setUnit(xu);
+    }
 
     QString yName = curveModel->y()->name();
     QChar integSymbol(8747);
@@ -34,10 +41,15 @@ CurveModelIntegral::CurveModelIntegral(CurveModel *curveModel,
     }
     _y->setName(iYName);
 
-    QString integUnit = Unit::integral(curveModel->y()->unit());
+    QString yUnit = yu;
+    if ( yu.isEmpty() || yu == "--" ) {
+        yUnit = curveModel->y()->unit();
+    }
+    QString integUnit = Unit::integral(yUnit);
     _y->setUnit(integUnit);
 
-    _init(curveModel,initial_value);
+    _init(curveModel,start,stop,_x->unit(),xs,xb,
+                                yUnit,ys,yb,initial_value);
 }
 
 CurveModelIntegral::~CurveModelIntegral()
@@ -136,27 +148,54 @@ QVariant CurveModelIntegral::data (const QModelIndex & index, int role ) const
 }
 
 // Use trapezoids to estimate integral
-void CurveModelIntegral::_init(CurveModel* curveModel, double initial_value)
+void CurveModelIntegral::_init(CurveModel* curveModel,
+                               double start, double stop,
+                               const QString& xu, double xs, double xb,
+                               const QString& yu, double ys, double yb,
+                               double initial_value)
 {
     curveModel->map();
     ModelIterator* it = curveModel->begin();
 
-    _nrows = curveModel->rowCount();
+    double xus = Unit::scale(curveModel->x()->unit(),xu);
+    double xub = Unit::bias(curveModel->x()->unit(),xu);
+    double yus = Unit::scale(curveModel->y()->unit(),yu);
+    double yub = Unit::bias(curveModel->y()->unit(),yu);
+
+    _nrows = 0;
+    int n = curveModel->rowCount();
+    for (int i = 0; i < n; ++i ) {
+        double t =  (it->at(i)->x()*xus+xub)*xs+xb;
+        if ( t >= start && t <= stop ) {
+            ++_nrows;
+        }
+    }
+    if ( _nrows == 0 ) {
+        curveModel->unmap();
+        delete it;
+        return;
+    }
+
     _data = (double*)malloc(_nrows*_ncols*sizeof(double));
 
-    for (int i = 0; i < _nrows; ++i ) {
-        _data[i*_ncols+0] = it->at(i)->t();
-        _data[i*_ncols+1] = it->at(i)->x();
-        if ( i == 0 ) {
-            _data[i*_ncols+2] = initial_value;
+    int j = 0;
+    for (int i = 0; i < n; ++i ) {
+        double t = (it->at(i)->x()*xus+xub)*xs+xb;
+        if ( t < start || t > stop ) {
+            continue;
+        }
+        _data[j*_ncols+0] = it->at(i)->t();
+        _data[j*_ncols+1] = t;
+        if ( j == 0 ) {
+            _data[j*_ncols+2] = initial_value;
         } else {
-            double x0 = it->at(i-1)->x();
-            double y0 = it->at(i-1)->y();
-            double x1 = it->at(i)->x();
-            double y1 = it->at(i)->y();
-            for (int j = i-1; j >= 0; --j) {
-                x0 = it->at(j)->x();
-                y0 = it->at(j)->y();
+            double x0 = (it->at(i-1)->x()*xus+xub)*xs+xb;
+            double y0 = (it->at(i-1)->y()*yus+yub)*ys+yb;
+            double x1 = (it->at(i)->x()*xus+xub)*xs+xb;
+            double y1 = (it->at(i)->y()*yus+yub)*ys+yb;
+            for (int k = i-1; k >= 0; --k) {
+                x0 = (it->at(k)->x()*xus+xub)*xs+xb;
+                y0 = (it->at(k)->y()*yus+yub)*ys+yb;
                 if ( !std::isnan(x0) && !std::isnan(y0) && x0 != x1 ) {
                     break;
                 }
@@ -165,8 +204,9 @@ void CurveModelIntegral::_init(CurveModel* curveModel, double initial_value)
             if ( x1 == x0 ) {
                 area = 0.0;
             }
-            _data[i*_ncols+2] = _data[(i-1)*_ncols+2] + area;
+            _data[j*_ncols+2] = _data[(i-1)*_ncols+2] + area;
         }
+        ++j;
     }
 
     delete it;

@@ -1,6 +1,9 @@
 #include "curvemodel_deriv.h"
 
-CurveModelDerivative::CurveModelDerivative(CurveModel *curveModel) :
+CurveModelDerivative::CurveModelDerivative(CurveModel *curveModel,
+                                           double start, double stop,
+                                           QString xu, double xs, double xb,
+                                           QString yu, double ys, double yb) :
     _ncols(3),
     _nrows(0),
     _t(new CurveModelParameter),
@@ -21,14 +24,22 @@ CurveModelDerivative::CurveModelDerivative(CurveModel *curveModel) :
     _t->setName(curveModel->t()->name());
     _t->setUnit(curveModel->t()->unit());
     _x->setName(curveModel->x()->name());
-    _x->setUnit(curveModel->x()->unit());
+    if ( xu.isEmpty() || xu == "--" ) {
+        _x->setUnit(curveModel->x()->unit());
+    } else {
+        _x->setUnit(xu);
+    }
     QString yName = "d'(" + curveModel->y()->name() + ")";
     _y->setName(yName);
 
-    QString dUnit = Unit::derivative(curveModel->y()->unit());
+    QString yUnit = yu;
+    if ( yu.isEmpty() || yu == "--" ) {
+        yUnit = curveModel->y()->unit();
+    }
+    QString dUnit = Unit::derivative(yUnit);
     _y->setUnit(dUnit);
 
-    _init(curveModel);
+    _init(curveModel,start,stop,_x->unit(),xs,xb,yUnit,ys,yb);
 }
 
 CurveModelDerivative::~CurveModelDerivative()
@@ -126,233 +137,284 @@ QVariant CurveModelDerivative::data (const QModelIndex & index, int role ) const
     return v;
 }
 
-void CurveModelDerivative::_init(CurveModel* curveModel)
+void CurveModelDerivative::_init(CurveModel* curveModel,
+                                 double start, double stop,
+                                 QString xu, double xs, double xb,
+                                 QString yu, double ys, double yb)
 {
     curveModel->map();
     ModelIterator* it = curveModel->begin();
 
-    _nrows = curveModel->rowCount();
+    double xus = Unit::scale(curveModel->x()->unit(),xu);
+    double xub = Unit::bias(curveModel->x()->unit(),xu);
+    double yus = Unit::scale(curveModel->y()->unit(),yu);
+    double yub = Unit::bias(curveModel->y()->unit(),yu);
+
+    _nrows = 0;
+    int n = curveModel->rowCount();
+    for (int i = 0; i < n; ++i ) {
+        double t =  (it->at(i)->x()*xus+xub)*xs+xb;
+        double y =  (it->at(i)->y()*yus+yub)*ys+yb;
+        if ( t >= start && t <= stop && !std::isnan(t) && !std::isnan(y) ) {
+            ++_nrows;
+        }
+    }
+    if ( _nrows <= 1 ) {
+        // Empty set or single point has no derivative since no change in x
+        curveModel->unmap();
+        delete it;
+        return;
+    }
+
     _data = (double*)malloc(_nrows*_ncols*sizeof(double));
 
-    if ( _nrows == 0 ) {
-        // Nothing to do, empty
-    } else if ( _nrows == 1 ) {
-        _data[0*_ncols+0] = it->at(0)->t();
-        _data[0*_ncols+1] = it->at(0)->x();
-        _data[0*_ncols+2] = 0.0;
-    } else if ( _nrows == 2 ) {
-        double x0 = it->at(0)->x();
-        double x1 = it->at(1)->x();
-        double y0 = it->at(0)->y();
-        double y1 = it->at(1)->y();
-        double m = (y1-y0)/(x1-x0);
-        if ( x1 == x0 ) {
-            m = 0;
+    int j = 0;
+    for (int i = 0; i < n; ++i ) {
+        double t = (it->at(i)->x()*xus+xub)*xs+xb;
+        double y = (it->at(i)->y()*yus+yub)*ys+yb;
+        if ( t < start || t > stop || std::isnan(t) || std::isnan(y) ) {
+            continue;
         }
-        _data[0*_ncols+0] = it->at(0)->t();
-        _data[0*_ncols+1] = it->at(0)->x();
-        _data[0*_ncols+2] = m;
-        _data[1*_ncols+0] = it->at(1)->t();
-        _data[1*_ncols+1] = it->at(1)->x();
-        _data[1*_ncols+2] = m;
-    } else if ( _nrows == 3 ) {
-        double x0 = it->at(0)->x();
-        double y0 = it->at(0)->y();
-        double x1 = it->at(1)->x();
-        double y1 = it->at(1)->y();
-        double x2 = it->at(2)->x();
-        double y2 = it->at(2)->y();
-        double m1 = (y1-y0)/(x1-x0);
-        double m2 = (y2-y1)/(x2-x1);
-        if ( x1 == x0 ) {
-            m1 = 0;
-        }
-        if ( x2 == x1 ) {
-            m2 = 0;
-        }
-        _data[0*_ncols+0] = it->at(0)->t();
-        _data[0*_ncols+1] = it->at(0)->x();
-        _data[0*_ncols+2] = m1;
-        _data[1*_ncols+0] = it->at(1)->t();
-        _data[1*_ncols+1] = it->at(1)->x();
-        _data[1*_ncols+2] = (m1+m2)/2;
-        _data[2*_ncols+0] = it->at(2)->t();
-        _data[2*_ncols+1] = it->at(2)->x();
-        _data[2*_ncols+2] = m2;
-    } else {
-        for (int i = 0; i < _nrows; ++i ) {
-            _data[i*_ncols+0] = it->at(i)->t();
-            _data[i*_ncols+1] = it->at(i)->x();
-            if ( i == 0 ) {
-                // Initial point
-                double x0 = it->at(0)->x();
-                double y0 = it->at(0)->y();
-                double x1 = it->at(1)->x();
-                double y1 = it->at(1)->y();
-                double x2 = it->at(2)->x();
-                double y2 = it->at(2)->y();
-                double x3 = it->at(3)->x();
-                double y3 = it->at(3)->y();
+        _data[j*_ncols+0] = it->at(i)->t();
+        _data[j*_ncols+1] = t;
 
-                int j;
-                for (j = 1; j < _nrows; ++j) {
-                    it = it->at(j);
-                    if ( !it->isDone() ) {
-                        x1 = it->at(j)->x();
-                        y1 = it->at(j)->y();
-                        if ( !std::isnan(x1) && !std::isnan(y1) && x0 != x1 ) {
-                            break;
-                        }
-                    }
-                }
+        double derivative;
+        if ( j == 0 ) { // Initial point
 
-                for (j = j+1; j < _nrows; ++j) {
-                    it = it->at(j);
-                    if ( !it->isDone() ) {
-                        x2 = it->at(j)->x();
-                        y2 = it->at(j)->y();
-                        if ( !std::isnan(x2) && !std::isnan(y2) && x1 != x2 ) {
-                            break;
-                        }
-                    }
-                }
+            // Try to use 4 points for derivative approximation
 
-                for (j = j+1; j < _nrows; ++j) {
-                    it = it->at(j);
-                    if ( !it->isDone() ) {
-                        x3 = it->at(j)->x();
-                        y3 = it->at(j)->y();
-                        if ( !std::isnan(x3) && !std::isnan(y3) && x2 != x3 ) {
-                            break;
-                        }
-                    }
-                }
+            double x0 = t;
+            double y0 = y;
 
-                if ( !std::isnan(x0) && !std::isnan(y0) &&
-                     !std::isnan(x1) && !std::isnan(y1) &&
-                     !std::isnan(x2) && !std::isnan(y2) &&
-                     !std::isnan(x3) && !std::isnan(y3) ) {
-
-                    double m0 = (y1-y0)/(x1-x0);
-                    double m1 = (y2-y1)/(x2-x1);
-                    double m2 = (y3-y2)/(x3-x2);
-
-                    double v1 = (m0+m1)/2.0;
-                    double v2 = (m1+m2)/2.0;
-
-                    double m = (v2-v1)/(x2-x1);
-
-                    _data[i*_ncols+2] = m*(x0-x1)+v1;
-                } else {
-                    double m = (y1-y0)/(x1-x0);
-                    if ( x0 == x1 ) {
-                        m = 0.0;
-                    }
-                    _data[i*_ncols+2] = m;
-                }
-
-
-            } else if ( i == _nrows-1 ) {
-                // Last point
-                double x0 = it->at(i-3)->x();
-                double y0 = it->at(i-3)->y();
-                double x1 = it->at(i-2)->x();
-                double y1 = it->at(i-2)->y();
-                double x2 = it->at(i-1)->x();
-                double y2 = it->at(i-1)->y();
-                double x3 = it->at(i)->x();
-                double y3 = it->at(i)->y();
-
-                int j;
-                for (j = i-1; j >= 0; --j) {
-                    x2 = it->at(j)->x();
-                    y2 = it->at(j)->y();
-                    if ( !std::isnan(x2) && !std::isnan(y2) && x2 != x3 ) {
+            double x1 = std::numeric_limits<double>::quiet_NaN();
+            double y1 = std::numeric_limits<double>::quiet_NaN();
+            int k;
+            for (k = i+1; k < n; ++k) {
+                it = it->at(k);
+                if ( !it->isDone() ) {
+                    x1 = (it->at(k)->x()*xus+xub)*xs+xb;
+                    y1 = (it->at(k)->y()*yus+yub)*ys+yb;
+                    if ( !std::isnan(x1) && !std::isnan(y1) && x0 != x1 ) {
                         break;
+                    } else {
+                        x1 = std::numeric_limits<double>::quiet_NaN();
+                        y1 = std::numeric_limits<double>::quiet_NaN();
                     }
                 }
+            }
 
-                for (j = j-1; j >= 0; --j) {
-                    x1 = it->at(j)->x();
-                    y1 = it->at(j)->y();
-                    if ( !std::isnan(x1) && !std::isnan(y1) && x1 != x2 ) {
+            double x2 = std::numeric_limits<double>::quiet_NaN();
+            double y2 = std::numeric_limits<double>::quiet_NaN();
+            for (k = k+1; k < n; ++k) {
+                it = it->at(k);
+                if ( !it->isDone() ) {
+                    x2 = (it->at(k)->x()*xus+xub)*xs+xb;
+                    y2 = (it->at(k)->y()*yus+yub)*ys+yb;
+                    if ( !std::isnan(x2) && !std::isnan(y2) && x1 != x2 ) {
                         break;
+                    } else {
+                        x2 = std::numeric_limits<double>::quiet_NaN();
+                        y2 = std::numeric_limits<double>::quiet_NaN();
                     }
                 }
+            }
 
-                for (j = j-1; j >= 0; --j) {
-                    x0 = it->at(j)->x();
-                    y0 = it->at(j)->y();
-                    if ( !std::isnan(x0) && !std::isnan(y0) && x0 != x1 ) {
+            double x3 = std::numeric_limits<double>::quiet_NaN();
+            double y3 = std::numeric_limits<double>::quiet_NaN();
+            for (k = k+1; k < n; ++k) {
+                it = it->at(k);
+                if ( !it->isDone() ) {
+                    x3 = (it->at(k)->x()*xus+xub)*xs+xb;
+                    y3 = (it->at(k)->y()*yus+yub)*ys+yb;
+                    if ( !std::isnan(x3) && !std::isnan(y3) && x2 != x3 ) {
                         break;
+                    } else {
+                        x3 = std::numeric_limits<double>::quiet_NaN();
+                        y3 = std::numeric_limits<double>::quiet_NaN();
                     }
                 }
+            }
 
-                if ( !std::isnan(x0) && !std::isnan(y0) &&
-                     !std::isnan(x1) && !std::isnan(y1) &&
-                     !std::isnan(x2) && !std::isnan(y2) &&
-                     !std::isnan(x3) && !std::isnan(y3) ) {
+            if ( !std::isnan(x0) && !std::isnan(y0) &&
+                 !std::isnan(x1) && !std::isnan(y1) &&
+                 !std::isnan(x2) && !std::isnan(y2) &&
+                 !std::isnan(x3) && !std::isnan(y3) ) {
 
-                    double m0 = (y1-y0)/(x1-x0);
-                    double m1 = (y2-y1)/(x2-x1);
-                    double m2 = (y3-y2)/(x3-x2);
-
-                    double v1 = (m0+m1)/2.0;
-                    double v2 = (m1+m2)/2.0;
-
-                    double m = (v2-v1)/(x2-x1);
-
-                    _data[i*_ncols+2] = m*(x3-x2)+v2;
-                } else {
-                    double m = (y3-y2)/(x3-x2);
-                    if ( x3 == x2 ) {
-                        m = 0.0;
-                    }
-                    _data[i*_ncols+2] = m;
-                }
-
-            } else {
-                // All other points (avg slope before and after)
-                double x0 = it->at(i-1)->x();
-                double x1 = it->at(i)->x();
-                double x2 = it->at(i+1)->x();
-                double y0 = it->at(i-1)->y();
-                double y1 = it->at(i)->y();
-                double y2 = it->at(i+1)->y();
-                for (int j = i-1; j >= 0; --j) {
-                    x0 = it->at(j)->x();
-                    y0 = it->at(j)->y();
-                    if ( !std::isnan(x0) && !std::isnan(y0) && x0 != x1 ) {
-                        break;
-                    }
-                }
-                for (int j = i+1; j < _nrows; ++j) {
-                    it = it->at(j);
-                    if ( !it->isDone() ) {
-                        x2 = it->at(j)->x();
-                        y2 = it->at(j)->y();
-                        if ( !std::isnan(x2) && !std::isnan(y2) && x1 != x2 ) {
-                            break;
-                        }
-                    }
-                }
+                // >= Four points (normal case) - use quadratic extrapolation
                 double m0 = (y1-y0)/(x1-x0);
-                if ( x1 == x0 ) {
-                    m0 = 0.0;
-                }
                 double m1 = (y2-y1)/(x2-x1);
-                if ( x1 == x2 ) {
-                    m1 = 0.0;
+                double m2 = (y3-y2)/(x3-x2);
+                double v1 = (m0+m1)/2.0;
+                double v2 = (m1+m2)/2.0;
+                double m = (v2-v1)/(x2-x1);
+                derivative = m*(x0-x1)+v1;
+            } else if ( !std::isnan(x0) && !std::isnan(y0) &&
+                        !std::isnan(x1) && !std::isnan(y1) &&
+                        !std::isnan(x2) && !std::isnan(y2) ) {
+                // Three points
+                double m0 = (y1-y0)/(x1-x0);
+                double m1 = (y2-y1)/(x2-x1);
+                double v1 = (m0+m1)/2.0;
+                double m = (m1-m0)/(x2-x0);
+                derivative = m*(x0-x1)+v1;
+            } else if ( !std::isnan(x0) && !std::isnan(y0) &&
+                        !std::isnan(x1) && !std::isnan(y1) ) {
+                // Two points
+                double m = (y1-y0)/(x1-x0);
+                derivative = m;
+            } else {
+                // Empty or single point, let derivative be a nan
+                derivative = std::numeric_limits<double>::quiet_NaN();
+            }
+
+        } else if ( j == _nrows-1 ) {
+
+            // Last point (try to use 4 points)
+            double x3 = t;
+            double y3 = y;
+
+            double x2 = std::numeric_limits<double>::quiet_NaN();
+            double y2 = std::numeric_limits<double>::quiet_NaN();
+            int k;
+            for (k = i; k >= 0; --k) {
+                x2 = (it->at(k)->x()*xus+xub)*xs+xb;
+                y2 = (it->at(k)->y()*yus+yub)*ys+yb;
+                if ( !std::isnan(x2) && !std::isnan(y2) && x2 != x3 ) {
+                    break;
+                } else {
+                    x2 = std::numeric_limits<double>::quiet_NaN();
+                    y2 = std::numeric_limits<double>::quiet_NaN();
                 }
+            }
+
+            double x1 = std::numeric_limits<double>::quiet_NaN();
+            double y1 = std::numeric_limits<double>::quiet_NaN();
+            for (k = k-1; k >= 0; --k) {
+                x1 = (it->at(k)->x()*xus+xub)*xs+xb;
+                y1 = (it->at(k)->y()*yus+yub)*ys+yb;
+                if ( !std::isnan(x1) && !std::isnan(y1) && x1 != x2 ) {
+                    break;
+                } else {
+                    x1 = std::numeric_limits<double>::quiet_NaN();
+                    y1 = std::numeric_limits<double>::quiet_NaN();
+                }
+            }
+
+            double x0 = std::numeric_limits<double>::quiet_NaN();
+            double y0 = std::numeric_limits<double>::quiet_NaN();
+            for (k = k-1; k >= 0; --k) {
+                x0 = (it->at(k)->x()*xus+xub)*xs+xb;
+                y0 = (it->at(k)->y()*yus+yub)*ys+yb;
+                if ( !std::isnan(x0) && !std::isnan(y0) && x0 != x1 ) {
+                    break;
+                } else {
+                    x0 = std::numeric_limits<double>::quiet_NaN();
+                    y0 = std::numeric_limits<double>::quiet_NaN();
+                }
+            }
+
+            if ( !std::isnan(x0) && !std::isnan(y0) &&
+                 !std::isnan(x1) && !std::isnan(y1) &&
+                 !std::isnan(x2) && !std::isnan(y2) &&
+                 !std::isnan(x3) && !std::isnan(y3) ) {
+
+                // >= Four points
+
+                double m0 = (y1-y0)/(x1-x0);
+                double m1 = (y2-y1)/(x2-x1);
+                double m2 = (y3-y2)/(x3-x2);
+
+                double v1 = (m0+m1)/2.0;
+                double v2 = (m1+m2)/2.0;
+
+                double m = (v2-v1)/(x2-x1);
+
+                derivative = m*(x3-x2)+v2;
+
+            } else if ( !std::isnan(x1) && !std::isnan(y1) &&
+                        !std::isnan(x2) && !std::isnan(y2) &&
+                        !std::isnan(x3) && !std::isnan(y3) ) {
+
+                // Three points
+                double m0 = (y2-y1)/(x2-x1);
+                double m1 = (y3-y2)/(x3-x2);
+                double v2 = (m0+m1)/2.0;
+                double m = (m1-m0)/(x3-x1);
+
+                derivative = m*(x3-x2)+v2;
+
+            } else if ( !std::isnan(x2) && !std::isnan(y2) &&
+                        !std::isnan(x3) && !std::isnan(y3) ) {
+                // Two points
+                double m = (y3-y2)/(x3-x2);
+                derivative = m;
+            } else {
+                // Empty or single point - no derivative - set to nan
+                derivative = std::numeric_limits<double>::quiet_NaN();
+            }
+
+        } else {
+            // Inside/Non-edge points (avg slope before and after)
+
+            // Middle point
+            double x1 = t;
+            double y1 = y;
+
+            // Previous point
+            double x0 = std::numeric_limits<double>::quiet_NaN();
+            double y0 = std::numeric_limits<double>::quiet_NaN();
+            int k;
+            for (k = i-1; k >= 0; --k) {
+                x0 = (it->at(k)->x()*xus+xub)*xs+xb;
+                y0 = (it->at(k)->y()*yus+yub)*ys+yb;
+                if ( !std::isnan(x0) && !std::isnan(y0) && x0 != x1 ) {
+                    break;
+                } else {
+                    x0 = std::numeric_limits<double>::quiet_NaN();
+                    y0 = std::numeric_limits<double>::quiet_NaN();
+                }
+            }
+
+            // Next point
+            double x2 = std::numeric_limits<double>::quiet_NaN();
+            double y2 = std::numeric_limits<double>::quiet_NaN();
+            for (k = i+1; k < n; ++k) {
+                it = it->at(k);
+                if ( !it->isDone() ) {
+                    x2 = (it->at(k)->x()*xus+xub)*xs+xb;
+                    y2 = (it->at(k)->y()*yus+yub)*ys+yb;
+                    if ( !std::isnan(x2) && !std::isnan(y2) && x2 != x1 ) {
+                        break;
+                    } else {
+                        x2 = std::numeric_limits<double>::quiet_NaN();
+                        y2 = std::numeric_limits<double>::quiet_NaN();
+                    }
+                }
+            }
+
+            if ( !std::isnan(x0) && !std::isnan(y0) &&
+                 !std::isnan(x2) && !std::isnan(y2) ) {
+                // Use all three points to approximate deriv at x1
+                double m0 = (y1-y0)/(x1-x0);
+                double m1 = (y2-y1)/(x2-x1);
                 double m = (m0+m1)/2.0;
-                if ( std::isnan(m0) && !std::isnan(m1) ) {
-                    m = m1;
-                } else if ( !std::isnan(m0) && std::isnan(m1) ) {
-                    m = m0;
-                }
-                _data[i*_ncols+2] = m;
+                derivative = m;
+            } else if ( !std::isnan(x0) && !std::isnan(y0) ) {
+                // Use (x0,y0) only
+                double m0 = (y1-y0)/(x1-x0);
+                derivative = m0;
+            } else if ( !std::isnan(x2) && !std::isnan(y2) ) {
+                // Use (x1,y1) only
+                double m1 = (y2-y1)/(x2-x1);
+                derivative = m1;
+            } else {
+                // All points about (x1,y1) nan
+                derivative = std::numeric_limits<double>::quiet_NaN();
             }
         }
+
+        _data[j*_ncols+2] = derivative;
+        ++j;
     }
 
     delete it;
