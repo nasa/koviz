@@ -471,6 +471,8 @@ QString Unit::integral(const QString &unit)
         integUnit = "N*s";
     } else if ( unit == "N*m" ) {
         integUnit = "N*m*s";
+    } else if ( unit == "lbf" ) {
+        integUnit = "lbf*s";
     } else {
         integUnit = "--";
     }
@@ -525,6 +527,12 @@ QHash<QPair<QString, QString>, double> Unit::_initScales()
     map.insert(QPair<QString,QString>("m/s2","mm/s2"),      0.001);
     map.insert(QPair<QString,QString>("m/s2","in/s2"),      0.0254);
     map.insert(QPair<QString,QString>("m/s2","ft/s2"),      0.3048);
+
+    // Jerk
+    map.insert(QPair<QString,QString>("m/s3","m/s3"), 1.0);
+
+    // Absement
+    map.insert(QPair<QString,QString>("m*s","m*s"), 1.0);
 
     // Angle
     map.insert(QPair<QString,QString>("r","r"),      1.0);
@@ -589,6 +597,7 @@ QHash<QPair<QString, QString>, double> Unit::_initScales()
     map.insert(QPair<QString,QString>("N*s","N*s"),     1.0);
     map.insert(QPair<QString,QString>("N*s","kg*m/s"),  1.0);
     map.insert(QPair<QString,QString>("N*s","kg*M/s"),  1.0);
+    map.insert(QPair<QString,QString>("N*s","lbf*s"),   4.4482216152605);
 
     // Angular Impulse
     map.insert(QPair<QString,QString>("N*m*s","N*m*s"),    1.0);
@@ -596,6 +605,10 @@ QHash<QPair<QString, QString>, double> Unit::_initScales()
     map.insert(QPair<QString,QString>("N*m*s","kg*m2/s"),  1.0);
     map.insert(QPair<QString,QString>("N*m*s","kg*M2/s"),  1.0);
     map.insert(QPair<QString,QString>("N*m*s","lbf*ft*s"), 1.35581795);
+
+    // Force rate
+    map.insert(QPair<QString,QString>("N/s","N/s"),     1.0);
+    map.insert(QPair<QString,QString>("N/s","lbf/s"),   4.4482216152605);
 
     // Pressure
     map.insert(QPair<QString,QString>("N/m2","N/m2"),      1.0);
