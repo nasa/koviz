@@ -467,6 +467,8 @@ QString Unit::integral(const QString &unit)
                 integUnit = QString("%1/s%2").arg(u).arg(--n);
             }
         }
+    } else if ( unit == "m" ) {
+        integUnit = "m*s";
     } else if ( unit == "N" ) {
         integUnit = "N*s";
     } else if ( unit == "N*m" ) {

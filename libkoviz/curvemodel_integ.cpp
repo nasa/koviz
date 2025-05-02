@@ -12,9 +12,9 @@ CurveModelIntegral::CurveModelIntegral(CurveModel *curveModel,
     _y(new CurveModelParameter),
     _iteratorTimeIndex(0)
 {
-    if ( curveModel->x()->unit() != "s" ) {
+    if ( !Unit::canConvert(curveModel->x()->unit(),"s") ) {
         fprintf(stderr,"koviz [bad scoobs]: CurveModelIntegral given curve "
-                       "with xunit=%s.  It must be in seconds.\n",
+                       "with xunit=%s.  It must be time.\n",
                 curveModel->x()->unit().toLatin1().constData());
         exit(-1);
     }
@@ -25,11 +25,7 @@ CurveModelIntegral::CurveModelIntegral(CurveModel *curveModel,
     _t->setName(curveModel->t()->name());
     _t->setUnit(curveModel->t()->unit());
     _x->setName(curveModel->x()->name());
-    if ( xu.isEmpty() || xu == "--" ) {
-        _x->setUnit(curveModel->x()->unit());
-    } else {
-        _x->setUnit(xu);
-    }
+    _x->setUnit(curveModel->t()->unit());  // Yes, t()->unit
 
     QString yName = curveModel->y()->name();
     QChar integSymbol(8747);
@@ -48,8 +44,7 @@ CurveModelIntegral::CurveModelIntegral(CurveModel *curveModel,
     QString integUnit = Unit::integral(yUnit);
     _y->setUnit(integUnit);
 
-    _init(curveModel,start,stop,_x->unit(),xs,xb,
-                                yUnit,ys,yb,initial_value);
+    _init(curveModel,start,stop,xu,xs,xb,yUnit,ys,yb,initial_value);
 }
 
 CurveModelIntegral::~CurveModelIntegral()
@@ -185,7 +180,7 @@ void CurveModelIntegral::_init(CurveModel* curveModel,
             continue;
         }
         _data[j*_ncols+0] = it->at(i)->t();
-        _data[j*_ncols+1] = t;
+        _data[j*_ncols+1] = it->at(i)->x();
         if ( j == 0 ) {
             _data[j*_ncols+2] = initial_value;
         } else {
@@ -204,7 +199,7 @@ void CurveModelIntegral::_init(CurveModel* curveModel,
             if ( x1 == x0 ) {
                 area = 0.0;
             }
-            _data[j*_ncols+2] = _data[(i-1)*_ncols+2] + area;
+            _data[j*_ncols+2] = _data[(j-1)*_ncols+2] + area;
         }
         ++j;
     }

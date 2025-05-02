@@ -11,9 +11,9 @@ CurveModelDerivative::CurveModelDerivative(CurveModel *curveModel,
     _y(new CurveModelParameter),
     _iteratorTimeIndex(0)
 {
-    if ( curveModel->x()->unit() != "s" ) {
+    if ( !Unit::canConvert(curveModel->x()->unit(), "s") ) {
         fprintf(stderr,"koviz [bad scoobs]: CurveModelDerivative given curve "
-                       "with xunit=%s.  It must be in seconds.\n",
+                       "with xunit=%s.  It must be time.\n",
                 curveModel->x()->unit().toLatin1().constData());
         exit(-1);
     }
@@ -24,11 +24,7 @@ CurveModelDerivative::CurveModelDerivative(CurveModel *curveModel,
     _t->setName(curveModel->t()->name());
     _t->setUnit(curveModel->t()->unit());
     _x->setName(curveModel->x()->name());
-    if ( xu.isEmpty() || xu == "--" ) {
-        _x->setUnit(curveModel->x()->unit());
-    } else {
-        _x->setUnit(xu);
-    }
+    _x->setUnit(curveModel->t()->unit());  // Yes, t()->unit
     QString yName = "d'(" + curveModel->y()->name() + ")";
     _y->setName(yName);
 
@@ -39,7 +35,7 @@ CurveModelDerivative::CurveModelDerivative(CurveModel *curveModel,
     QString dUnit = Unit::derivative(yUnit);
     _y->setUnit(dUnit);
 
-    _init(curveModel,start,stop,_x->unit(),xs,xb,yUnit,ys,yb);
+    _init(curveModel,start,stop,xu,xs,xb,yUnit,ys,yb);
 }
 
 CurveModelDerivative::~CurveModelDerivative()
@@ -176,7 +172,7 @@ void CurveModelDerivative::_init(CurveModel* curveModel,
             continue;
         }
         _data[j*_ncols+0] = it->at(i)->t();
-        _data[j*_ncols+1] = t;
+        _data[j*_ncols+1] = it->at(i)->t();
 
         double derivative;
         if ( j == 0 ) { // Initial point
