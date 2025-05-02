@@ -22,16 +22,10 @@ BookView::BookView(QWidget *parent) :
     setLayout(_mainLayout);
 }
 
-void BookView::setModel(QAbstractItemModel *model)
+void BookView::setModel(PlotBookModel *model)
 {
-    auto bookModel = qobject_cast<PlotBookModel*>(model);
-    if (!bookModel) {
-        fprintf(stderr, "koviz [bad scoobs]: BookView::setModel(model) "
-                        "expects model to be a PlotBookModel*\n");
-        exit(-1);
-    }
-    _nb->setBookModel(bookModel);
-    BookIdxView::setModel(bookModel);
+    _nb->setBookModel(model);
+    BookIdxView::setModel(model);
 }
 
 
@@ -48,11 +42,8 @@ void BookView::currentChanged(const QModelIndex &current,
         }
         QString pageName = _bookModel()->getDataString(pageIdx,
                                                        "PageName","Page");
-        pageName = pageName.split(":").at(0);
-        QFileInfo fi(pageName);
-        pageName = fi.fileName();
         for (int i = 0; i < _nb->count(); ++i) {
-            if ( _nb->tabText(i) == pageName ) {
+            if ( _nb->tabToolTip(i) == pageName ) {
                 _nb->setCurrentIndex(i);
                 break;
             }
@@ -60,11 +51,8 @@ void BookView::currentChanged(const QModelIndex &current,
     } else if ( _bookModel()->isIndex(current,"Table") ) {
         QString tableName = _bookModel()->getDataString(current,
                                                        "TableName","Table");
-        tableName = tableName.split(":").at(0);
-        QFileInfo fi(tableName);
-        tableName = fi.fileName() + ".table";
         for (int i = 0; i < _nb->count(); ++i) {
-            if ( _nb->tabText(i) == tableName ) {
+            if ( _nb->tabToolTip(i) == tableName ) {
                 _nb->setCurrentIndex(i);
                 break;
             }
@@ -402,10 +390,8 @@ void BookView::_pageViewCurrentChanged(const QModelIndex &currIdx,
 }
 
 void BookView::dataChanged(const QModelIndex &topLeft,
-                           const QModelIndex &bottomRight,
-                           const QVector<int> &roles)
+                           const QModelIndex &bottomRight)
 {
-    Q_UNUSED(roles);
     Q_UNUSED(topLeft);
     Q_UNUSED(bottomRight);
 }
