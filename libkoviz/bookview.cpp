@@ -22,9 +22,9 @@ BookView::BookView(QWidget *parent) :
     setLayout(_mainLayout);
 }
 
-void BookView::setModel(PlotBookModel *model)
+void BookView::setModel(QAbstractItemModel *model)
 {
-    _nb->setBookModel(model);
+    _nb->setBookModel(static_cast<PlotBookModel*>(model));
     BookIdxView::setModel(model);
 }
 
@@ -390,10 +390,12 @@ void BookView::_pageViewCurrentChanged(const QModelIndex &currIdx,
 }
 
 void BookView::dataChanged(const QModelIndex &topLeft,
-                           const QModelIndex &bottomRight)
+                           const QModelIndex &bottomRight,
+                           const QVector<int> &roles)
 {
     Q_UNUSED(topLeft);
     Q_UNUSED(bottomRight);
+    Q_UNUSED(roles);
 }
 
 void BookView::rowsInserted(const QModelIndex &pidx, int start, int end)
