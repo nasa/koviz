@@ -1,16 +1,13 @@
 Koviz
 
 PLOTS:
-  Page 1: "Go Go Gadget!"
+  Page 1: ""
 
-    Plot 1: "Integral"
+    Plot 1: ""
       x_variable: "sys.exec.out.time"
-          scale_factor: 2
-          bias: 100.0
-          units: "min"
-      y_variable: "force"
-          units: "kN"
-          scale_factor: 3
-          bias: 1000
-         
-
+        units: "hr"
+        scale_factor: 2.0
+      y_variable: "temperature"
+        units: "F"
+        scale_factor: 2.0
+        bias: 11

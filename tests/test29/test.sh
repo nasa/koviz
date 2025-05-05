@@ -67,4 +67,21 @@ echo ""
 echo "Action4: Press 'd'"
 echo "Expect4: {m/s3} {(0,~6),(1,~6),(2,~6),(3,~6),(4,~6)}"
 echo "              Line will not be flat due to round off"
-koviz DP_test3 temperature.csv -start 0 -stop 4 -shift -14
+koviz DP_test temperature.csv -start 0 -stop 4 -shift -14
+
+echo ""
+echo "Test integration with timenames/scale/bias/start/stop and xy unit scaling"
+echo ""
+echo "To show what's going on in this test, see how two points are aligned at 14hrs:"
+echo "cat.csv has point=(2520,7) 2520/60=42hrs 42*DP.scale(0.5)=21hrs 21+shift(-7)=14hrs"
+echo "rat.csv has point=(62,7) 62*DP.scale(0.5)=31hrs 31+shift(-17)=14hrs"
+echo ""
+echo "Action1: Press i to integrate"
+echo "Expect1: Both curves {(14,0),(15,8.5),(16,23),(17,49.5),(18,94)}"
+echo ""
+echo "Action2: Hit spacebar to compare"
+echo "Expect2: Flatline"
+koviz DP_cat cat.csv rat.csv \
+      -timeName "cat.time=rat.time" \
+      -start 14 -stop 18 \
+      -shift "cat.csv:-7,rat.csv:-17"

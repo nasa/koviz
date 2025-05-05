@@ -25,7 +25,7 @@ CurveModelIntegral::CurveModelIntegral(CurveModel *curveModel,
     _t->setName(curveModel->t()->name());
     _t->setUnit(curveModel->t()->unit());
     _x->setName(curveModel->x()->name());
-    _x->setUnit(curveModel->t()->unit());  // Yes, t()->unit
+    _x->setUnit(curveModel->x()->unit());
 
     QString yName = curveModel->y()->name();
     QChar integSymbol(8747);
