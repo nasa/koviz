@@ -85,3 +85,17 @@ koviz DP_cat cat.csv rat.csv \
       -timeName "cat.time=rat.time" \
       -start 14 -stop 18 \
       -shift "cat.csv:-7,rat.csv:-17"
+
+echo ""
+echo "Test integration constant"
+echo ""
+echo "This test does a lot of actions then checks a single point"
+echo ""
+echo "Action1: Select jerk"
+echo "Action2: Press i to integrate to acceleration"
+echo "Action3: Press i again to integrate to velocity"
+echo "Action4: Put 7.0 in integration initial value and hit <enter>"
+echo "Action5: Put 0.0 in integration initial value and then click out of box *without* hitting <enter>"
+echo "Action6: Press i twice to get to Absement which is iiii(jerk) {m*s}"
+echo "Expect6: Last point is (4,128)"
+koviz javpa.csv

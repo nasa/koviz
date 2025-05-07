@@ -3976,19 +3976,17 @@ void CurvesView::_keyPressIInitValueReturnPressed()
     IntegPlotCache* cache = _integCache.plotCaches.last();
     int i = 0;
     foreach ( QModelIndex curveIdx, curveIdxs ) {
+        // Since redoing integration with new constant,
+        // drop back to cached curve to re-integrate.
+        // Xunit will not change via integration so it is not cached
         QString xu = _bookModel()->getDataString(curveIdx,
                                                  "CurveXUnit","Curve");
-        double xs = _bookModel()->getDataDouble(curveIdx,
-                                                "CurveXScale","Curve");
-        double xb = _bookModel()->getDataDouble(curveIdx,
-                                                "CurveXBias","Curve");
-        QString yu = _bookModel()->getDataString(curveIdx,
-                                                 "CurveYUnit","Curve");
-        double ys = _bookModel()->getDataDouble(curveIdx,
-                                                "CurveYScale","Curve");
-        double yb = _bookModel()->getDataDouble(curveIdx,
-                                                "CurveYBias","Curve");
-        CurveModel* curveModel = cache->curveCaches.at(i++)->curveModel();
+        double xs = cache->curveCaches.at(i)->xScale();
+        double xb = cache->curveCaches.at(i)->xBias();
+        QString yu = cache->curveCaches.at(i)->yUnit();
+        double ys = cache->curveCaches.at(i)->yScale();
+        double yb = cache->curveCaches.at(i)->yBias();
+        CurveModel* curveModel = cache->curveCaches.at(i)->curveModel();
         CurveModel* integ = new CurveModelIntegral(curveModel,
                                                    timeNames, start, stop,
                                                    xu,xs,xb,yu,ys,yb,ival);
@@ -3996,6 +3994,7 @@ void CurvesView::_keyPressIInitValueReturnPressed()
         QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
                                                            "CurveData","Curve");
         _bookModel()->setData(curveDataIdx,v);
+        ++i;
     }
     QRectF bbox = _bookModel()->calcCurvesBBox(curvesIdx);
     _bookModel()->setPlotMathRect(bbox,rootIndex());
