@@ -1,6 +1,7 @@
 #include "curvemodel_integ.h"
 
 CurveModelIntegral::CurveModelIntegral(CurveModel *curveModel,
+                                       const QStringList &timeNames,
                                        double start, double stop,
                                        QString xu, double xs, double xb,
                                        QString yu, double ys, double yb,
@@ -12,6 +13,12 @@ CurveModelIntegral::CurveModelIntegral(CurveModel *curveModel,
     _y(new CurveModelParameter),
     _iteratorTimeIndex(0)
 {
+    if ( !timeNames.contains(curveModel->x()->name()) ) {
+        fprintf(stderr,"koviz [bad scoobs]: CurveModelIntegral given curve "
+                       "with x name=%s.  It must be time. Use -timeName.\n",
+                curveModel->x()->name().toLatin1().constData());
+        exit(-1);
+    }
     if ( !Unit::canConvert(curveModel->x()->unit(),"s") ) {
         fprintf(stderr,"koviz [bad scoobs]: CurveModelIntegral given curve "
                        "with xunit=%s.  It must be time.\n",

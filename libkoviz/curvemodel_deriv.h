@@ -23,6 +23,7 @@ class CurveModelDerivative : public CurveModel
   public:
 
     explicit CurveModelDerivative(CurveModel* curveModel,
+                                const QStringList& timeNames,
                                 double start, double stop,
                                 QString xu, double xs, double xb,
                                 QString yu, double ys, double yb);

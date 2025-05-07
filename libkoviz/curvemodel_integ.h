@@ -22,6 +22,7 @@ class CurveModelIntegral : public CurveModel
   public:
 
     explicit CurveModelIntegral(CurveModel* curveModel,
+                                const QStringList& timeNames,
                                 double start, double stop,
                                 QString xu, double xs, double xb,
                                 QString yu, double ys, double yb,

@@ -1142,6 +1142,7 @@ int main(int argc, char *argv[])
             bookModel->addChild(citem, "Title2",titles.at(1));
             bookModel->addChild(citem, "Title3",titles.at(2));
             bookModel->addChild(citem, "Title4",titles.at(3));
+            bookModel->addChild(rootItem, "TimeNames", timeNames);
             if ( opts.liveTime.isEmpty() ) {
                 bookModel->addChild(rootItem, "LiveCoordTime","");
             } else {

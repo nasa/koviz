@@ -2987,8 +2987,22 @@ void CurvesView::_keyPressD()
     }
 
     // xunit should be in time
+    QModelIndex timeNamesIdx = _bookModel()->getDataIndex(QModelIndex(),
+                                                     "TimeNames","");
+    QStringList timeNames = _bookModel()->data(timeNamesIdx).toStringList();
     foreach ( QModelIndex curveIdx, curveIdxs ) {
         CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+        if ( !timeNames.contains(curveModel->x()->name()) ) {
+            QMessageBox msgBox;
+            QString msg = QString("Sorry, attempting take derivative with "
+                                  "x=%1.  The integral expects x "
+                                  "to be a specified time name. "\
+                                  "Try using the -timeName option.\n")
+                                  .arg(curveModel->x()->name());
+            msgBox.setText(msg);
+            msgBox.exec();
+            return;
+        }
         if ( !Unit::canConvert(curveModel->x()->unit(),"s") ) {
             QMessageBox msgBox;
             QString msg = QString("Sorry, attempting to take derivative with "
@@ -3068,7 +3082,8 @@ void CurvesView::_keyPressD()
             double yb = _bookModel()->getDataDouble(curveIdx,
                                                      "CurveYBias","Curve");
             CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
-            CurveModel* deriv = new CurveModelDerivative(curveModel,start,stop,
+            CurveModel* deriv = new CurveModelDerivative(curveModel,
+                                                         timeNames, start,stop,
                                                          xu,xs,xb,yu,ys,yb);
             QVariant v = PtrToQVariant<CurveModel>::convert(deriv);
             QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
@@ -3212,9 +3227,23 @@ void CurvesView::_keyPressI()
         return;
     }
 
-    // xunit should be in seconds
+    // xunit should be time
+    QModelIndex timeNamesIdx = _bookModel()->getDataIndex(QModelIndex(),
+                                                     "TimeNames","");
+    QStringList timeNames = _bookModel()->data(timeNamesIdx).toStringList();
     foreach ( QModelIndex curveIdx, curveIdxs ) {
         CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+        if ( !timeNames.contains(curveModel->x()->name()) ) {
+            QMessageBox msgBox;
+            QString msg = QString("Sorry, attempting integrate with "
+                                  "x=%1.  The integral expects x "
+                                  "to be a specified time name. "\
+                                  "Try using the -timeName option.\n")
+                                  .arg(curveModel->x()->name());
+            msgBox.setText(msg);
+            msgBox.exec();
+            return;
+        }
         if ( !Unit::canConvert(curveModel->x()->unit(),"s") ) {
             QMessageBox msgBox;
             QString msg = QString("Sorry, attempting integrate with "
@@ -3321,6 +3350,7 @@ void CurvesView::_keyPressI()
                                                      "CurveYBias","Curve");
             CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
             CurveModel* integ = new CurveModelIntegral(curveModel,
+                                                       timeNames,
                                                        start,stop,
                                                        xu,xs,xb,yu,ys,yb,ival);
             QVariant v = PtrToQVariant<CurveModel>::convert(integ);
@@ -3938,6 +3968,9 @@ void CurvesView::_keyPressIInitValueReturnPressed()
                                                            "Curve","Curves");
 
     // Integrate from cached state using updated initial value
+    QModelIndex timeNamesIdx = _bookModel()->getDataIndex(QModelIndex(),
+                                                          "TimeNames","");
+    QStringList timeNames = _bookModel()->data(timeNamesIdx).toStringList();
     double start = _bookModel()->getDataDouble(QModelIndex(),"StartTime");
     double stop = _bookModel()->getDataDouble(QModelIndex(),"StopTime");
     IntegPlotCache* cache = _integCache.plotCaches.last();
@@ -3957,7 +3990,7 @@ void CurvesView::_keyPressIInitValueReturnPressed()
                                                 "CurveYBias","Curve");
         CurveModel* curveModel = cache->curveCaches.at(i++)->curveModel();
         CurveModel* integ = new CurveModelIntegral(curveModel,
-                                                   start, stop,
+                                                   timeNames, start, stop,
                                                    xu,xs,xb,yu,ys,yb,ival);
         QVariant v = PtrToQVariant<CurveModel>::convert(integ);
         QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,

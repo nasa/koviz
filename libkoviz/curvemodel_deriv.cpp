@@ -1,6 +1,7 @@
 #include "curvemodel_deriv.h"
 
 CurveModelDerivative::CurveModelDerivative(CurveModel *curveModel,
+                                           const QStringList &timeNames,
                                            double start, double stop,
                                            QString xu, double xs, double xb,
                                            QString yu, double ys, double yb) :
@@ -11,6 +12,12 @@ CurveModelDerivative::CurveModelDerivative(CurveModel *curveModel,
     _y(new CurveModelParameter),
     _iteratorTimeIndex(0)
 {
+    if ( !timeNames.contains(curveModel->x()->name()) ) {
+        fprintf(stderr,"koviz [bad scoobs]: CurveModelDerivative given curve "
+                       "with x name=%s.  It must be time. Use -timeName.\n",
+                curveModel->x()->name().toLatin1().constData());
+        exit(-1);
+    }
     if ( !Unit::canConvert(curveModel->x()->unit(), "s") ) {
         fprintf(stderr,"koviz [bad scoobs]: CurveModelDerivative given curve "
                        "with xunit=%s.  It must be time.\n",
