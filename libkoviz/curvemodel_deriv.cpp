@@ -28,6 +28,7 @@ CurveModelDerivative::CurveModelDerivative(CurveModel *curveModel,
     _iteratorTimeIndex = new DerivativeModelIterator(this);
 
     _fileName = curveModel->fileName();
+    _runPath = curveModel->runPath();
     _t->setName(curveModel->t()->name());
     _t->setUnit(curveModel->t()->unit());
     _x->setName(curveModel->x()->name());

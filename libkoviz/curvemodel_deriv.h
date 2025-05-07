@@ -35,6 +35,7 @@ class CurveModelDerivative : public CurveModel
     CurveModelParameter* y() { return _y; }
 
     QString fileName() const { return _fileName; }
+    QString runPath() const { return _runPath; }
 
     void map() {}
     void unmap() {}
@@ -49,6 +50,7 @@ class CurveModelDerivative : public CurveModel
   private:
 
     QString _fileName;
+    QString _runPath;
     double* _data;
     int _ncols;
     int _nrows;
