@@ -2988,14 +2988,28 @@ void CurvesView::_keyPressD()
         return;
     }
 
-    // xunit should be in seconds
+    // xunit should be in time
+    QModelIndex timeNamesIdx = _bookModel()->getDataIndex(QModelIndex(),
+                                                     "TimeNames","");
+    QStringList timeNames = _bookModel()->data(timeNamesIdx).toStringList();
     foreach ( QModelIndex curveIdx, curveIdxs ) {
         CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
-        if ( curveModel->x()->unit() != "s" ) {
+        if ( !timeNames.contains(curveModel->x()->name()) ) {
+            QMessageBox msgBox;
+            QString msg = QString("Sorry, attempting take derivative with "
+                                  "x=%1.  The integral expects x "
+                                  "to be a specified time name. "\
+                                  "Try using the -timeName option.\n")
+                                  .arg(curveModel->x()->name());
+            msgBox.setText(msg);
+            msgBox.exec();
+            return;
+        }
+        if ( !Unit::canConvert(curveModel->x()->unit(),"s") ) {
             QMessageBox msgBox;
             QString msg = QString("Sorry, attempting to take derivative with "
                                   "xunit=%1.  The derivative expects the logged"
-                                  " xunits to be seconds.\n")
+                                  " xunits to be time.\n")
                                   .arg(curveModel->x()->unit());
             msgBox.setText(msg);
             msgBox.exec();
@@ -3024,14 +3038,25 @@ void CurvesView::_keyPressD()
         plotCache->yAxisLabel = _bookModel()->getDataString(plotIdx,
                                                        "PlotYAxisLabel","Plot");
         plotCache->M = _bookModel()->getPlotMathRect(plotIdx);
+        double start = _bookModel()->getDataDouble(QModelIndex(),"StartTime");
+        double stop = _bookModel()->getDataDouble(QModelIndex(),"StopTime");
         foreach ( QModelIndex curveIdx, curveIdxs ) {
             CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+            double xs = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveXScale","Curve");
+            double xb = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveXBias","Curve");
+            double ys = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveYScale","Curve");
+            double yb = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveYBias","Curve");
             QString yUnit = _bookModel()->getDataString(curveIdx,
                                                         "CurveYUnit","Curve");
             QString yLabel = _bookModel()->getDataString(curveIdx,
                                                          "CurveYLabel","Curve");
-            DerivCurveCache* curveCache = new DerivCurveCache(curveModel,
-                                                              yUnit,yLabel);
+            CurveCache* curveCache = new CurveCache(curveModel,
+                                                    xs,xb,ys,yb,
+                                                    yLabel,yUnit);
             plotCache->curveCaches.append(curveCache);
         }
         _derivCache.plotCaches.append(plotCache);
@@ -3046,8 +3071,22 @@ void CurvesView::_keyPressD()
         QString plotUnit = _bookModel()->getCurvesYUnit(curvesIdx);
         QString plotDerivUnit = Unit::derivative(plotUnit);
         foreach ( QModelIndex curveIdx, curveIdxs ) {
+            QString xu = _bookModel()->getDataString(curveIdx,
+                                                     "CurveXUnit","Curve");
+            double xs = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveXScale","Curve");
+            double xb = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveXBias","Curve");
+            QString yu = _bookModel()->getDataString(curveIdx,
+                                                     "CurveYUnit","Curve");
+            double ys = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveYScale","Curve");
+            double yb = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveYBias","Curve");
             CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
-            CurveModel* deriv = new CurveModelDerivative(curveModel);
+            CurveModel* deriv = new CurveModelDerivative(curveModel,
+                                                         timeNames, start,stop,
+                                                         xu,xs,xb,yu,ys,yb);
             QVariant v = PtrToQVariant<CurveModel>::convert(deriv);
             QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
                                                            "CurveData","Curve");
@@ -3061,10 +3100,19 @@ void CurvesView::_keyPressD()
                 _bookModel()->setData(yUnitIdx,deriv->y()->unit());
             }
 
+            // Set y scale/bias to 1/0 since scale and bias baked in curve
+            QModelIndex yScaleIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYScale","Curve");
+            _bookModel()->setData(yScaleIdx,1.0);
+            QModelIndex yBiasIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYBias","Curve");
+            _bookModel()->setData(yBiasIdx,0.0);
+
             QModelIndex yNameIdx = _bookModel()->getDataIndex(curveIdx,
                                                          "CurveYName","Curve");
             QModelIndex yLabelIdx = _bookModel()->getDataIndex(curveIdx,
                                                          "CurveYLabel","Curve");
+
             _bookModel()->setData(yNameIdx, deriv->y()->name());
             _bookModel()->setData(yLabelIdx, deriv->y()->name());
 
@@ -3097,7 +3145,7 @@ void CurvesView::_keyPressD()
         bool block = _bookModel()->blockSignals(true);
         int i = 0;
         foreach ( QModelIndex curveIdx, curveIdxs ) {
-            IntegCurveCache* curveCache = plotCache->curveCaches.at(i++);
+            CurveCache* curveCache = plotCache->curveCaches.at(i++);
             QModelIndex yUnitIdx = _bookModel()->getDataIndex(curveIdx,
                                                           "CurveYUnit","Curve");
             _bookModel()->setData(yUnitIdx,""); // Unset units
@@ -3112,10 +3160,22 @@ void CurvesView::_keyPressD()
             _bookModel()->setData(curveDataIdx,v);
             _bookModel()->setData(yUnitIdx,curveCache->yUnit()); // Reset units
 
+            QModelIndex xScaleIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveXScale","Curve");
+            QModelIndex xBiasIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveXBias","Curve");
+            QModelIndex yScaleIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYScale","Curve");
+            QModelIndex yBiasIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYBias","Curve");
             QModelIndex yNameIdx = _bookModel()->getDataIndex(curveIdx,
                                                          "CurveYName","Curve");
             QModelIndex yLabelIdx = _bookModel()->getDataIndex(curveIdx,
                                                          "CurveYLabel","Curve");
+            _bookModel()->setData(xScaleIdx, curveCache->xScale());
+            _bookModel()->setData(xBiasIdx,  curveCache->xBias());
+            _bookModel()->setData(yScaleIdx, curveCache->yScale());
+            _bookModel()->setData(yBiasIdx,  curveCache->yBias());
             _bookModel()->setData(yNameIdx,
                                   curveCache->curveModel()->y()->name());
             _bookModel()->setData(yLabelIdx, curveCache->yLabel());
@@ -3169,14 +3229,28 @@ void CurvesView::_keyPressI()
         return;
     }
 
-    // xunit should be in seconds
+    // xunit should be time
+    QModelIndex timeNamesIdx = _bookModel()->getDataIndex(QModelIndex(),
+                                                     "TimeNames","");
+    QStringList timeNames = _bookModel()->data(timeNamesIdx).toStringList();
     foreach ( QModelIndex curveIdx, curveIdxs ) {
         CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
-        if ( curveModel->x()->unit() != "s" ) {
+        if ( !timeNames.contains(curveModel->x()->name()) ) {
+            QMessageBox msgBox;
+            QString msg = QString("Sorry, attempting integrate with "
+                                  "x=%1.  The integral expects x "
+                                  "to be a specified time name. "\
+                                  "Try using the -timeName option.\n")
+                                  .arg(curveModel->x()->name());
+            msgBox.setText(msg);
+            msgBox.exec();
+            return;
+        }
+        if ( !Unit::canConvert(curveModel->x()->unit(),"s") ) {
             QMessageBox msgBox;
             QString msg = QString("Sorry, attempting integrate with "
                                   "xunit=%1.  The integral expects the logged"
-                                  " xunits to be seconds.\n")
+                                  " xunits to be time.\n")
                                   .arg(curveModel->x()->unit());
             msgBox.setText(msg);
             msgBox.exec();
@@ -3225,7 +3299,9 @@ void CurvesView::_keyPressI()
     if ( _derivCache.plotCaches.isEmpty()) {
 
         // Show integ init value entry box
-        _integ_frame->show();
+        if ( _integ_frame ) {
+            _integ_frame->show();
+        }
 
         // Cache
         IntegPlotCache* plotCache = new IntegPlotCache();
@@ -3235,12 +3311,21 @@ void CurvesView::_keyPressI()
         plotCache->M = _bookModel()->getPlotMathRect(plotIdx);
         foreach ( QModelIndex curveIdx, curveIdxs ) {
             CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
+            double xs = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveXScale","Curve");
+            double xb = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveXBias","Curve");
+            double ys = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveYScale","Curve");
+            double yb = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveYBias","Curve");
             QString yLabel = _bookModel()->getDataString(curveIdx,
                                                         "CurveYLabel","Curve");
             QString yUnit = _bookModel()->getDataString(curveIdx,
                                                         "CurveYUnit","Curve");
-            IntegCurveCache* curveCache = new IntegCurveCache(curveModel,
-                                                              yLabel,yUnit);
+            CurveCache* curveCache = new CurveCache(curveModel,
+                                                    xs,xb,ys,yb,
+                                                    yLabel,yUnit);
             plotCache->curveCaches.append(curveCache);
         }
         _integCache.plotCaches.append(plotCache);
@@ -3250,9 +3335,26 @@ void CurvesView::_keyPressI()
         QString plotUnit = _bookModel()->getCurvesYUnit(curvesIdx);
         QString plotIntegUnit = Unit::integral(plotUnit);
         bool block = _bookModel()->blockSignals(true);
+        double start = _bookModel()->getDataDouble(QModelIndex(),"StartTime");
+        double stop = _bookModel()->getDataDouble(QModelIndex(),"StopTime");
         foreach ( QModelIndex curveIdx, curveIdxs ) {
+            QString xu = _bookModel()->getDataString(curveIdx,
+                                                     "CurveXUnit","Curve");
+            double xs = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveXScale","Curve");
+            double xb = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveXBias","Curve");
+            QString yu = _bookModel()->getDataString(curveIdx,
+                                                     "CurveYUnit","Curve");
+            double ys = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveYScale","Curve");
+            double yb = _bookModel()->getDataDouble(curveIdx,
+                                                     "CurveYBias","Curve");
             CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
-            CurveModel* integ = new CurveModelIntegral(curveModel,ival);
+            CurveModel* integ = new CurveModelIntegral(curveModel,
+                                                       timeNames,
+                                                       start,stop,
+                                                       xu,xs,xb,yu,ys,yb,ival);
             QVariant v = PtrToQVariant<CurveModel>::convert(integ);
             QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
                                                            "CurveData","Curve");
@@ -3272,6 +3374,14 @@ void CurvesView::_keyPressI()
                                                          "CurveYLabel","Curve");
             _bookModel()->setData(yNameIdx, integ->y()->name());
             _bookModel()->setData(yLabelIdx, integ->y()->name());
+
+            // Reset y scale and bias since baked into integral
+            QModelIndex yScaleIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYScale","Curve");
+            QModelIndex yBiasIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYBias","Curve");
+            _bookModel()->setData(yScaleIdx, 1.0);
+            _bookModel()->setData(yBiasIdx, 0.0);
         }
         _bookModel()->blockSignals(block);
         QRectF bbox = _bookModel()->calcCurvesBBox(curvesIdx);
@@ -3295,7 +3405,7 @@ void CurvesView::_keyPressI()
         bool block = _bookModel()->blockSignals(true);
         int i = 0;
         foreach ( QModelIndex curveIdx, curveIdxs ) {
-            DerivCurveCache* curveCache = plotCache->curveCaches.at(i++);
+            CurveCache* curveCache = plotCache->curveCaches.at(i++);
             QModelIndex yUnitIdx = _bookModel()->getDataIndex(curveIdx,
                                                           "CurveYUnit","Curve");
             _bookModel()->setData(yUnitIdx,"");  // Unset units
@@ -3311,10 +3421,22 @@ void CurvesView::_keyPressI()
 
             _bookModel()->setData(yUnitIdx,curveCache->yUnit());// Reset units
 
+            QModelIndex xScaleIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveXScale","Curve");
+            QModelIndex xBiasIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveXBias","Curve");
+            QModelIndex yScaleIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYScale","Curve");
+            QModelIndex yBiasIdx = _bookModel()->getDataIndex(curveIdx,
+                                                         "CurveYBias","Curve");
             QModelIndex yNameIdx = _bookModel()->getDataIndex(curveIdx,
                                                          "CurveYName","Curve");
             QModelIndex yLabelIdx = _bookModel()->getDataIndex(curveIdx,
                                                          "CurveYLabel","Curve");
+            _bookModel()->setData(xScaleIdx, curveCache->xScale());
+            _bookModel()->setData(xBiasIdx, curveCache->xBias());
+            _bookModel()->setData(yScaleIdx, curveCache->yScale());
+            _bookModel()->setData(yBiasIdx, curveCache->yBias());
             _bookModel()->setData(yNameIdx,
                                   curveCache->curveModel()->y()->name());
             _bookModel()->setData(yLabelIdx, curveCache->yLabel());
@@ -3859,15 +3981,33 @@ void CurvesView::_keyPressIInitValueReturnPressed()
                                                            "Curve","Curves");
 
     // Integrate from cached state using updated initial value
+    QModelIndex timeNamesIdx = _bookModel()->getDataIndex(QModelIndex(),
+                                                          "TimeNames","");
+    QStringList timeNames = _bookModel()->data(timeNamesIdx).toStringList();
+    double start = _bookModel()->getDataDouble(QModelIndex(),"StartTime");
+    double stop = _bookModel()->getDataDouble(QModelIndex(),"StopTime");
     IntegPlotCache* cache = _integCache.plotCaches.last();
     int i = 0;
     foreach ( QModelIndex curveIdx, curveIdxs ) {
-        CurveModel* curveModel = cache->curveCaches.at(i++)->curveModel();
-        CurveModel* integ = new CurveModelIntegral(curveModel,ival);
+        // Since redoing integration with new constant,
+        // drop back to cached curve to re-integrate.
+        // Xunit will not change via integration so it is not cached
+        QString xu = _bookModel()->getDataString(curveIdx,
+                                                 "CurveXUnit","Curve");
+        double xs = cache->curveCaches.at(i)->xScale();
+        double xb = cache->curveCaches.at(i)->xBias();
+        QString yu = cache->curveCaches.at(i)->yUnit();
+        double ys = cache->curveCaches.at(i)->yScale();
+        double yb = cache->curveCaches.at(i)->yBias();
+        CurveModel* curveModel = cache->curveCaches.at(i)->curveModel();
+        CurveModel* integ = new CurveModelIntegral(curveModel,
+                                                   timeNames, start, stop,
+                                                   xu,xs,xb,yu,ys,yb,ival);
         QVariant v = PtrToQVariant<CurveModel>::convert(integ);
         QModelIndex curveDataIdx = _bookModel()->getDataIndex(curveIdx,
                                                            "CurveData","Curve");
         _bookModel()->setData(curveDataIdx,v);
+        ++i;
     }
     QRectF bbox = _bookModel()->calcCurvesBBox(curvesIdx);
     _bookModel()->setPlotMathRect(bbox,rootIndex());
@@ -3980,34 +4120,11 @@ DerivCache::DerivCache()
 DerivCache::~DerivCache()
 {
     foreach ( DerivPlotCache* plotCache, plotCaches ) {
-        foreach ( DerivCurveCache* curveCache, plotCache->curveCaches ) {
+        foreach ( CurveCache* curveCache, plotCache->curveCaches ) {
             delete curveCache;
         }
         delete plotCache;
     }
-}
-
-DerivCurveCache::DerivCurveCache(CurveModel *curveModel,
-                                 const QString &yUnit, const QString &yLabel) :
-    _curveModel(curveModel),
-    _yUnit(yUnit),
-    _yLabel(yLabel)
-{
-}
-
-CurveModel *DerivCurveCache::curveModel() const
-{
-    return _curveModel;
-}
-
-QString DerivCurveCache::yUnit() const
-{
-    return _yUnit;
-}
-
-QString DerivCurveCache::yLabel() const
-{
-    return _yLabel;
 }
 
 IntegPlotCache::IntegPlotCache() :
@@ -4026,32 +4143,53 @@ IntegCache::IntegCache()
 IntegCache::~IntegCache()
 {
     foreach ( IntegPlotCache* plotCache, plotCaches ) {
-        foreach ( IntegCurveCache* curveCache, plotCache->curveCaches ) {
+        foreach ( CurveCache* curveCache, plotCache->curveCaches ) {
             delete curveCache;
         }
         delete plotCache;
     }
 }
 
-IntegCurveCache::IntegCurveCache(CurveModel *curveModel,
-                                 const QString &yLabel, const QString &yUnit) :
+CurveCache::CurveCache(CurveModel *curveModel,
+                       double xs, double xb, double ys, double yb,
+                       const QString &yLabel, const QString &yUnit) :
     _curveModel(curveModel),
-    _yLabel(yLabel),
-    _yUnit(yUnit)
-{
-}
+    _xs(xs),_xb(xb),_ys(ys),_yb(yb),
+    _yLabel(yLabel),_yUnit(yUnit)
+{}
 
-CurveModel *IntegCurveCache::curveModel() const
+CurveModel* CurveCache::curveModel() const
 {
     return _curveModel;
 }
 
-QString IntegCurveCache::yLabel() const
+
+double CurveCache::xScale() const
+{
+    return _xs;
+}
+
+double CurveCache::xBias() const
+{
+    return _xb;
+}
+
+double CurveCache::yScale() const
+{
+    return _ys;
+}
+
+double CurveCache::yBias() const
+{
+    return _yb;
+}
+
+QString CurveCache::yLabel() const
 {
     return _yLabel;
 }
 
-QString IntegCurveCache::yUnit() const
+QString CurveCache::yUnit() const
 {
     return _yUnit;
 }

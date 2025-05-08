@@ -22,7 +22,11 @@ class CurveModelDerivative : public CurveModel
 
   public:
 
-    explicit CurveModelDerivative(CurveModel* curveModel);
+    explicit CurveModelDerivative(CurveModel* curveModel,
+                                const QStringList& timeNames,
+                                double start, double stop,
+                                QString xu, double xs, double xb,
+                                QString yu, double ys, double yb);
 
     ~CurveModelDerivative();
 
@@ -31,6 +35,7 @@ class CurveModelDerivative : public CurveModel
     CurveModelParameter* y() override { return _y; }
 
     QString fileName() const override { return _fileName; }
+    QString runPath() const override { return _runPath; }
 
     void map() override {}
     void unmap() override {}
@@ -45,6 +50,7 @@ class CurveModelDerivative : public CurveModel
   private:
 
     QString _fileName;
+    QString _runPath;
     double* _data;
     int _ncols;
     int _nrows;
@@ -57,7 +63,10 @@ class CurveModelDerivative : public CurveModel
 
     DerivativeModelIterator* _iteratorTimeIndex;
 
-    void _init(CurveModel *curveModel);
+    void _init(CurveModel *curveModel,
+               double start, double stop,
+               QString xu, double xs, double xb,
+               QString yu, double ys, double yb);
     int _idxAtTimeBinarySearch (DerivativeModelIterator *it,
                                 int low, int high, double time);
 };

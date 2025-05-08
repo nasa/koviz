@@ -1,6 +1,10 @@
 #include "curvemodel_integ.h"
 
 CurveModelIntegral::CurveModelIntegral(CurveModel *curveModel,
+                                       const QStringList &timeNames,
+                                       double start, double stop,
+                                       QString xu, double xs, double xb,
+                                       QString yu, double ys, double yb,
                                        double initial_value) :
     _ncols(3),
     _nrows(0),
@@ -9,9 +13,15 @@ CurveModelIntegral::CurveModelIntegral(CurveModel *curveModel,
     _y(new CurveModelParameter),
     _iteratorTimeIndex(0)
 {
-    if ( curveModel->x()->unit() != "s" ) {
+    if ( !timeNames.contains(curveModel->x()->name()) ) {
         fprintf(stderr,"koviz [bad scoobs]: CurveModelIntegral given curve "
-                       "with xunit=%s.  It must be in seconds.\n",
+                       "with x name=%s.  It must be time. Use -timeName.\n",
+                curveModel->x()->name().toLatin1().constData());
+        exit(-1);
+    }
+    if ( !Unit::canConvert(curveModel->x()->unit(),"s") ) {
+        fprintf(stderr,"koviz [bad scoobs]: CurveModelIntegral given curve "
+                       "with xunit=%s.  It must be time.\n",
                 curveModel->x()->unit().toLatin1().constData());
         exit(-1);
     }
@@ -19,6 +29,7 @@ CurveModelIntegral::CurveModelIntegral(CurveModel *curveModel,
     _iteratorTimeIndex = new IntegralModelIterator(this);
 
     _fileName = curveModel->fileName();
+    _runPath = curveModel->runPath();
     _t->setName(curveModel->t()->name());
     _t->setUnit(curveModel->t()->unit());
     _x->setName(curveModel->x()->name());
@@ -34,10 +45,14 @@ CurveModelIntegral::CurveModelIntegral(CurveModel *curveModel,
     }
     _y->setName(iYName);
 
-    QString integUnit = Unit::integral(curveModel->y()->unit());
+    QString yUnit = yu;
+    if ( yu.isEmpty() || yu == "--" ) {
+        yUnit = curveModel->y()->unit();
+    }
+    QString integUnit = Unit::integral(yUnit);
     _y->setUnit(integUnit);
 
-    _init(curveModel,initial_value);
+    _init(curveModel,start,stop,xu,xs,xb,yUnit,ys,yb,initial_value);
 }
 
 CurveModelIntegral::~CurveModelIntegral()
@@ -136,76 +151,65 @@ QVariant CurveModelIntegral::data (const QModelIndex & index, int role ) const
 }
 
 // Use trapezoids to estimate integral
-void CurveModelIntegral::_init(CurveModel* curveModel, double initial_value)
+void CurveModelIntegral::_init(CurveModel* curveModel,
+                               double start, double stop,
+                               const QString& xu, double xs, double xb,
+                               const QString& yu, double ys, double yb,
+                               double initial_value)
 {
     curveModel->map();
     ModelIterator* it = curveModel->begin();
 
-    _nrows = curveModel->rowCount();
+    double xus = Unit::scale(curveModel->x()->unit(),xu);
+    double xub = Unit::bias(curveModel->x()->unit(),xu);
+    double yus = Unit::scale(curveModel->y()->unit(),yu);
+    double yub = Unit::bias(curveModel->y()->unit(),yu);
+
+    _nrows = 0;
+    int n = curveModel->rowCount();
+    for (int i = 0; i < n; ++i ) {
+        double t =  (it->at(i)->x()*xus+xub)*xs+xb;
+        if ( t >= start && t <= stop ) {
+            ++_nrows;
+        }
+    }
+    if ( _nrows == 0 ) {
+        curveModel->unmap();
+        delete it;
+        return;
+    }
+
     _data = (double*)malloc(_nrows*_ncols*sizeof(double));
 
-    if ( _nrows == 0 ) {
-        // Nothing to do, empty
-    } else if ( _nrows == 1 ) {
-        _data[0*_ncols+0] = it->at(0)->t();
-        _data[0*_ncols+1] = it->at(0)->x();
-        _data[0*_ncols+2] = initial_value;
-    } else if ( _nrows == 2 ) {
-        double x0 = it->at(0)->x();
-        double x1 = it->at(1)->x();
-        double y0 = it->at(0)->y();
-        double y1 = it->at(1)->y();
-        double dx = x1-x0;
-        double area = (y0+y1)*dx/2.0;
-        _data[0*_ncols+0] = it->at(0)->t();
-        _data[0*_ncols+1] = it->at(0)->x();
-        _data[0*_ncols+2] = initial_value;
-        _data[1*_ncols+0] = it->at(1)->t();
-        _data[1*_ncols+1] = it->at(1)->x();
-        _data[1*_ncols+2] = area;
-    } else if ( _nrows == 3 ) {
-        double x0 = it->at(0)->x();
-        double y0 = it->at(0)->y();
-        double x1 = it->at(1)->x();
-        double y1 = it->at(1)->y();
-        double x2 = it->at(2)->x();
-        double y2 = it->at(2)->y();
-        double a0 = (y0+y1)*(x1-x0)/2.0;
-        double a1 = (y1+y2)*(x2-x1)/2.0;
-        _data[0*_ncols+0] = it->at(0)->t();
-        _data[0*_ncols+1] = it->at(0)->x();
-        _data[0*_ncols+2] = initial_value;
-        _data[1*_ncols+0] = it->at(1)->t();
-        _data[1*_ncols+1] = it->at(1)->x();
-        _data[1*_ncols+2] = a0;
-        _data[2*_ncols+0] = it->at(2)->t();
-        _data[2*_ncols+1] = it->at(2)->x();
-        _data[2*_ncols+2] = a1;
-    } else {
-        for (int i = 0; i < _nrows; ++i ) {
-            _data[i*_ncols+0] = it->at(i)->t();
-            _data[i*_ncols+1] = it->at(i)->x();
-            if ( i == 0 ) {
-                _data[i*_ncols+2] = initial_value;
-            } else {
-                double x0 = it->at(i-1)->x();
-                double y0 = it->at(i-1)->y();
-                double x1 = it->at(i)->x();
-                double y1 = it->at(i)->y();
-                for (int j = i-1; j >= 0; --j) {
-                    x0 = it->at(j)->x();
-                    y0 = it->at(j)->y();
-                    if ( !std::isnan(x0) && !std::isnan(y0) && x0 != x1 ) {
-                        break;
-                    }
-                }
-                double area = (y0+y1)*(x1-x0)/2.0;
-                if ( x1 == x0 ) {
-                    area = 0.0;
-                }
-                _data[i*_ncols+2] = _data[(i-1)*_ncols+2] + area;
-            }
+    int j = 0;
+    for (int i = 0; i < n; ++i ) {
+        double t = (it->at(i)->x()*xus+xub)*xs+xb;
+        if ( t < start || t > stop ) {
+            continue;
         }
+        _data[j*_ncols+0] = it->at(i)->t();
+        _data[j*_ncols+1] = it->at(i)->x();
+        if ( j == 0 ) {
+            _data[j*_ncols+2] = initial_value;
+        } else {
+            double x0 = (it->at(i-1)->x()*xus+xub)*xs+xb;
+            double y0 = (it->at(i-1)->y()*yus+yub)*ys+yb;
+            double x1 = (it->at(i)->x()*xus+xub)*xs+xb;
+            double y1 = (it->at(i)->y()*yus+yub)*ys+yb;
+            for (int k = i-1; k >= 0; --k) {
+                x0 = (it->at(k)->x()*xus+xub)*xs+xb;
+                y0 = (it->at(k)->y()*yus+yub)*ys+yb;
+                if ( !std::isnan(x0) && !std::isnan(y0) && x0 != x1 ) {
+                    break;
+                }
+            }
+            double area = (y0+y1)*(x1-x0)/2.0;
+            if ( x1 == x0 ) {
+                area = 0.0;
+            }
+            _data[j*_ncols+2] = _data[(j-1)*_ncols+2] + area;
+        }
+        ++j;
     }
 
     delete it;
