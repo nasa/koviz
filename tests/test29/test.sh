@@ -123,3 +123,14 @@ echo "Action7: Change {ft} to {m}"
 echo "Action8: Press i"
 echo "Expect8: [(0,0),(1,4.25),(2,20),(3,56.25),(4,128)] {m*s}"
 koviz javpa.csv
+
+echo ""
+echo "Test zooming in to change start/stop"
+echo ""
+echo "Action1: Mouse zoom in between ~2.5 to ~6.5"
+echo "Action2: Press i"
+echo "Expect2: [(3,0),(4,3.5),(5,8.0),(6,13.5)]"
+echo "Action3: Press d twice"
+echo "Expect3: Flat 1 between 3&6 i.e. [(3,1),(4,1),(5,1),(6,1)]"
+koviz -a a10.csv
+

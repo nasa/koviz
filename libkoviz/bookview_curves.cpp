@@ -3038,8 +3038,8 @@ void CurvesView::_keyPressD()
         plotCache->yAxisLabel = _bookModel()->getDataString(plotIdx,
                                                        "PlotYAxisLabel","Plot");
         plotCache->M = _bookModel()->getPlotMathRect(plotIdx);
-        double start = _bookModel()->getDataDouble(QModelIndex(),"StartTime");
-        double stop = _bookModel()->getDataDouble(QModelIndex(),"StopTime");
+        double start = plotCache->M.left();
+        double stop = plotCache->M.right();
         foreach ( QModelIndex curveIdx, curveIdxs ) {
             CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
             double xs = _bookModel()->getDataDouble(curveIdx,
@@ -3335,8 +3335,9 @@ void CurvesView::_keyPressI()
         QString plotUnit = _bookModel()->getCurvesYUnit(curvesIdx);
         QString plotIntegUnit = Unit::integral(plotUnit);
         bool block = _bookModel()->blockSignals(true);
-        double start = _bookModel()->getDataDouble(QModelIndex(),"StartTime");
-        double stop = _bookModel()->getDataDouble(QModelIndex(),"StopTime");
+        QRectF M = _bookModel()->getPlotMathRect(plotIdx);
+        double start = M.left();
+        double stop = M.right();
         foreach ( QModelIndex curveIdx, curveIdxs ) {
             QString xu = _bookModel()->getDataString(curveIdx,
                                                      "CurveXUnit","Curve");
@@ -3984,8 +3985,9 @@ void CurvesView::_keyPressIInitValueReturnPressed()
     QModelIndex timeNamesIdx = _bookModel()->getDataIndex(QModelIndex(),
                                                           "TimeNames","");
     QStringList timeNames = _bookModel()->data(timeNamesIdx).toStringList();
-    double start = _bookModel()->getDataDouble(QModelIndex(),"StartTime");
-    double stop = _bookModel()->getDataDouble(QModelIndex(),"StopTime");
+    QRectF M = _bookModel()->getPlotMathRect(plotIdx);
+    double start = M.left();
+    double stop = M.right();
     IntegPlotCache* cache = _integCache.plotCaches.last();
     int i = 0;
     foreach ( QModelIndex curveIdx, curveIdxs ) {
