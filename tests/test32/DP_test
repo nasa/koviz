@@ -1,0 +1,16 @@
+Koviz
+
+PLOTS:
+  Page 1: "Page Session Test"
+
+    Plot 1: "Plot Session Test"
+      x_variable: "sys.exec.out.time"
+      y_variable: "y"
+        symbol_style: "circle"
+        symbol_end: "none"
+        line_color: "brown"
+        label: "brown"
+TABLES:
+  Table 1: "My Table Is Off"
+      variable: "x"
+      variable: "y"

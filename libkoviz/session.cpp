@@ -89,6 +89,9 @@ Session::Session(const QString &sessionFileName) :
     QTextStream in(&file);
     while (!in.atEnd()) {
         QString line = in.readLine();
+        if (line.trimmed().startsWith("#")) {
+            continue; // Ignore lines that are "commented out" with opening hash
+        }
         if ( line.contains("RUN:",Qt::CaseInsensitive) ) {
             int i = line.indexOf("RUN:",0,Qt::CaseInsensitive);
             QString run = line.mid(i+4).trimmed();

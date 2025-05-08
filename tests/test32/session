@@ -1,0 +1,30 @@
+Session - kvetter May 8, 2025
+
+map: x=a.x=b.x=c.x,y=a.y=b.y=c.y
+
+RUN: a.csv
+RUN: b.csv
+RUN: c.csv
+#RUN: commented-out.csv
+PRODUCT: DP_test
+    #PRODUCT: DP_commented_out
+t1: ""
+t2: "Title Two"
+t3: "Title Three"
+t4: "Title Four"
+c1: "brown"
+c2: "purple"
+c3: "orange"
+l1: "brown"
+l2: "purple"
+l3: "orange"
+ls1: "4_dot_dash"
+ls2: "fine_dash"
+ls3: "plain"
+s1: "circle"
+s2: "triangle"
+s3: "satellite"
+legend: true
+orient: landscape
+presentation: compare
+showTables: off
