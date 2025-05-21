@@ -162,9 +162,6 @@ QString Unit::next(const QString &unit)
     QString u;
 
     QString family = _family(unit);
-    fprintf(stderr, "u=%s f=%s\n",
-            unit.toLatin1().constData(),
-            family.toLatin1().constData());
 
     if ( family.isEmpty() ) {
         return u;  // return empty string if unit dne
