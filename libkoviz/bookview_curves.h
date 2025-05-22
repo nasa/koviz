@@ -55,7 +55,11 @@ struct CurveInfo
               xScale(xs), xBias(xb),
               yScale(ys), yBias(yb),
               bmXUnit(bmxu), bmYUnit(bmyu)
-              {}
+    {
+        QString cmu = cm->y()->unit();
+        yUnitScale = Unit::scale(cmu, bmyu);
+        yUnitBias  = Unit::bias(cmu, bmyu);
+    }
 
     CurveModel* curveModel;
     double xScale;
@@ -66,6 +70,9 @@ struct CurveInfo
                      // The curveModel->x()->unit() may not be same as bm unit
     QString bmYUnit; // Book model's y unit (possibly from DP file)
                      // The curveModel->y()->unit() may not be same as bm unit
+
+    double yUnitScale; // Calculated in constructor
+    double yUnitBias;  // Calculated in constructor
 };
 
 class CurveOperation {

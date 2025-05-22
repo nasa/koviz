@@ -3654,9 +3654,8 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
                 double unitScale = 1.0;
                 double unitBias = 0.0;
                 if ( !yUnit.isEmpty() ) {
-                    QString cmu=it2curveInfo.value(it)->curveModel->y()->unit();
-                    unitScale = Unit::scale(cmu, yUnit);
-                    unitBias  = Unit::bias(cmu, yUnit);
+                    unitScale = it2curveInfo.value(it)->yUnitScale;
+                    unitBias  = it2curveInfo.value(it)->yUnitBias;
                 }
                 double y = it->y()*unitScale + unitBias;
                 y *= it2curveInfo.value(it)->yScale;
@@ -3691,10 +3690,8 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
                         double unitScale = 1.0;
                         double unitBias = 0.0;
                         if ( !yUnit.isEmpty() ) {
-                            QString cmu = it2curveInfo.value(it)->
-                                                       curveModel->y()->unit();
-                            unitScale = Unit::scale(cmu,yUnit);
-                            unitBias  = Unit::bias(cmu,yUnit);
+                            unitScale = it2curveInfo.value(it)->yUnitScale;
+                            unitBias  = it2curveInfo.value(it)->yUnitBias;
                         }
                         double ys = it2curveInfo.value(it)->yScale;
                         double yb = it2curveInfo.value(it)->yBias;
@@ -3728,10 +3725,8 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
                         double unitScale = 1.0;
                         double unitBias = 0.0;
                         if ( !yUnit.isEmpty() ) {
-                            QString cmu = it2curveInfo.value(it)->
-                                                        curveModel->y()->unit();
-                            unitScale = Unit::scale(cmu,yUnit);
-                            unitBias  = Unit::bias(cmu,yUnit);
+                            unitScale = it2curveInfo.value(it)->yUnitScale;
+                            unitBias  = it2curveInfo.value(it)->yUnitBias;
                         }
                         double y = it->y()*unitScale+unitBias;
                         y *= it2curveInfo.value(it)->yScale;
@@ -3763,10 +3758,8 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
                     double unitScale = 1.0;
                     double unitBias = 0.0;
                     if ( !yUnit.isEmpty() ) {
-                        QString cmu = it2curveInfo.value(it)->
-                                                        curveModel->y()->unit();
-                        unitScale = Unit::scale(cmu,yUnit);
-                        unitBias  = Unit::bias(cmu,yUnit);
+                        unitScale = it2curveInfo.value(it)->yUnitScale;
+                        unitBias  = it2curveInfo.value(it)->yUnitBias;
                     }
                     double y = it->y()*unitScale+unitBias;
                     y *= it2curveInfo.value(it)->yScale;

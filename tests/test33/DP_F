@@ -1,0 +1,9 @@
+Koviz
+
+PLOTS:
+  Page 1: "Test Mag/Sum"
+
+    Plot 1: "C&K->F"
+      x_variable: "sys.exec.out.time"
+      y_variable: "temperature"
+        units: "F"
