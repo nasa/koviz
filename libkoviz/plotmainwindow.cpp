@@ -1466,7 +1466,7 @@ void PlotMainWindow::_openVideos(const QList<QPair<QString, double> > &videos)
 #endif
     QRect lastVideoRect;
     if ( vidView ) {
-        lastVideoRect = vidView->frameGeometry();
+        lastVideoRect = vidView->geometry();
     }
 
     if ( !vidView && videos.isEmpty() ) {
@@ -1514,8 +1514,7 @@ void PlotMainWindow::_openVideos(const QList<QPair<QString, double> > &videos)
         if ( lastVideoRect.isNull() ) {
             _readVideoWindowSettings();
         } else {
-            vidView->resize(lastVideoRect.size());
-            vidView->move(lastVideoRect.topLeft());
+            vidView->setGeometry(lastVideoRect);
         }
     }
 }
