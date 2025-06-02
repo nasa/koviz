@@ -161,6 +161,8 @@ void TrickModel::map()
 
     _mem = (ptrdiff_t) _file.map(0,_file.size());
 
+    _file.close();
+
     if ( _mem == 0 ) {
         _err_stream << "koviz [error]: TrickModel couldn't allocate memory for : "
                     << _file.fileName() << "\n";
@@ -180,7 +182,6 @@ void TrickModel::unmap()
 {
     if ( _data ) {
         _file.unmap((uchar*)_mem);
-        _file.close();
         _data = 0 ;
     }
     if ( _iteratorTimeIndex ) {
