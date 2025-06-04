@@ -1,0 +1,10 @@
+Koviz
+
+PLOTS:
+  Page 1: "Test Sum With Diff Time Units"
+
+    Plot 1: ""
+      x_variable: "sys.exec.out.time"
+        units: "day"
+      y_variable: "duration"
+        units: "day"

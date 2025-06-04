@@ -54,11 +54,17 @@ struct CurveInfo
             : curveModel(cm),
               xScale(xs), xBias(xb),
               yScale(ys), yBias(yb),
-              bmXUnit(bmxu), bmYUnit(bmyu)
+              bmXUnit(bmxu), bmYUnit(bmyu),
+              begTime(DBL_MAX),
+              endTime(-DBL_MAX)
     {
         QString cmu = cm->y()->unit();
-        yUnitScale = Unit::scale(cmu, bmyu);
-        yUnitBias  = Unit::bias(cmu, bmyu);
+        yUnitScale = 1.0;
+        yUnitBias = 0.0;
+        if ( !bmyu.isEmpty() ) {
+            yUnitScale = Unit::scale(cmu, bmyu);
+            yUnitBias  = Unit::bias(cmu, bmyu);
+        }
     }
 
     CurveModel* curveModel;
@@ -73,6 +79,9 @@ struct CurveInfo
 
     double yUnitScale; // Calculated in constructor
     double yUnitBias;  // Calculated in constructor
+
+    double begTime;
+    double endTime;
 };
 
 class CurveOperation {
@@ -98,6 +107,28 @@ public:
                                       [](double acc, double val)
                                       { return acc + val * val; });
         return std::sqrt(sumOfSquares);
+    }
+};
+
+class LowerBoundOperation : public CurveOperation {
+public:
+    QString name() const override { return "lower_bound"; }
+    double compute(const QVector<double>& values) const override {
+        if (values.isEmpty()) {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+        return *std::min_element(values.begin(), values.end());
+    }
+};
+
+class UpperBoundOperation : public CurveOperation {
+public:
+    QString name() const override { return "upper_bound"; }
+    double compute(const QVector<double>& values) const override {
+        if (values.isEmpty()) {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+        return *std::max_element(values.begin(), values.end());
     }
 };
 
@@ -284,6 +315,7 @@ private:
     void _keyPressI();
     void _keyPressS();
     void _keyPressM();
+    void _keyPressE();
     void _keyPressMinus();
 
     QFrame* _bw_frame;

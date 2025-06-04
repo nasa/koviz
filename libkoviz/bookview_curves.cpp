@@ -2234,6 +2234,7 @@ void CurvesView::keyPressEvent(QKeyEvent *event)
     case Qt::Key_I: _keyPressI();break;
     case Qt::Key_S: _keyPressS();break;
     case Qt::Key_M: _keyPressM();break;
+    case Qt::Key_E: _keyPressE();break;
     case Qt::Key_Minus: _keyPressMinus();break;
     default: ; // do nothing
     }
@@ -3478,6 +3479,15 @@ void CurvesView::_keyPressM()
     _combinePlotCurves(curveOp);
 }
 
+void CurvesView::_keyPressE()
+{
+    LowerBoundOperation lb_curveOp;
+    _combinePlotCurves(lb_curveOp);
+
+    UpperBoundOperation ub_curveOp;
+    _combinePlotCurves(ub_curveOp);
+}
+
 // Takes curves of curve's view plot and generates a new curve on the plot
 // by combining the curves using the given "curveOp".
 // For example, if curveOp is a summation,
@@ -3496,7 +3506,7 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
     int nCurvesToSum = curveIdxs.size();
 
     // Get list of curves to sum
-    QList<CurveInfo> curveInfos;
+    QList<CurveInfo*> curveInfos;
     foreach ( QModelIndex curveIdx, curveIdxs ) {
         CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
         double xs = _bookModel()->getDataDouble(curveIdx,"CurveXScale");
@@ -3506,7 +3516,7 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
         QString bmxu = _bookModel()->getDataString(curveIdx,"CurveXUnit");
         QString bmyu = _bookModel()->getDataString(curveIdx,"CurveYUnit");
         if ( curveModel ) {
-            curveInfos.append({curveModel,xs,xb,ys,yb,bmxu,bmyu});
+            curveInfos.append(new CurveInfo{curveModel,xs,xb,ys,yb,bmxu,bmyu});
         }
     }
 
@@ -3515,14 +3525,14 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
     }
 
     // Map all models
-    foreach (CurveInfo curveInfo, curveInfos) {
-        curveInfo.curveModel->map();
+    foreach (CurveInfo* curveInfo, curveInfos) {
+        curveInfo->curveModel->map();
     }
 
     bool isXTime = true;
-    foreach (CurveInfo curveInfo, curveInfos) {
-        if ( curveInfo.curveModel->t()->name() !=
-             curveInfo.curveModel->x()->name() ) {
+    foreach (CurveInfo* curveInfo, curveInfos) {
+        if ( curveInfo->curveModel->t()->name() !=
+             curveInfo->curveModel->x()->name() ) {
             isXTime = false;
             break;
         }
@@ -3531,27 +3541,27 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
     // Choose x time unit
     QString xUnit;
     if ( isXTime ) {
-        foreach (CurveInfo curveInfo, curveInfos) {
-            if ( !curveInfo.bmXUnit.isEmpty() ) {
-                xUnit = curveInfo.bmXUnit ;
+        foreach (CurveInfo* curveInfo, curveInfos) {
+            if ( !curveInfo->bmXUnit.isEmpty() ) {
+                xUnit = curveInfo->bmXUnit ;
                 break;  // Choose first book model x unit (if it exists)
             } else {
-                xUnit = curveInfo.curveModel->x()->unit();
+                xUnit = curveInfo->curveModel->x()->unit();
             }
         }
     }
 
     // Check if y units are all in same family for conversion
     QString yUnit;
-    foreach (CurveInfo curveInfo, curveInfos) {
+    foreach (CurveInfo* curveInfo, curveInfos) {
         if ( yUnit.isEmpty() ) {
-            if ( !curveInfo.bmYUnit.isEmpty() ) {
-                yUnit = curveInfo.bmYUnit ;
+            if ( !curveInfo->bmYUnit.isEmpty() ) {
+                yUnit = curveInfo->bmYUnit ;
             } else {
-                yUnit = curveInfo.curveModel->y()->unit();
+                yUnit = curveInfo->curveModel->y()->unit();
             }
         } else {
-            if ( !Unit::canConvert(yUnit,curveInfo.curveModel->y()->unit()) ) {
+            if ( !Unit::canConvert(yUnit,curveInfo->curveModel->y()->unit()) ) {
                 yUnit.clear();
                 break;
             }
@@ -3560,15 +3570,15 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
 
     // Hash to keep previous points and unit for each iterator
     QHash<ModelIterator*, QPointF> it2prevPoint;
-    QHash<ModelIterator*, const CurveInfo*> it2curveInfo;
+    QHash<ModelIterator*, CurveInfo*> it2curveInfo;
     // Map each curve and get iterators for each curve
     QList<ModelIterator*> iterators;
-    foreach (const CurveInfo& curveInfo, curveInfos) {
-        ModelIterator* it = curveInfo.curveModel->begin();
+    foreach (CurveInfo* curveInfo, curveInfos) {
+        ModelIterator* it = curveInfo->curveModel->begin();
         it->start();
         iterators.append(it);
         it2prevPoint.insert(it,QPointF(qQNaN(),qQNaN()));
-        it2curveInfo.insert(it,&curveInfo);
+        it2curveInfo.insert(it,curveInfo);
     }
 
     // Get time match tolerance for comparing timestamps
@@ -3576,32 +3586,19 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
                                              "TimeMatchTolerance",
                                              "");
 
-    // Calculate intersection of time domains for all curves
-    // i.e. the time segment [begTime-tmt,endTime+tmt] which contains all curves
-    double begTime = -DBL_MAX;  // max of mins
-    double endTime = DBL_MAX;   // min of maxs
+    // Calculate beg/end times for all curves
     foreach (ModelIterator* it, iterators) {
-        double minTime = DBL_MAX;
-        double maxTime = -DBL_MAX;
         while ( !it->isDone() ) {
             double t = _getTime(isXTime,xUnit,it,it2curveInfo.value(it));
-            if ( t < minTime && !qIsNaN(it->y()) ) {
-                minTime = t;
+            if ( t < it2curveInfo.value(it)->begTime && !qIsNaN(it->y()) ) {
+                it2curveInfo.value(it)->begTime = t;
             }
-            if ( t > maxTime && !qIsNaN(it->y()) ) {
-                maxTime = t;
+            if ( t > it2curveInfo.value(it)->endTime && !qIsNaN(it->y()) ) {
+                it2curveInfo.value(it)->endTime = t;
             }
             it->next();
         }
-        if ( minTime > begTime ) {
-            begTime = minTime;
-        }
-        if ( maxTime < endTime ) {
-            endTime = maxTime;
-        }
     }
-    begTime -= tmt;
-    endTime += tmt;
 
     // Reset all iterators to start
     foreach (ModelIterator* it, iterators) {
@@ -3683,10 +3680,11 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
                     t = _getTime(isXTime,xUnit,it,it2curveInfo.value(it));
                 }
                 if (!it->isDone() && qAbs(t-minTime) > tmt ) {
-                    // Iterator time doesn't match, try to interpolate
-                    // Note: No extrapolation, time inside intersection of time
-                    //       domains of all curves
-                    if ( minTime >= begTime && minTime <= endTime ) {
+                    // Iterator time doesn't match, try to interpolate.
+                    // Interpolate if time inside curve's beg/end times.
+                    // Do not extrapolate.
+                    if ( minTime >= it2curveInfo.value(it)->begTime &&
+                         minTime <= it2curveInfo.value(it)->endTime ) {
                         double unitScale = 1.0;
                         double unitBias = 0.0;
                         if ( !yUnit.isEmpty() ) {
@@ -3716,8 +3714,9 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
                             break;
                         }
                     } else {
-                        isOK = false;
-                        break;
+                        // Do nothing, but allow combining of points for other
+                        // curves that do match instead of breaking out of this
+                        // loop for a curve that does not match
                     }
                 } else if (!it->isDone() && qAbs(t-minTime) <= tmt ) {
                     // Iterator time matches
@@ -3737,8 +3736,9 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
                         break;
                     }
                 } else {
-                    isOK = false;
-                    break;
+                    // Do nothing, but allow combining of points for other
+                    // curves that do match instead of breaking out of this
+                    // loop for a curve that does not match
                 }
             }
             if ( isOK ) {
@@ -3774,9 +3774,10 @@ void CurvesView::_combinePlotCurves(CurveOperation &curveOp)
     // Clean up iterators
     qDeleteAll(iterators);
 
-    // Unmap curve models
-    foreach (CurveInfo curveInfo, curveInfos) {
-        curveInfo.curveModel->unmap();
+    // Unmap curve models and clean curveInfos
+    foreach (CurveInfo* curveInfo, curveInfos) {
+        curveInfo->curveModel->unmap();
+        delete curveInfo;
     }
 
     // Create curve model from points
