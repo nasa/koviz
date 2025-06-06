@@ -140,6 +140,7 @@ class SnapOptions : public Options
     QString videoFileName;
     double videoOffset;
     QString videoList;
+    QString showVideo;
     QString unitOverrides;
     QString group1;
     QString group2;
@@ -298,6 +299,8 @@ int main(int argc, char *argv[])
     opts.add("-videoList", &opts.videoList, "",
              "list of videos and colon delimited offsets "
              "e.g.: \"myvideo.mp4:123.4,myothervideo.mp4:567.8");
+    opts.add("-showVideo", &opts.showVideo,"",
+             "Show video if possible - valid values yes,no,1,0 etc.");
     opts.add("-units", &opts.unitOverrides, "",
              "comma delimited list of override units e.g. -units \"in,d\"");
     opts.add("-showUnits:{0,1}",&opts.isShowUnits,false,
@@ -508,6 +511,35 @@ int main(int argc, char *argv[])
             } else {
                 videos.append(qMakePair(item.trimmed(),0.0));
             }
+        }
+    }
+
+    // Enable/disable showing video
+    bool showVideo;
+    if ( !opts.showVideo.isEmpty() ) {
+        bool ok;
+        bool isShow = Options::stringToBool(opts.showVideo,&ok);
+        if ( ok ) {
+            showVideo = isShow;
+        } else {
+            fprintf(stderr, "koviz [error]: Bad option \"%s\" for -showVideo.  "
+                            "Should be a boolean like true,yes,no,0,1 etc.\n",
+                            opts.showVideo.toLatin1().constData());
+            exit(-1);
+        }
+    } else {
+        // -showVideo not set
+        if ( !opts.videoFileName.isEmpty() || !opts.videoList.isEmpty() ) {
+            // If -video or -videoList option set, show video
+            showVideo = true;
+        } else {
+            // Else use what's in the koviz.conf settings file
+            QSettings settings("JSC", "koviz");
+            if (!settings.contains("VideoWindow/showVideo")) {
+                // Make koviz.conf's showVideo default true
+                settings.setValue("VideoWindow/showVideo", true);
+            }
+            showVideo = settings.value("VideoWindow/showVideo").toBool();
         }
     }
 
@@ -1245,6 +1277,7 @@ int main(int argc, char *argv[])
         bookModel->addChild(rootItem,"ButtonReset",opts.buttonReset );
         bookModel->addChild(rootItem,"XAxisLabel",xaxislabel );
         bookModel->addChild(rootItem,"YAxisLabel",yaxislabel );
+        bookModel->addChild(rootItem,"ShowVideo",showVideo );
 
         if ( isTrk ) {
 

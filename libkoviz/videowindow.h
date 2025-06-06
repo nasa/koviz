@@ -7,6 +7,8 @@
 #include <time.h>
 #include <math.h>
 #include <cstdlib>
+#include <thread>
+#include <chrono>
 
 #include <QMainWindow>
 #include <QtGlobal>
@@ -102,7 +104,7 @@ public slots:
 signals:
     void mpv_events();
     void timechangedByMpv(double time);
-    void close();
+    void closeVidView();
 
 private:
     QList<Video*> _videos;

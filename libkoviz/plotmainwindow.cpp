@@ -272,7 +272,8 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
         _blender->sendRun2Bvis(rundir);
     }
 
-    if ( !_videos.isEmpty() ) {
+    bool showVideo = _bookModel->getDataBool(QModelIndex(),"ShowVideo","");
+    if ( !_videos.isEmpty() && showVideo ) {
 #ifndef HAS_MPV
         fprintf(stderr, "koviz [error]: koviz built without mpv video support!"
                         "  Please install mpv and rebuild koviz!\n");
@@ -342,7 +343,13 @@ void PlotMainWindow::createMenu()
     _openVideoAction = _fileMenu->addAction(tr("Open &Video"));
 #endif
     _exitAction = _fileMenu->addAction(tr("E&xit"));
+    _showVideoAction = _optsMenu->addAction(tr("ShowVideo"));
+        _showVideoAction->setCheckable(true);
+        bool showVideo = _bookModel->getDataBool(QModelIndex(),"ShowVideo","");
+        _showVideoAction->setChecked(showVideo);
     _showLiveCoordAction = _optsMenu->addAction(tr("ShowLiveCoord"));
+        _showLiveCoordAction->setCheckable(true);
+        _showLiveCoordAction->setChecked(true);
     _refreshPlotsAction  = _optsMenu->addAction(tr("RefreshPlots"));
     _clearPlotsAction  = _optsMenu->addAction(tr("ClearPlots"));
     _clearTablesAction = _optsMenu->addAction(tr("ClearTables"));
@@ -352,8 +359,6 @@ void PlotMainWindow::createMenu()
     _enableDragDropAction->setCheckable(true);
     _filterOutFlatLinesAction = _optsMenu->addAction(
                                                   tr("FilterOutFlatlineZeros"));
-    _showLiveCoordAction->setCheckable(true);
-    _showLiveCoordAction->setChecked(true);
     _selectRunsHomeAction = _optsMenu->addAction(tr("SelectRunsHome"));
     _menuBar->addMenu(_fileMenu);
     _menuBar->addMenu(_optsMenu);
@@ -377,6 +382,8 @@ void PlotMainWindow::createMenu()
             this, SLOT(_openVideoByMenu()));
 #endif
     connect(_exitAction, SIGNAL(triggered()),this, SLOT(close()));
+    connect(_showVideoAction, SIGNAL(triggered()),
+            this, SLOT(_toggleShowVideo()));
     connect(_showLiveCoordAction, SIGNAL(triggered()),
             this, SLOT(_toggleShowLiveCoord()));
     connect(_refreshPlotsAction, SIGNAL(triggered()),
@@ -526,8 +533,14 @@ void PlotMainWindow::_bookModelDataChanged(const QModelIndex &topLeft,
 
 void PlotMainWindow::vidViewClosed()
 {
+    bool showVideo = _bookModel->getDataBool(QModelIndex(),"ShowVideo","");
+    if ( showVideo ) {
+        QModelIndex showVideoIdx = _bookModel->getDataIndex(QModelIndex(),
+                                                            "ShowVideo","");
+        _bookModel->setData(showVideoIdx,false);
+        _showVideoAction->setChecked(false);
+    }
     vidView = 0;
-    _videos.clear();
 }
 
 void PlotMainWindow::_scriptError(QProcess::ProcessError error)
@@ -1490,7 +1503,7 @@ void PlotMainWindow::_openVideos(const QList<QPair<QString, double> > &videos)
         this->setFocusPolicy(Qt::StrongFocus);
         connect(vidView,SIGNAL(timechangedByMpv(double)),
                 this, SLOT(setTimeFromVideo(double)));
-        connect(vidView,SIGNAL(close()), this, SLOT(vidViewClosed()));
+        connect(vidView,SIGNAL(closeVidView()), this, SLOT(vidViewClosed()));
     } else {
         if ( vidView->isHidden() ) {
             vidView->show();
@@ -1516,6 +1529,52 @@ void PlotMainWindow::_openVideos(const QList<QPair<QString, double> > &videos)
         } else {
             vidView->setGeometry(lastVideoRect);
         }
+    }
+}
+
+void PlotMainWindow::_toggleShowVideo()
+{
+    QModelIndex showVideoIdx = _bookModel->getDataIndex(QModelIndex(),
+                                                        "ShowVideo","");
+    bool showVideo = _bookModel->getDataBool(QModelIndex(),"ShowVideo","");
+    QSettings settings("JSC", "koviz");
+    if ( showVideo ) {
+        _bookModel->setData(showVideoIdx,false);
+        _showVideoAction->setChecked(false);
+        settings.setValue("VideoWindow/showVideo", false);
+        if ( vidView ) {
+            vidView->close();
+            vidView = 0;
+        }
+    } else {
+#ifndef HAS_MPV
+            QMessageBox msgBox;
+            msgBox.setText("Koviz built without mpv video support!  "
+                           "Please install mpv and rebuild koviz!");
+            msgBox.exec();
+            _showVideoAction->setChecked(false);  // reject user check
+            return;
+#endif
+        if ( !_videos.isEmpty() ) {
+            QPair<QString,double> video; // mp4name,timeoffset
+            foreach ( video, _videos ) {
+                QFileInfo fi(video.first);
+                if ( !fi.isReadable() ) {
+                    QMessageBox msgBox;
+                    QString msg = QString("Cannot find or read video=%1\n").
+                                          arg(video.first);
+                    msgBox.setText(msg);
+                    return;
+                }
+            }
+            _openVideos(_videos);
+            selectFirstCurve();
+        } else {
+            _openVideoByRun();
+        }
+        _bookModel->setData(showVideoIdx,true);
+        settings.setValue("VideoWindow/showVideo", true);
+        _showVideoAction->setChecked(true);
     }
 }
 
@@ -2287,7 +2346,10 @@ void PlotMainWindow::_monteInputsViewCurrentChanged(const QModelIndex &currIdx,
             _blender->sendRun2Bvis(runpath);
         }
 #if HAS_MPV
-        _openVideoByRun();
+        bool showVideo = _bookModel->getDataBool(QModelIndex(),"ShowVideo","");
+        if ( showVideo ) {
+            _openVideoByRun();
+        }
 #endif
     }
 }

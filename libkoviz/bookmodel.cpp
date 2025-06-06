@@ -553,6 +553,8 @@ QModelIndex PlotBookModel::getIndex(const QModelIndex &startIdx,
             idx = index(31,0);
         } else if ( searchItemText == "YAxisLabel" ) {
             idx = index(32,0);
+        } else if ( searchItemText == "ShowVideo" ) {
+            idx = index(33,0);
         } else {
             fprintf(stderr,"koviz [bad scoobs]:3: getIndex() received "
                            "root as a startIdx and had bad child "

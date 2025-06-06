@@ -84,7 +84,32 @@ void VideoWindow::closeEvent(QCloseEvent *event)
     settings.setValue("pos", pos());
     settings.endGroup();
 
-    emit close();
+#ifdef HAS_MPV
+    // Shutdown mpv videos
+    foreach (Video* video, _videos) {
+        if (video->mpv) {
+            const char *args[] = {"quit", NULL};
+            mpv_command(video->mpv, args);
+            mpv_event *event;
+            int i = 0;
+            while ( true ) {
+                event = mpv_wait_event(video->mpv, 0);
+                if (event->event_id == MPV_EVENT_SHUTDOWN) {
+                    break;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                if ( i++ > 10 ) {
+                    fprintf(stderr,"koviz [error]: Trouble terminating mpv\n");
+                    break;
+                }
+            }
+            mpv_terminate_destroy(video->mpv);
+            video->mpv = nullptr;
+        }
+    }
+#endif
+
+    emit closeVidView();
     QMainWindow::closeEvent(event);
 }
 
