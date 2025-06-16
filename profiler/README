@@ -1,0 +1,52 @@
+A tiny hack of a profiler!
+
+# Build
+% cd <koviz>/profiler
+% ./build.sh
+% ./testme
+% koviz -session session_test
+
+
+# Profile Trick sim
+% cd $HOME/dev/koviz-profiler
+% ./clean.sh
+% vi koviz.h 
+    1. Uncomment out #define TRICK
+    2. Change KOVIZ_MAX_STATS
+       This is the number of timing tags.
+       For example set KOVIZ_MAX_STATS to 2
+       to time think and dance using 
+       gettimeofday() e.g.:
+           koviz_start("gtod", "time_to_think");
+           ...
+           koviz_stop("gtod", "time_to_think);
+           koviz_start("gtod", "time_to_dance");
+           ...
+           koviz_stop("gtod", "time_to_dance);
+    3. Change KOVIZ_NRECS from 2000 if you
+       want more logging e.g. 30000 records
+       for a 30 second RUN at 1000Hz
+% cc -I/home/kvetter/dev/trick/include -c koviz.c 
+   NOTE: If the sim doesn't link,
+         instead of cc, you may need to use g++
+       
+% ar cr libkoviz.a koviz.o
+% cd SIM_iss
+% vi S_overrides.mk 
+    add:
+    TRICK_USER_LINK_LIBS += ${HOME}/dev/koviz-profiler/libkoviz.a
+% vi <modeldir/modelfile.cpp>
+    add:
+    #include <full_path>/koviz.h"
+    ...
+    koviz_start("gtod","<tag>"); // gtod is for gettimeofday
+    code to profile
+    koviz_stop("gtod","<tag>");
+ 
+% trick-CP ; # QCP -u <modeldir/modelfile.cpp> for TS21
+   NOTE: If profiling Trick, and you get something like
+         Clock.cpp:(.text+0x2e9): undefined reference to `koviz_start(char const*, char const*)'
+         % vi build/MAKE_OUT, grab the link line and put libkoviz.a at the very end of the link
+
+% run the sim to get koviz.trk
+% koviz .
