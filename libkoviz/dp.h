@@ -278,11 +278,13 @@ public:
     double stopTime();
     QString backgroundColor();
     QString foregroundColor();
+    QString tabLabel();
 
     void setStartTime(double startTime);
     void setStopTime(double stopTime);
     void setBackgroundColor(const QString& color);
     void setForegroundColor(const QString& color);
+    void setTabLabel(const QString& label);
 
 private:
     QString _title;
@@ -291,6 +293,7 @@ private:
     double _stopTime;
     QString _backgroundColor;
     QString _foregroundColor;
+    QString _tabLabel;
 };
 
 class DPTable
@@ -305,10 +308,12 @@ public:
     double startTime() const { return _startTime; }
     double stopTime() const { return _stopTime; }
     QList<DPVar*> vars() const { return _vars; }
+    QString tabLabel() const { return _tabLabel; }
 
     void setDelimiter(const QString& d) { _delimiter = d; }
     void setStartTime(double startTime) { _startTime = startTime; }
     void setStopTime(double stopTime) { _stopTime = stopTime; }
+    void setTabLabel(const QString& label) { _tabLabel = label; }
 
     DPVar* addVar(const char* title);
 
@@ -318,6 +323,7 @@ private:
     double _startTime;
     double _stopTime;
     QList<DPVar*> _vars;
+    QString _tabLabel;
 };
 
 class DPProduct

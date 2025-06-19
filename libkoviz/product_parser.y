@@ -102,6 +102,7 @@ QString dpFileName() {
 %token DP_RECT
 %token DP_PRESENTATION
 %token DP_HLINE DP_COLOR DP_LABEL_UNITS DP_LABEL_ORIENT
+%token DP_TAB_LABEL
 
 %token <sval> DP_STR
 %token <dval> DP_FLOAT
@@ -191,6 +192,9 @@ page_options:
         }
         | page_options DP_FONT ':' DP_STR  {
                 msg("PAGE.FONT spec not supported");
+        }
+        | page_options DP_TAB_LABEL ':' DP_STR  {
+                currPage->setTabLabel($4);
         }
         ;
 
@@ -559,6 +563,9 @@ table_options:
         }
         | table_options DP_COLUMN_WIDTH ':' DP_FLOAT {
                 msg("TABLE.COLUMN_WIDTH not supported");
+        }
+        | table_options DP_TAB_LABEL ':' DP_STR {
+                currTable->setTabLabel($4);
         }
         ;
 

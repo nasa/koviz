@@ -1,0 +1,8 @@
+Koviz
+
+PLOTS:
+  Page 1: "Car Acceleration"
+    Tab_Label: "Accelerating In The Rain In Spain"
+    Plot 1: ""
+      x_variable: "sys.exec.out.time"
+      y_variable: "acceleration"

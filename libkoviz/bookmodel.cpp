@@ -2480,6 +2480,7 @@ QStandardItem *PlotBookModel::createPageItem()
 
     static int pageId = 0 ;
     QString pageName = QString("Page_%0").arg(pageId++);
+    addChild(pageItem, "PageTabLabel", "");
     addChild(pageItem, "PageName", pageName);
     addChild(pageItem, "PageTitle", "Koviz");
     addChild(pageItem, "PageStartTime", -DBL_MAX);

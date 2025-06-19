@@ -311,6 +311,11 @@ QString DPPage::foregroundColor()
     return _foregroundColor;
 }
 
+QString DPPage::tabLabel()
+{
+    return _tabLabel;
+}
+
 void DPPage::setStartTime(double startTime)
 {
     _startTime = startTime;
@@ -329,6 +334,11 @@ void DPPage::setBackgroundColor(const QString &color)
 void DPPage::setForegroundColor(const QString &color)
 {
     _foregroundColor = color;
+}
+
+void DPPage::setTabLabel(const QString &label)
+{
+    _tabLabel = label;
 }
 
 DPPlot::DPPlot(const QDomElement &e) :

@@ -423,11 +423,15 @@ void BookView::rowsInserted(const QModelIndex &pidx, int start, int end)
             int tabId = _nb->addTab(pageView,"Page");
             QString pageName = _bookModel()->getDataString(pidx,
                                                            "PageName","Page");
-            QString shortName = pageName.split(":").at(0);
-            QFileInfo fi(shortName);
-            shortName = fi.fileName();
+            QString pageTabLabel = _bookModel()->getDataString(pidx,
+                                                         "PageTabLabel","Page");
+            if ( pageTabLabel.isEmpty() ) {
+                QString shortName = pageName.split(":").at(0);
+                QFileInfo fi(shortName);
+                pageTabLabel = fi.fileName();
+            }
             _nb->setTabToolTip(tabId,pageName);
-            _nb->setTabText(tabId,shortName);
+            _nb->setTabText(tabId,pageTabLabel);
             _nb->setTabWhatsThis(tabId, "Page");
         } else if ( cText == "TableName") {
             TablePageView* tablePageView = new TablePageView;
@@ -437,11 +441,15 @@ void BookView::rowsInserted(const QModelIndex &pidx, int start, int end)
             int tabId = _nb->addTab(tablePageView,"Table");
             QString tableName = _bookModel()->getDataString(pidx,
                                                            "TableName","Table");
-            QString shortName = tableName.split(":").at(0) + ".table";
-            QFileInfo fi(shortName);
-            shortName = fi.fileName();
+            QString tableTabLabel = _bookModel()->getDataString(pidx,
+                                                       "TableTabLabel","Table");
+            if ( tableTabLabel.isEmpty() ) {
+                QString shortName = tableName.split(":").at(0) + ".table";
+                QFileInfo fi(shortName);
+                tableTabLabel = fi.fileName();
+            }
             _nb->setTabToolTip(tabId,tableName);
-            _nb->setTabText(tabId,shortName);
+            _nb->setTabText(tabId,tableTabLabel);
             _nb->setTabWhatsThis(tabId, "Table");
         }
     }

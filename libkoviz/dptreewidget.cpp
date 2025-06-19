@@ -382,6 +382,9 @@ void DPTreeWidget::_createDPPages(const QString& dpfile)
         // Page
         QStandardItem *pageItem = _addChild(pagesItem,"Page");
 
+        // Notebook Tab label
+        _addChild(pageItem, "PageTabLabel", page->tabLabel());
+
         // PageName
         QString pageName = dpfile;
         pageName += QString(":dp.page.%0").arg(_idNum++);
@@ -656,6 +659,9 @@ void DPTreeWidget::_createDPTables(const QString &dpfile)
 
         // Table
         QStandardItem *tableItem = _addChild(tablesItem,"Table");
+
+        // Notebook Tab label
+        _addChild(tableItem, "TableTabLabel", table->tabLabel());
 
         // TableName
         QString tableName = dpfile;

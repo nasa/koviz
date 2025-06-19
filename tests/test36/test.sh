@@ -1,0 +1,20 @@
+#! /usr/bin/env bash
+
+echo "---------------------------------------------------"
+echo "              Test Page Tab Titles                 "
+echo "---------------------------------------------------"
+echo ""
+echo "Action1: N/A"
+echo "Expect1: Tab titles Position,Position,DP_1,Velocity,"
+echo "         Acceleration,Tableaux,"
+echo "         Accelerating In The Rain In Spain"
+echo ""
+echo "Action2: Click acceleration in vars panel"
+echo "Expect2: Hop to page with acceleration"
+echo ""
+echo "Action3: Remove first 3 pages: Position,Position,DP_1"
+echo ""
+echo "Action4: Click position in vars panel"
+echo "Expect4: New page with position appears Page_0"
+echo ""
+koviz DP_1 DP_2 a.csv

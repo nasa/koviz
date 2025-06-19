@@ -1,0 +1,39 @@
+Koviz
+
+PLOTS:
+  Page 1: "Car Position"
+    Tab_Label: "Position"
+    Plot 1: ""
+      x_variable: "sys.exec.out.time"
+      y_variable: "position"
+
+  Page 2: "Car Position Repeated"
+    Tab_Label: "Position"
+    Plot 1: ""
+      x_variable: "sys.exec.out.time"
+      y_variable: "position"
+
+  Page 3: "Position with empty DP label"
+    Tab_Label: ""
+    Plot 1: ""
+      x_variable: "sys.exec.out.time"
+      y_variable: "position"
+
+  Page 4: "Car Velocity"
+    Tab_Label: "Velocity"
+    Plot 1: ""
+      x_variable: "sys.exec.out.time"
+      y_variable: "velocity"
+
+  Page 5: "Car Acceleration"
+    Tab_Label: "Accleration"
+    Plot 1: "Acceleration"
+      x_variable: "sys.exec.out.time"
+      y_variable: "acceleration"
+
+TABLES:
+  Table 1: "My Table"
+    Tab_Label: "Tableaux"
+    variable: position
+    variable: velocity
+    variable: acceleration
