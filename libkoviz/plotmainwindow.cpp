@@ -12,6 +12,7 @@
 #include <QProcess>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QScreen>
 
 #include "plotmainwindow.h"
 
@@ -2381,9 +2382,11 @@ void PlotMainWindow::_readMainWindowSettings()
 {
     QSettings settings("JSC", "koviz");
     settings.beginGroup("PlotMainWindow");
-    resize(settings.value("size", QSize(1300, 720)).toSize());
-    move(settings.value("pos", QPoint(200, 200)).toPoint());
+    QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
+    QSize size = settings.value("size", QSize(1300, 720)).toSize();
     settings.endGroup();
+
+    __placeWindow(this,pos,size);
 }
 
 void PlotMainWindow::_readVideoWindowSettings()
@@ -2391,9 +2394,31 @@ void PlotMainWindow::_readVideoWindowSettings()
     if ( vidView ) {
         QSettings settings("JSC", "koviz");
         settings.beginGroup("VideoWindow");
-        vidView->resize(settings.value("size", QSize(1300, 720)).toSize());
-        vidView->move(settings.value("pos", QPoint(50, 50)).toPoint());
+        QPoint pos = settings.value("pos", QPoint(50, 50)).toPoint();
+        QSize size = settings.value("size", QSize(1300, 720)).toSize();
         settings.endGroup();
+
+        __placeWindow(vidView, pos, size);
+    }
+}
+
+void PlotMainWindow::__placeWindow(QWidget *window,
+                                   const QPoint &pos, const QSize &size)
+{
+    // Apply size
+    window->resize(size);
+
+    // Move window to saved position if it is viewable at saved position
+    bool isPositionValid = false;
+    foreach ( QScreen* screen, QGuiApplication::screens() ) {
+        QRect screenGeom = screen->availableGeometry();
+        if (screenGeom.contains(pos)) {
+            isPositionValid = true;
+            break;
+        }
+    }
+    if (isPositionValid) {
+        window->move(pos);
     }
 }
 

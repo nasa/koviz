@@ -161,6 +161,7 @@ private:
     void _writeSettings();
     void _readMainWindowSettings();
     void _readVideoWindowSettings();
+    void __placeWindow(QWidget* window, const QPoint& pos, const QSize& size);
 
     QModelIndex _currentIdx();
 
