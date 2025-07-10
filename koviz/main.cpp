@@ -140,6 +140,7 @@ class SnapOptions : public Options
     QString videoFileName;
     double videoOffset;
     QString videoList;
+    QString videoDir;
     QString showVideo;
     QString unitOverrides;
     QString group1;
@@ -298,7 +299,9 @@ int main(int argc, char *argv[])
              "video time sync offset");
     opts.add("-videoList", &opts.videoList, "",
              "list of videos and colon delimited offsets "
-             "e.g.: \"myvideo.mp4:123.4,myothervideo.mp4:567.8");
+             "e.g. \"myvideo.mp4:123.4,myothervideo.mp4:567.8\"");
+    opts.add("-videoDir", &opts.videoDir, "",
+             "relative path to video directory from RUN e.g. ../Video");
     opts.add("-showVideo", &opts.showVideo,"",
              "Show video if possible - valid values yes,no,1,0 etc.");
     opts.add("-units", &opts.unitOverrides, "",
@@ -495,8 +498,7 @@ int main(int argc, char *argv[])
         QStringList items = opts.videoList.split(',',skipEmptyParts);
         foreach ( QString item, items ) {
             if ( item.contains(':') ) {
-                QString f = item.split(':',
-                                       skipEmptyParts).at(0).trimmed();
+                QString f = item.split(':',skipEmptyParts).at(0).trimmed();
                 QString s = item.split(':',skipEmptyParts).at(1);
                 bool ok;
                 double o = s.toDouble(&ok);
@@ -512,6 +514,20 @@ int main(int argc, char *argv[])
                 videos.append(qMakePair(item.trimmed(),0.0));
             }
         }
+    }
+
+    // -videoDir: relative path from RUN to video directory
+    QString videoDir;
+    if ( !opts.videoDir.isEmpty() ) {
+        videoDir = opts.videoDir;
+    } else {
+        // -videoDir option not used
+        QSettings settings("JSC", "koviz");
+        if (!settings.contains("VideoWindow/videoDir")) {
+            // Make koviz.conf's video directory default to "video"
+            settings.setValue("VideoWindow/videoDir", "video");
+        }
+        videoDir = settings.value("VideoWindow/videoDir").toString();
     }
 
     // Enable/disable showing video
@@ -1278,6 +1294,7 @@ int main(int argc, char *argv[])
         bookModel->addChild(rootItem,"XAxisLabel",xaxislabel );
         bookModel->addChild(rootItem,"YAxisLabel",yaxislabel );
         bookModel->addChild(rootItem,"ShowVideo",showVideo );
+        bookModel->addChild(rootItem,"VideoDir", videoDir);
 
         if ( isTrk ) {
 

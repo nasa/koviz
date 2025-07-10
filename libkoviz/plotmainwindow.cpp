@@ -12,6 +12,7 @@
 #include <QProcess>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QInputDialog>
 
 #include "plotmainwindow.h"
 
@@ -347,6 +348,7 @@ void PlotMainWindow::createMenu()
         _showVideoAction->setCheckable(true);
         bool showVideo = _bookModel->getDataBool(QModelIndex(),"ShowVideo","");
         _showVideoAction->setChecked(showVideo);
+    _videoDirAction = _optsMenu->addAction(tr("VideoDirectory"));
     _showLiveCoordAction = _optsMenu->addAction(tr("ShowLiveCoord"));
         _showLiveCoordAction->setCheckable(true);
         _showLiveCoordAction->setChecked(true);
@@ -384,6 +386,8 @@ void PlotMainWindow::createMenu()
     connect(_exitAction, SIGNAL(triggered()),this, SLOT(close()));
     connect(_showVideoAction, SIGNAL(triggered()),
             this, SLOT(_toggleShowVideo()));
+    connect(_videoDirAction, SIGNAL(triggered()),
+            this, SLOT(_chooseVideoDirectory()));
     connect(_showLiveCoordAction, SIGNAL(triggered()),
             this, SLOT(_toggleShowLiveCoord()));
     connect(_refreshPlotsAction, SIGNAL(triggered()),
@@ -1355,7 +1359,9 @@ void PlotMainWindow::_openVideoByRun()
     if ( i >= 0 && _videos.isEmpty() ) { // No cmdline or menu opened videos
         // Look in RUN dir for videos
         QString runpath = _runs->runPaths().at(i);
-        QString videoDirName = runpath + "/video";
+        QString videoDir = _bookModel->getDataString(QModelIndex(),
+                                                     "VideoDir","");
+        QString videoDirName = runpath + "/" + videoDir;
         QFileInfo fi(videoDirName);
         QList<QPair<QString, double> > videos;
         if ( fi.exists() && fi.isDir() ) {
@@ -1575,6 +1581,23 @@ void PlotMainWindow::_toggleShowVideo()
         _bookModel->setData(showVideoIdx,true);
         settings.setValue("VideoWindow/showVideo", true);
         _showVideoAction->setChecked(true);
+    }
+}
+
+void PlotMainWindow::_chooseVideoDirectory()
+{
+    QString currVideoDir = _bookModel->getDataString(QModelIndex(),
+                                                     "VideoDir","");
+    QString videoDir = QInputDialog::getText(this, "VideoDir",
+                                             "Video directory path:",
+                                             QLineEdit::Normal,currVideoDir);
+
+    if (!videoDir.isEmpty()) {
+        QSettings settings("JSC", "koviz");
+        QModelIndex videoDirIdx = _bookModel->getDataIndex(QModelIndex(),
+                                                           "VideoDir","");
+        _bookModel->setData(videoDirIdx,videoDir);
+        settings.setValue("VideoWindow/videoDir", videoDir);
     }
 }
 
