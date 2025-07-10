@@ -129,6 +129,7 @@ private:
     QAction *_openVideoAction;
     QAction *_exitAction;
     QAction *_showVideoAction;
+    QAction *_videoDirAction;
     QAction *_showLiveCoordAction;
     QAction *_refreshPlotsAction;
     QAction *_clearPlotsAction;
@@ -187,6 +188,7 @@ private slots:
      void _openVideoByRun();
      void _openVideoByMenu();
      void _toggleShowVideo();
+     void _chooseVideoDirectory();
      void _toggleShowLiveCoord();
      void _refreshPlots();
      void _clearPlots();
