@@ -20,15 +20,27 @@ RunsWidget::RunsWidget(Runs *runs,
     _fileModel = new QFileSystemModel;
 
     // Set initial runs home
-    _runsHome = QDir::currentPath();
-    QString exePath = _runsHome + QDir::separator() + "koviz.exe";
-    QString iconPath = _runsHome + QDir::separator() + "koviz.ico";
-    if (QFile::exists(exePath) && QFile::exists(iconPath)) {
-        // If koviz.exe and koviz.ico are in the current path,
-        // assume this is being launched from a Windows install location.
-        // In this case, set runs home to user's home directory
-        _runsHome = QStandardPaths::
+    QSettings settings("JSC", "koviz");
+    settings.beginGroup("PlotMainWindow");
+    QString _runsHome = settings.value("runsHome", QString("")).toString();
+    settings.endGroup();
+    if ( !_runsHome.isEmpty() ) {
+        QFileInfo fi(_runsHome);
+        if ( !fi.isDir() ) {
+            _runsHome = QString("");  // unset runs home since it DNE
+        }
+    }
+    if ( _runsHome.isEmpty() ) {
+        _runsHome = QDir::currentPath();
+        QString exePath = _runsHome + QDir::separator() + "koviz.exe";
+        QString iconPath = _runsHome + QDir::separator() + "koviz.ico";
+        if (QFile::exists(exePath) && QFile::exists(iconPath)) {
+            // If koviz.exe and koviz.ico are in the current path,
+            // assume this is being launched from a Windows install location.
+            // In this case, set runs home to user's home directory
+            _runsHome = QStandardPaths::
                                  writableLocation(QStandardPaths::HomeLocation);
+        }
     }
     _fileModel->setRootPath(_runsHome);
 

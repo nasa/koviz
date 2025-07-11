@@ -13,6 +13,7 @@
 #include <QSortFilterProxyModel>
 #include <QRegularExpression>
 #include <QStandardPaths>
+#include <QSettings>
 
 #include "bookmodel.h"
 #include "monteinputsview.h"

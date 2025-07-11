@@ -2146,7 +2146,16 @@ void PlotMainWindow::_selectRunsHome()
                                                    currRunsHome,
                                                    QFileDialog::ShowDirsOnly);
     if ( !runsHome.isEmpty() ) {
-        _runsWidget->setRunsHome(runsHome);
+        QFileInfo fi(runsHome);
+        if ( fi.isDir() ) {
+            _runsWidget->setRunsHome(runsHome);
+
+            // Save runs home in .config
+            QSettings settings("JSC", "koviz");
+            settings.beginGroup("PlotMainWindow");
+            settings.setValue("runsHome", runsHome);
+            settings.endGroup();
+        }
     }
 }
 
