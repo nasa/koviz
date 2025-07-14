@@ -96,6 +96,7 @@ public:
 protected:
     void closeEvent(QCloseEvent *event) override;
     bool eventFilter(QObject* obj, QEvent* event) override;
+     void keyPressEvent(QKeyEvent *event) override;
 
 public slots:
     void on_mpv_events();

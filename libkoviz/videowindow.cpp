@@ -204,6 +204,27 @@ bool VideoWindow::eventFilter(QObject *obj, QEvent *event)
     return QMainWindow::eventFilter(obj,event);
 }
 
+void VideoWindow::keyPressEvent(QKeyEvent *event)
+{
+    if ( event->key() == Qt::Key_Space ) {
+        foreach (Video* video, _videos) {
+            if (video->mpv) {
+                char* prop = mpv_get_property_string(video->mpv,"pause");
+                if ( prop ) {
+                    if ( !strcmp(prop,"no") ) {
+                        mpv_set_option_string(video->mpv,"pause","yes");
+                    } else {
+                        mpv_set_option_string(video->mpv,"pause","no");
+                    }
+                    mpv_free(prop);
+                }
+            }
+        }
+    } else {
+       QWidget::keyPressEvent(event);
+    }
+}
+
 void VideoWindow::seek_time(double time) {
 #ifndef HAS_MPV
     Q_UNUSED(time)
@@ -493,8 +514,10 @@ Video* VideoWindow::_create_video()
     mpv_container->setAttribute(Qt::WA_DontCreateNativeAncestors);
     mpv_container->setAttribute(Qt::WA_NativeWindow);
 
+#ifndef _WIN32
     mpv_set_option_string(mpv, "input-default-bindings", "yes");
     mpv_set_option_string(mpv, "input-vo-keyboard", "yes");
+#endif
     mpv_set_option_string(mpv, "keep-open", "always");
     mpv_set_option_string(mpv, "osd-level", "0");
 
