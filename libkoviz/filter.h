@@ -44,12 +44,16 @@ extern "C"{
 #if DOUBLE_PRECISION
 #define FTR_PRECISION double
 #if defined(_WIN32) || defined(__ZEPHYR__)
+#ifndef M_PI
 #define M_PI 3.141592653589793238462643383279502884197163993751
+#endif
 #endif
 #else
 #define FTR_PRECISION float
 #if defined(_WIN32) || defined(__ZEPHYR__)
+#ifndef M_PI
 #define M_PI 3.1415927
+#endif
 #endif
 #endif
 

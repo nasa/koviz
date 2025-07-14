@@ -17,6 +17,7 @@
 //
 
 // system headers
+#include <QString.h>
 #include <stdio.h>
 #include <stddef.h>             // for size_t
 #include <stdlib.h>             // for CentOS7 build
@@ -139,16 +140,11 @@ float_mat::float_mat(const size_t rows,const size_t cols,const double defval)
         (*this)[i].resize(cols, defval);
     }
     if ((rows < 1) || (cols < 1)) {
-        char* buffer;
-        int ret = asprintf(&buffer,
-                          "cannot build matrix with %lu rows and %lu columns\n",
-                          rows, cols);
-        if ( ret > 0 ) {
-            sgs_error(buffer);
-            free(buffer);
-        } else {
-            sgs_error("koviz [error]: S-golay filter can't allocate memory!\n");
-        }
+        QString s = QString("Cannot build matrix with %1 rows and %2 columns\n").
+                    arg(rows).arg(cols);
+        char* buffer = s.toLocal8Bit().data();
+        sgs_error(buffer);
+        free(buffer);
     }
 }
 
