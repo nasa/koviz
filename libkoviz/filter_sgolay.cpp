@@ -17,7 +17,7 @@
 //
 
 // system headers
-#include <QString.h>
+#include <QString>
 #include <stdio.h>
 #include <stddef.h>             // for size_t
 #include <stdlib.h>             // for CentOS7 build
