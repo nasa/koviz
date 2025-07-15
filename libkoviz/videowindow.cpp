@@ -206,6 +206,10 @@ bool VideoWindow::eventFilter(QObject *obj, QEvent *event)
 
 void VideoWindow::keyPressEvent(QKeyEvent *event)
 {
+#ifndef HAS_MPV
+   QWidget::keyPressEvent(event);
+#endif
+#ifdef HAS_MPV
     if ( event->key() == Qt::Key_Space ) {
         foreach (Video* video, _videos) {
             if (video->mpv) {
@@ -223,6 +227,7 @@ void VideoWindow::keyPressEvent(QKeyEvent *event)
     } else {
        QWidget::keyPressEvent(event);
     }
+#endif
 }
 
 void VideoWindow::seek_time(double time) {
