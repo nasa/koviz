@@ -275,6 +275,20 @@ void CurvesLayoutItem::_printCoplot(const QTransform& T,
                 yub = Unit::bias(loggedYUnit, bookYUnit);
             }
 
+            // Scales and bias for time
+            double startTime = start;
+            double stopTime = stop;
+            double ts = 1.0;
+            double tb = 0.0;
+            double tus = 1.0;
+            if ( _bookModel->isXTime(_plotIdx) ) {
+                ts = xs;
+                tb = xb;
+                tus = xus;
+                startTime = (start-tb)/ts/tus;
+                stopTime =  (stop-tb)/ts/tus;
+            }
+
             QPainterPath* path = new QPainterPath;
             paths << path;
 
@@ -285,7 +299,7 @@ void CurvesLayoutItem::_printCoplot(const QTransform& T,
             bool isFirst = true;
             while ( !it->isDone() ) {
 
-                if ( it->t() < start || it->t() > stop ) {
+                if ( it->t() < startTime || it->t() > stopTime ) {
                     it->next();
                     continue;
                 }
