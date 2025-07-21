@@ -53,17 +53,12 @@
 class CoordArrow
 {
   public:
-    CoordArrow();
-    CoordArrow(const QPointF& coord,
-               double r, double h,
-               double a, double b, double m,
-               double angle, double tipAngle);
+    CoordArrow(const QPainter* painter);
 
-  public:
     QString txt;    // Text e.g. "(10.375,3.141593)"
     QPointF coord;  // math coord
-    double r;       // radius of circle in window coords
-    double h;       // height of arrow head in window coords
+    double r;       // radius of circle in avg char width
+    double h;       // height of arrow head (see above)
     double a;       // length of part1 of tail (see above)
     double b;       // length of part2 of tail (see above)
     double m;       // dist between text box and 'b'
@@ -76,6 +71,9 @@ class CoordArrow
     void paintMeCenter(QPainter &painter, const QTransform &T,
                        const QRect& viewportRect,
                        const QColor &fg, const QColor &bg) const;
+
+  private:
+    CoordArrow() {}
 };
 
 #endif // COORDARROW_H

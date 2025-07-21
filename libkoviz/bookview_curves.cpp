@@ -24,9 +24,6 @@ CurvesView::~CurvesView()
 {
     delete _pixmap;
 
-    foreach ( TimeAndIndex* marker, _markers ) {
-        delete marker;
-    }
     foreach ( FFTCurveCache* cache,  _fftCache.curveCaches ) {
         delete cache->curveModel();
         delete cache;
@@ -171,7 +168,7 @@ void CurvesView::paintEvent(QPaintEvent *event)
     _paintCurvesLegend(viewport()->rect(),curvesIdx,painter);
 
     // Draw markers
-    _paintMarkers(painter);
+    _paintMarkers(painter,rootIndex());
 
     if ( _isMeasure ) {
         painter.drawEllipse(_mousePressPos,3,3);
@@ -474,376 +471,6 @@ void CurvesView::_paintCurve(const QModelIndex& curveIdx,
     }
     painter.setPen(origPen);
     painter.restore();
-}
-
-void CurvesView::_paintMarkers(QPainter &painter)
-{
-    // Return and do not draw if Options->isShowLiveCoord is off
-    QModelIndex isShowIdx = _bookModel()->getDataIndex(QModelIndex(),
-                                                       "IsShowLiveCoord");
-    bool isShowLiveCoord = model()->data(isShowIdx).toBool();
-    if ( !isShowLiveCoord ) {
-        return;
-    }
-
-    // Draw in window coords
-    painter.save();
-    QTransform I;
-    painter.setTransform(I);
-
-    QModelIndex pageIdx = rootIndex().parent().parent();
-    QColor bg = _bookModel()->pageBackgroundColor(pageIdx);
-    QColor fg = _bookModel()->pageForegroundColor(pageIdx);
-
-    TimeAndIndex* liveMarker = 0;
-    QList<TimeAndIndex*> markers;
-    QString pres = _bookModel()->getDataString(rootIndex(),
-                                               "PlotPresentation","Plot");
-    QString tag = model()->data(currentIndex()).toString();
-    QModelIndex liveIdx = _bookModel()->getDataIndex(QModelIndex(),
-                                                     "LiveCoordTime");
-    double liveTime = model()->data(liveIdx).toDouble();
-    QModelIndex liveTimeIdxIdx = _bookModel()->getDataIndex(QModelIndex(),
-                                                     "LiveCoordTimeIndex");
-    int timeIdx = model()->data(liveTimeIdxIdx).toInt();
-    if ( currentIndex().isValid() && (tag == "Curve" || tag == "Plot") ) {
-        TimeAndIndex* liveMarker = 0;
-        if ( tag == "Plot" ) {
-            if ( pres == "error" || pres == "error+compare") {
-                liveMarker = new TimeAndIndex(liveTime,timeIdx,currentIndex());
-            }
-        } else if ( tag == "Curve" ) {
-            if ( pres == "compare" || pres == "error+compare" ) {
-                liveMarker = new TimeAndIndex(liveTime,timeIdx,currentIndex());
-            } else if ( pres == "error" ) {
-                QModelIndex plotIdx = currentIndex().parent().parent();
-                liveMarker = new TimeAndIndex(liveTime,0,plotIdx);
-            }
-        } else {
-            // bad scoobs
-            fprintf(stderr, "koviz [bad scoobs]:1 CurvesView::_paintMarkers\n");
-            exit(-1);
-        }
-        if ( liveMarker ) {
-            markers << liveMarker;
-        }
-    }
-    foreach ( TimeAndIndex* marker, _markers ) {
-        QString markerTag = model()->data(marker->modelIdx()).toString();
-        if ( markerTag == "Curve" && pres == "compare" ) {
-            markers << marker;
-        } else if ( markerTag == "Plot" && pres == "error" ) {
-            markers << marker;
-        }
-    }
-
-    foreach ( TimeAndIndex* marker, markers ) {
-
-        // Tag is either "Curve" or "Plot"
-        QString tag = _bookModel()->data(marker->modelIdx()).toString();
-
-        // Get plot x/y scale (log or linear)
-        QModelIndex plotIdx;
-        if ( tag == "Curve" ) {
-            QModelIndex curveIdx = marker->modelIdx();
-            plotIdx = curveIdx.parent().parent();
-        } else if ( tag == "Plot" ) {
-            plotIdx = marker->modelIdx();
-        } else {
-            // bad scoobs
-        }
-        QString plotXScale = _bookModel()->getDataString(plotIdx,
-                                                         "PlotXScale","Plot");
-        QString plotYScale = _bookModel()->getDataString(plotIdx,
-                                                         "PlotYScale","Plot");
-        bool isXLogScale = (plotXScale=="log") ? true : false;
-        bool isYLogScale = (plotYScale=="log") ? true : false;
-
-        // Scale and bias
-        double xs = 1.0;
-        double ys = 1.0;
-        double xb = 0.0;
-        double yb = 0.0;
-        if ( tag == "Curve") {
-            QModelIndex curveIdx = marker->modelIdx();
-            if ( !isXLogScale ) {
-                // With logscale, scale/bias already done foreach path element
-                xs = _bookModel()->getDataDouble(curveIdx,
-                                                 "CurveXScale","Curve");
-                xb = _bookModel()->getDataDouble(curveIdx,"CurveXBias","Curve");
-            }
-            if ( !isYLogScale ) {
-                ys = _bookModel()->getDataDouble(curveIdx,
-                                                 "CurveYScale","Curve");
-                yb = _bookModel()->getDataDouble(curveIdx,"CurveYBias","Curve");
-            }
-        }
-
-        // Get path
-        QPainterPath* path = 0;
-        if ( tag == "Curve" ) {
-            QModelIndex curveIdx = marker->modelIdx();
-            path = _bookModel()->getPainterPath(curveIdx);
-        } else if ( tag == "Plot" ) {
-            QModelIndex plotIdx = marker->modelIdx();
-            QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,
-                                                           "Curves","Plot");
-            path = _bookModel()->getCurvesErrorPath(curvesIdx);
-        } else {
-            fprintf(stderr, "koviz [bad scoobs]: CurvesView::_paintMarkers : "
-                            "this case should not happen.\n");
-            exit(-1);
-        }
-        if ( path->elementCount() == 0 ) {
-            if ( tag == "Plot" ) {
-                delete path; // error path created on the fly!
-            }
-            continue;
-        }
-
-        // Get time (t)
-        double t;
-        if ( xb != 0.0 || xs != 1.0 ) {
-            t = (marker->time()-xb)/xs;
-            ROUNDOFF(t,t);
-        } else {
-            t = marker->time();
-            if ( isXLogScale ) {
-                t = log10(t);
-            }
-        }
-
-        // Get element index (i) for time (t)
-        int high = path->elementCount()-1;
-        int i = _idxAtTimeBinarySearch(path,0,high,t);
-
-        /* There may be duplicate timestamps in sequence - go to first */
-        double elementTime = path->elementAt(i).x;
-        while ( i > 0 ) {
-            if ( path->elementAt(i-1).x == elementTime ) {
-                --i;
-            } else {
-                break;
-            }
-        }
-
-        // If timestamps identical, it may be necessary to add LiveCoordTimeidx
-        int ii = marker->timeIdx();
-        i = i+ii;  // LiveCoordTimeIndex is normally 0
-
-        if ( tag == "Curve" ) {
-            QModelIndex curveIdx = marker->modelIdx();
-            CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
-            curveModel->map();
-            QModelIndex plotIdx = marker->modelIdx().parent().parent();
-            int nels = path->elementCount();
-            int npts = curveModel->rowCount();
-            if ( !_bookModel()->isXTime(plotIdx) || nels != npts ) {
-                // If X is not time, then x is e.g. xpos in ball xy orbit
-                //
-                // If nels != npts, the number of elements in the path do not
-                // match the number points in the data - most likely culled
-                // due to start/stop time or log eliminating zeroes
-                //
-                // i is calculated from the curve model instead of the path
-                // since the path does not have time
-                //
-                // i is a best guess
-
-                double xus = 1.0;
-                double xub = 0.0;
-                QString bookXUnit = _bookModel()->getDataString(
-                            curveIdx,
-                            "CurveXUnit","Curve");
-                if ( !bookXUnit.isEmpty() && bookXUnit != "--" ) {
-                    QString loggedXUnit = curveModel->x()->unit();
-                    xus = Unit::scale(loggedXUnit, bookXUnit);
-                    xub = Unit::bias(loggedXUnit, bookXUnit);
-                }
-
-                double xb = _bookModel()->getDataDouble(curveIdx,
-                                                        "CurveXBias","Curve");
-                double xs = _bookModel()->getDataDouble(curveIdx,
-                                                        "CurveXScale","Curve");
-                if ( _bookModel()->isXTime(plotIdx) ) {
-                    // Take time shift and scale into account
-                    // Also take x time unit scale into account
-                    // and no need for x unit bias since time has no bias
-                    i = curveModel->indexAtTime((marker->time()-xb)/xs/xus);
-                } else {
-                    i = curveModel->indexAtTime(marker->time());
-                }
-
-                if ( nels < npts ) {
-                    // Points have been culled out of the data leaving the
-                    // path with less elements than the curve
-                    // This can happen when:
-                    //    1) Log(curve) removes zeroes
-                    //    2) Frequency is given, points culled out of curve
-                    //    3) Start/stop time given, points lopped off ends
-                    // Search for first element that matches curve point at time
-                    ModelIterator* it = curveModel->begin();
-                    double x = it->at(i)->x();
-                    double y = it->at(i)->y();
-
-                    // Since X unit scale baked in path, need to unit scale
-                    x = xus*x + xub;    // X Unit scale
-
-                    // Since Y unit scale baked in path, need to unit scale
-                    double yb = _bookModel()->getDataDouble(curveIdx,
-                                                            "CurveYBias","Curve");
-                    double ys = _bookModel()->getDataDouble(curveIdx,
-                                                            "CurveYScale","Curve");
-                    double yus = 1.0;
-                    double yub = 0.0;
-                    QString bookYUnit = _bookModel()->getDataString(
-                                curveIdx,
-                                "CurveYUnit","Curve");
-                    if ( !bookYUnit.isEmpty() && bookYUnit != "--" ) {
-                        QString loggedYUnit = curveModel->y()->unit();
-                        yus = Unit::scale(loggedYUnit, bookYUnit);
-                        yub = Unit::bias(loggedYUnit, bookYUnit);
-                    }
-                    y = yus*y + yub;  // Y Unit scale
-
-                    if ( isXLogScale ) {
-                        // If logscale, scale and bias baked in path
-                        // Otherwise, scale and bias in path transform
-                        // not in path
-                        x = xs*x + xb;
-                        x = log10(x);
-                    }
-                    if ( isYLogScale ) {
-                        y = ys*y + yb;    // Book scale
-                        y = log10(y);
-                    }
-                    int j = (i < nels) ? i : nels - 1;
-                    while ( j >= 0 ) {
-                        QPainterPath::Element el = path->elementAt(j);
-                        if ( el.x == x && el.y == y ) {
-                            i = j;
-                            break;
-                        }
-                        --j;
-                    }
-                    if ( i >= nels ) {
-                        // Point not found, set to init
-                        i = 0;
-                    }
-                    delete it;
-                } else if ( nels > npts ) {
-                    // There are more elements in the path than points
-                    // on the curve.  Shouldn't happen, but if it does
-                    // don't show markers
-                    painter.restore();
-                    curveModel->unmap();
-                    return;
-                }
-
-                /* There may be duplicate timestamps in sequence - goto first */
-                ModelIterator* it = curveModel->begin();
-                double iTime = it->at(i)->t();
-                while ( i > 0 ) {
-                    if ( it->at(i-1)->t() == iTime ) {
-                        --i;
-                    } else {
-                        break;
-                    }
-                }
-                delete it;
-                i = i + ii;
-            }
-            curveModel->unmap();
-        }
-
-        // Element/coord at live time
-        QPainterPath::Element el = path->elementAt(i);
-        QPointF coord(el.x*xs+xb,el.y*ys+yb);
-
-        // Init arrow struct
-        CoordArrow arrow;
-        arrow.coord = coord;
-
-        // Set arrow text (special syntax for extremums)
-        QString x=isXLogScale ? _format(pow(10,coord.x())) : _format(coord.x());
-        QString y=isYLogScale ? _format(pow(10,coord.y())) : _format(coord.y());
-        int rc = path->elementCount();
-        if ( i > 0 && i < rc-1) {
-            // First and last point not considered
-            double yPrev = path->elementAt(i-1).y*ys+yb;
-            double yi = path->elementAt(i).y*ys+yb;
-            double yNext = path->elementAt(i+1).y*ys+yb;
-            if ( (yi>yPrev && yi>yNext) || (yi<yPrev && yi<yNext) ) {
-                arrow.txt = QString("<%1, %2>").arg(x).arg(y);
-            } else if ( yPrev == yi && yi != yNext ) {
-                arrow.txt = QString("(%1, %2]").arg(x).arg(y);
-            } else if ( yPrev != yi && yi == yNext ) {
-                arrow.txt = QString("[%1, %2)").arg(x).arg(y);
-            } else {
-                arrow.txt = QString("(%1, %2)").arg(x).arg(y);
-            }
-        } else if ( i == 0 ) {
-            arrow.txt = QString("init=(%1, %2)").arg(x).arg(y);
-        } else if ( i == rc-1 ) {
-            arrow.txt = QString("last=(%1, %2)").arg(x).arg(y);
-        } else {
-            fprintf(stderr,"koviz [bad scoobs]: CurvesView::_paintMarkers()\n");
-            exit(-1);
-        }
-
-        // Show run name if more than 5 runs
-        if ( tag == "Curve") {
-            QModelIndex curveIdx = marker->modelIdx();
-            if ( model()->rowCount(curveIdx.parent()) > 5 ) {
-                CurveModel* curveModel = _bookModel()->getCurveModel(curveIdx);
-                if ( curveModel ) {
-                    QString runPath = curveModel->runPath();
-                    QFileInfo fi(runPath);
-                    QString runName;
-                    foreach (QString name, fi.absoluteFilePath().split('/') ) {
-                        if ( name.startsWith("RUN_") ) {
-                            runName = name;
-                            break;
-                        }
-                    }
-                    QString runLabel = QString("%1: ").arg(runName);
-                    arrow.txt.prepend(runLabel);
-                }
-            }
-        }
-
-        // Map math coord to window pt
-        QTransform T = _coordToPixelTransform();
-
-        // Try to fit arrow into viewport using different angles
-        QList<double> angles;
-        angles << 1*(M_PI/4) << 3*(M_PI/4) << 5*(M_PI/4) << 7*(M_PI/4);
-        bool isFits = false;
-        foreach ( double angle, angles ) {
-            arrow.angle = angle;
-            QRect arrowBBox = arrow.boundingBox(painter,T).toRect();
-            if ( viewport()->rect().contains(arrowBBox) ) {
-                isFits = true;
-                break;
-            }
-        }
-
-        if ( isFits ) {
-            arrow.paintMe(painter,T,fg,bg);
-        } else if ( marker->modelIdx() == currentIndex() ) {
-            arrow.paintMeCenter(painter,T,viewport()->rect(),fg,bg);
-        }
-
-        if ( tag == "Plot" ) {
-            delete path; // error path created on the fly, so it must be freed
-        }
-    }
-
-    painter.restore();
-
-    if ( liveMarker ) {
-        delete liveMarker;
-    }
 }
 
 int CurvesView::_idxAtTimeBinarySearch(QPainterPath* path,
@@ -2386,8 +2013,10 @@ void CurvesView::_keyPressComma()
 
     if ( currentIndex().column() != 0 ) return;
 
-    // Get presentation
     QString tag = _bookModel()->data(currentIndex()).toString();
+    if ( tag != "Curve" && tag != "Plot" ) {
+        return;
+    }
 
     // Get live time
     QModelIndex liveIdx = _bookModel()->getDataIndex(QModelIndex(),
@@ -2398,26 +2027,41 @@ void CurvesView::_keyPressComma()
                                                      "LiveCoordTimeIndex");
     int timeIdx = model()->data(liveTimeIdxIdx).toInt();
 
-    // Add (or remove) marker based on presentation
-    if ( tag == "Curve" || tag == "Plot" ) {
-        bool isRemoved = false;
-        foreach (TimeAndIndex* marker, _markers ) {
-            if ( liveTime == marker->time() &&
-                 timeIdx == marker->timeIdx() &&
-                 marker->modelIdx().row() == currentIndex().row() ) {
-                // Remove marker if same time and same curve (eg toggle off/on)
-                _markers.removeOne(marker);
-                delete marker;
-                isRemoved = true;
-                break;
-            }
+    // Add Markers parent to either Plot or Curve
+    QModelIndex idx = currentIndex();
+    QStandardItem *currItem = _bookModel()->itemFromIndex(idx);
+    if ( tag == "Curve" ) {
+        if (!_bookModel()->isChildIndex(idx,"Curve","Markers")) {
+            _bookModel()->addChild(currItem, "Markers","");
         }
+    } else if ( tag == "Plot" ) {
+        if (!_bookModel()->isChildIndex(idx,"Plot","Markers")) {
+            _bookModel()->addChild(currItem, "Markers","");
+        }
+    }
+    QModelIndex markersIdx = _bookModel()->getIndex(idx,"Markers","");
 
-        if ( !isRemoved ) {
-            QModelIndex idx = currentIndex();
-            TimeAndIndex* timeAndIdx = new TimeAndIndex(liveTime,timeIdx,idx);
-            _markers << timeAndIdx;
+    // Add/remove marker to/from Bookmodel
+    bool isRemoved = false;
+    QModelIndexList markerIdxs = _bookModel()->getIndexList(markersIdx,
+                                                            "Marker","Markers");
+    foreach ( QModelIndex markerIdx, markerIdxs ) {
+        double markerTime = _bookModel()->getDataDouble(markerIdx,
+                                                        "MarkerTime","Marker");
+        int markerTimeIdx = _bookModel()->getDataInt(markerIdx,
+                                                     "MarkerTimeIdx","Marker");
+        if ( liveTime == markerTime && timeIdx == markerTimeIdx ) {
+            _bookModel()->removeRow(markerIdx.row(),markersIdx);
+            isRemoved = true;
+            break;
         }
+    }
+    if ( !isRemoved ) {
+        QStandardItem* markersItem =_bookModel()->itemFromIndex(markersIdx);
+        QStandardItem* markerItem = _bookModel()->addChild(markersItem,
+                                                           "Marker","");
+        _bookModel()->addChild(markerItem,"MarkerTime", liveTime);
+        _bookModel()->addChild(markerItem,"MarkerTimeIdx", timeIdx);
     }
 }
 

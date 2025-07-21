@@ -270,8 +270,6 @@ private:
     QPainterPath _sinPath();
     QPainterPath _stepPath();
 
-    QList<TimeAndIndex*> _markers;
-
     void _paintCoplot(const QTransform& T, QPainter& painter,QPen& pen);
     void _paintErrorplot(const QTransform& T,
                          QPainter& painter, const QPen &pen,
@@ -279,7 +277,6 @@ private:
     void _paintCurve(const QModelIndex& curveIdx,
                      const QTransform &T, QPainter& painter,
                      bool isHighlight);
-    void _paintMarkers(QPainter& painter);
 
     QModelIndex _chooseCurveNearMousePoint(const QPoint& pt);
     bool _isErrorCurveNearMousePoint(const QPoint& pt);

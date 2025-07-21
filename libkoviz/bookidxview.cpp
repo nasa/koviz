@@ -940,11 +940,24 @@ void BookIdxView::_paintGrid(QPainter &painter, const QModelIndex& plotIdx)
 void BookIdxView::_paintHLines(QPainter &painter, const QModelIndex &plotIdx)
 {
     // Use CurvesLayoutItem to consolidate pdf and x11 painting
-    CurvesLayoutItem curvesLayoutItem(_bookModel(), plotIdx);
+    CurvesLayoutItem curvesLayoutItem(_bookModel(),plotIdx,currentIndex());
 
     QRect R = viewport()->rect();
     QRect C = R;  // Window curve rect is same as R since hlines in CurvesView
     const QRectF M = _mathRect();
 
     curvesLayoutItem.paintHLines(&painter,R,R,C,M);
+}
+
+void BookIdxView::_paintMarkers(QPainter &painter,
+                                const QModelIndex &plotIdx)
+{
+    // Use CurvesLayoutItem to consolidate pdf and x11 painting
+    CurvesLayoutItem curvesLayoutItem(_bookModel(),plotIdx,currentIndex());
+
+    QRect R = viewport()->rect();
+    QRect C = R;  // Window curve rect is same as R since markers in CurvesView
+    const QRectF M = _mathRect();
+
+    curvesLayoutItem.paintMarkers(&painter,R,R,C,M);
 }

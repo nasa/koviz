@@ -1,39 +1,25 @@
 #include "coord_arrow.h"
 
-CoordArrow::CoordArrow() :
+CoordArrow::CoordArrow(const QPainter *painter) :
     coord(QPointF(DBL_MAX,DBL_MAX)),
-    r(2.0),
-    h(16.0),
-    a(48.0),
-    b(18.0),
-    m(4.0),
     angle(M_PI/4),
     tipAngle(M_PI/8)
 {
+    int fw = painter->fontMetrics().averageCharWidth();
+
+    r = fw/8;
+    h = fw;
+    a = fw*3;
+    b = fw*1.2;
+    m = fw/4.0;
 }
 
-CoordArrow::CoordArrow(const QPointF &coord,
-                       double r, double h,
-                       double a, double b, double m,
-                       double angle, double tipAngle) :
-    coord(coord),        // math coord of pt to draw arrow to
-    r(r),                // radius of circle around point
-    h(h),                // isoscelese triangle arrow head height
-    a(a),                // arrow tail length part between arrow head 'b'
-    b(b),                // arrow tail length part between 'a' and txt
-    m(m),                // distance (margin) between tail and text
-    angle(angle),
-    tipAngle(tipAngle)
-{
-}
-
-// T is coordToPix transform
 QRectF CoordArrow::boundingBox(const QPainter& painter,
                                const QTransform& T) const
 {
     QRectF bbox;
 
-    // Map math coord to window pt
+    // Map math coord to window/pdf pt
     QPointF pt = T.map(coord);
 
     // Text bbox width and height
@@ -245,8 +231,8 @@ void CoordArrow::paintMeCenter(QPainter &painter,
     QPointF a2;
     if ( pt.y() < viewportRect.height()/2 ) {
         // pt is in top half of viewport, so draw coord at bot of plot
-        QPointF tl(viewportRect.width()/2.0-tw/2.0,
-                   viewportRect.height()-th);
+        QPointF tl(viewportRect.x()+viewportRect.width()/2.0-tw/2.0,
+                   viewportRect.y()+viewportRect.height()-th);
         txtbox.moveTopLeft(tl);
 
         a0.setX(txtbox.center().x());
@@ -258,7 +244,8 @@ void CoordArrow::paintMeCenter(QPainter &painter,
 
     } else {
         // pt is in bot half of viewport, so draw coord at top of plot
-        QPointF tl(viewportRect.width()/2.0-tw/2.0,0);
+        QPointF tl(viewportRect.x()+viewportRect.width()/2.0-tw/2.0,
+                   viewportRect.y());
         txtbox.moveTopLeft(tl);
 
         a0.setX(txtbox.center().x());
