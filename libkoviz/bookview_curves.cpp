@@ -3694,29 +3694,6 @@ void CurvesView::_keyPressMinus()
     }
 }
 
-TimeAndIndex::TimeAndIndex(double time, int timeIdx, const QModelIndex &idx) :
-    _time(time),
-    _timeIdx(timeIdx),
-    _modelIdx(idx)
-{
-}
-
-double TimeAndIndex::time() const
-{
-    return _time;
-}
-
-int TimeAndIndex::timeIdx() const
-{
-    return _timeIdx;
-}
-
-QModelIndex TimeAndIndex::modelIdx() const
-{
-    return _modelIdx;
-}
-
-
 FFTCurveCache::FFTCurveCache(double xbias, double xscale,
                              CurveModel* curveModel) :
     _xbias(xbias),

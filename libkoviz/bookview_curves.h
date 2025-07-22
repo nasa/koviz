@@ -132,21 +132,6 @@ public:
     }
 };
 
-class TimeAndIndex
-{
-  public:
-    TimeAndIndex(double time, int timeIdx, const QModelIndex& modelIdx);
-    double time() const;
-    int timeIdx() const;
-    QModelIndex modelIdx() const;
-
-  private:
-    TimeAndIndex() {}
-    double _time;
-    int _timeIdx;  // Index for duplicate timestamps
-    QModelIndex _modelIdx;
-};
-
 class FFTCurveCache
 {
   public:

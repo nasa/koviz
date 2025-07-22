@@ -1052,8 +1052,8 @@ void CurvesLayoutItem::paintMarkers(QPainter *painter,
     painter->setTransform(I);
 
     // Paint markers (if possible)
-    QList<TimeAndIndex2*> markers = _getMarkers();
-    foreach ( TimeAndIndex2* marker, markers ) {
+    QList<TimeAndIndex*> markers = _getMarkers();
+    foreach ( TimeAndIndex* marker, markers ) {
         QPainterPath* path = _getMarkerPath(marker);
         if ( !path ) continue;
 
@@ -1073,16 +1073,16 @@ void CurvesLayoutItem::paintMarkers(QPainter *painter,
     }
 
     // Clean up
-    foreach ( TimeAndIndex2* marker, markers ) {
+    foreach ( TimeAndIndex* marker, markers ) {
         delete marker;
     }
     painter->restore();
 }
 
 // Client must clean allocated markers in returned list
-QList<TimeAndIndex2*> CurvesLayoutItem::_getMarkers() const
+QList<TimeAndIndex*> CurvesLayoutItem::_getMarkers() const
 {
-    QList<TimeAndIndex2*> markers;
+    QList<TimeAndIndex*> markers;
 
     QString pres = _bookModel->getDataString(_plotIdx,
                                              "PlotPresentation","Plot");
@@ -1096,17 +1096,17 @@ QList<TimeAndIndex2*> CurvesLayoutItem::_getMarkers() const
                                                           "LiveCoordTimeIndex");
     int timeIdx = _bookModel->data(liveTimeIdxIdx).toInt();
     if ( _currIdx.isValid() && (tag == "Curve" || tag == "Plot") ) {
-        TimeAndIndex2* liveMarker = 0;
+        TimeAndIndex* liveMarker = 0;
         if ( tag == "Plot" ) {
             if ( pres == "error" || pres == "error+compare") {
-                liveMarker = new TimeAndIndex2(liveTime,timeIdx,_currIdx);
+                liveMarker = new TimeAndIndex(liveTime,timeIdx,_currIdx);
             }
         } else if ( tag == "Curve" ) {
             if ( pres == "compare" || pres == "error+compare" ) {
-                liveMarker = new TimeAndIndex2(liveTime,timeIdx,_currIdx);
+                liveMarker = new TimeAndIndex(liveTime,timeIdx,_currIdx);
             } else if ( pres == "error" ) {
                 QModelIndex plotIdx = _currIdx.parent().parent();
-                liveMarker = new TimeAndIndex2(liveTime,0,plotIdx);
+                liveMarker = new TimeAndIndex(liveTime,0,plotIdx);
             }
         } else {
             // Should not happen
@@ -1132,7 +1132,7 @@ QList<TimeAndIndex2*> CurvesLayoutItem::_getMarkers() const
                                                          "MarkerTime","Marker");
                 int markerTimeIdx = _bookModel->getDataInt(markerIdx,
                                                       "MarkerTimeIdx","Marker");
-                TimeAndIndex2* marker = new TimeAndIndex2(markerTime,
+                TimeAndIndex* marker = new TimeAndIndex(markerTime,
                                                         markerTimeIdx,_plotIdx);
                 markers << marker;
             }
@@ -1155,7 +1155,7 @@ QList<TimeAndIndex2*> CurvesLayoutItem::_getMarkers() const
                                                          "MarkerTime","Marker");
                     int markerTimeIdx = _bookModel->getDataInt(markerIdx,
                                                       "MarkerTimeIdx","Marker");
-                    TimeAndIndex2* marker = new TimeAndIndex2(markerTime,
+                    TimeAndIndex* marker = new TimeAndIndex(markerTime,
                                                         markerTimeIdx,curveIdx);
                     markers << marker;
                 }
@@ -1166,7 +1166,7 @@ QList<TimeAndIndex2*> CurvesLayoutItem::_getMarkers() const
     return markers;
 }
 
-ScaleBias CurvesLayoutItem::_getMarkerScaleBias(TimeAndIndex2* marker) const
+ScaleBias CurvesLayoutItem::_getMarkerScaleBias(TimeAndIndex* marker) const
 {
     QString tag = _bookModel->data(marker->modelIdx()).toString();
 
@@ -1205,7 +1205,7 @@ ScaleBias CurvesLayoutItem::_getMarkerScaleBias(TimeAndIndex2* marker) const
 //
 // Unfortunately client needs to clean returned path if path is
 // an error plot i.e. it's a path associated with plot index
-QPainterPath *CurvesLayoutItem::_getMarkerPath(TimeAndIndex2 *marker) const
+QPainterPath *CurvesLayoutItem::_getMarkerPath(TimeAndIndex *marker) const
 {
     QPainterPath* path = 0;
 
@@ -1233,7 +1233,7 @@ QPainterPath *CurvesLayoutItem::_getMarkerPath(TimeAndIndex2 *marker) const
     return path;
 }
 
-int CurvesLayoutItem::_getMarkerPathIdx(TimeAndIndex2 *marker,
+int CurvesLayoutItem::_getMarkerPathIdx(TimeAndIndex *marker,
                                         const ScaleBias& sb,
                                         QPainterPath *path) const
 {
@@ -1400,7 +1400,7 @@ int CurvesLayoutItem::_getMarkerPathIdx(TimeAndIndex2 *marker,
 // R is curves viewport rectangle
 // Argument i is path index to paint marker at
 void CurvesLayoutItem::_paintMarker(QPainter* painter,
-                                    TimeAndIndex2 *marker,
+                                    TimeAndIndex *marker,
                                     const QRect& R,
                                     const QRect& RG,
                                     const QRect& C,
