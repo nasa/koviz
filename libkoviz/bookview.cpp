@@ -288,7 +288,7 @@ void BookView::_printPage(QPainter *painter, const QModelIndex& pageIdx)
         plotLayout->addItem(item);  // yTicLabels
         item = new PlotTitleLayoutItem(fm,_bookModel(),plotIdx);
         plotLayout->addItem(item);  // plottitle
-        item = new CurvesLayoutItem(_bookModel(),plotIdx,currentIndex());
+        item = new CurvesLayoutItem(_bookModel(),plotIdx,QModelIndex());
         plotLayout->addItem(item);  // curves
         item = new PlotCornerLayoutItem(fm,Qt::TopLeftCorner);
         plotLayout->addItem(item);  // tlcorner
