@@ -1,0 +1,15 @@
+Koviz
+
+PLOTS:
+  Page 1: ""
+
+    Plot 1: ""
+      x_variable: "x"
+        units: "m"
+      y_variable: "y"
+        units: "m"
+        symbol_style: "none"
+        symbol_end: "none"
+        label: "y"
+
+

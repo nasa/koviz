@@ -1298,6 +1298,25 @@ int CurvesLayoutItem::_getMarkerPathIdx(Marker *marker,
                 i = curveModel->indexAtTime(marker->time());
             }
 
+            // Account for time idx
+            ModelIterator* it = curveModel->begin();
+            double iTime = it->at(i)->t();
+            while ( i > 0 ) {
+                if ( it->at(i-1)->t() == iTime ) {
+                    --i;
+                } else {
+                    break;
+                }
+            }
+            int ii = marker->timeIdx();
+            it = it->at(i+ii);
+            if ( !it->isDone() ) {
+                if ( iTime == it->at(i+ii)->t() ) {
+                    i += ii;
+                }
+            }
+            delete it;
+
             if ( nels < npts ) {
                 // Points have been culled out of the data leaving the
                 // path with less elements than the curve
