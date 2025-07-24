@@ -43,6 +43,7 @@
 #include "sie_listmodel.h"
 #include "datamodel_tv.h"
 #include "runswidget.h"
+#include "markerdialog.h"
 
 class PlotMainWindow : public QMainWindow
 {
@@ -131,6 +132,7 @@ private:
     QAction *_showVideoAction;
     QAction *_videoDirAction;
     QAction *_showLiveCoordAction;
+    QAction *_markTimeAction;
     QAction *_refreshPlotsAction;
     QAction *_clearPlotsAction;
     QAction *_clearTablesAction;
@@ -190,6 +192,7 @@ private slots:
      void _toggleShowVideo();
      void _chooseVideoDirectory();
      void _toggleShowLiveCoord();
+     void _markTime();
      void _refreshPlots();
      void _clearPlots();
      void _clearTables();

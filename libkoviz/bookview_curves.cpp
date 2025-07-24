@@ -90,6 +90,71 @@ void CurvesView::setCurrentCurveRunID(int runID)
     }
 }
 
+void CurvesView::markTime(const QString &label, double time, int timeIdx)
+{
+    QString tag = _bookModel()->data(currentIndex()).toString();
+
+    QString pres = _bookModel()->getDataString(rootIndex(),
+                                               "PlotPresentation","Plot");
+
+    QModelIndex pIdx; // Block below sets pidx to parent of Markers
+    if ( currentIndex().isValid() && (tag == "Curve" || tag == "Plot") ) {
+        pIdx = currentIndex();
+    } else if ( pres == "error" ) {
+        pIdx = rootIndex();
+    } else {
+        QModelIndex curvesIdx = _bookModel()->getIndex(rootIndex(),
+                                                       "Curves","Plot");
+        int nCurves = model()->rowCount(curvesIdx);
+        if ( nCurves > 0 ) {
+            pIdx = model()->index(0,0,curvesIdx);
+        }
+    }
+
+    if ( pIdx.isValid() ) {
+        // Add Markers parent to either Plot or Curve
+        QString pTag = _bookModel()->data(pIdx).toString();
+        QStandardItem *pItem = _bookModel()->itemFromIndex(pIdx);
+        if ( pTag == "Curve" ) {
+            if (!_bookModel()->isChildIndex(pIdx,"Curve","Markers")) {
+                _bookModel()->addChild(pItem, "Markers","");
+            }
+        } else if ( pTag == "Plot" ) {
+            if (!_bookModel()->isChildIndex(pIdx,"Plot","Markers")) {
+                _bookModel()->addChild(pItem, "Markers","");
+            }
+        }
+
+        QModelIndex markersIdx = _bookModel()->getIndex(pIdx,"Markers","");
+        QModelIndexList markerIdxs = _bookModel()->getIndexList(markersIdx,
+                                                            "Marker","Markers");
+
+        bool isFound = false;
+        foreach ( QModelIndex markerIdx, markerIdxs ) {
+            double markerTime = _bookModel()->getDataDouble(markerIdx,
+                                                         "MarkerTime","Marker");
+            int markerTimeIdx = _bookModel()->getDataInt(markerIdx,
+                                                      "MarkerTimeIdx","Marker");
+            if ( markerTime == time && markerTimeIdx == timeIdx ) {
+                // Time already marked, just reset label
+                QModelIndex markerLabelIdx = _bookModel()->getDataIndex(
+                                             markerIdx,"MarkerLabel", "Marker");
+                model()->setData(markerLabelIdx,label);
+                isFound = true;
+                break;
+            }
+        }
+        if ( !isFound ) {
+            QStandardItem* markersItem =_bookModel()->itemFromIndex(markersIdx);
+            QStandardItem* markerItem = _bookModel()->addChild(markersItem,
+                                                               "Marker","");
+            _bookModel()->addChild(markerItem,"MarkerTime", time);
+            _bookModel()->addChild(markerItem,"MarkerTimeIdx", timeIdx);
+            _bookModel()->addChild(markerItem,"MarkerLabel", label);
+        }
+    }
+}
+
 void CurvesView::paintEvent(QPaintEvent *event)
 {
 #if 0
@@ -2062,6 +2127,7 @@ void CurvesView::_keyPressComma()
                                                            "Marker","");
         _bookModel()->addChild(markerItem,"MarkerTime", liveTime);
         _bookModel()->addChild(markerItem,"MarkerTimeIdx", timeIdx);
+        _bookModel()->addChild(markerItem,"MarkerLabel", "");
     }
 }
 

@@ -9,21 +9,24 @@
 #include "roundoff.h"
 #include "coord_arrow.h"
 
-class TimeAndIndex
+class Marker
 {
   public:
-    TimeAndIndex(double time, int timeIdx, const QModelIndex& modelIdx) :
-        _time(time),_timeIdx(timeIdx),_modelIdx(modelIdx)
+    Marker(double time, int timeIdx, const QString& label,
+                 const QModelIndex& modelIdx) :
+        _time(time),_timeIdx(timeIdx),_label(label),_modelIdx(modelIdx)
     {}
 
     double time() const { return _time; };
     int timeIdx() const { return _timeIdx; };
+    QString label() const { return _label; }
     QModelIndex modelIdx() const { return _modelIdx; };
 
   private:
-    TimeAndIndex() {}
+    Marker() {}
     double _time;
     int _timeIdx;  // Index for duplicate timestamps
+    QString _label;
     QModelIndex _modelIdx;
 };
 
@@ -100,13 +103,15 @@ private:
                              QPainter* painter);
 
     // Helper methods for paintMarkers()
-    QList<TimeAndIndex*> _getMarkers() const;
-    ScaleBias _getMarkerScaleBias(TimeAndIndex *marker) const;
-    QPainterPath* _getMarkerPath(TimeAndIndex *marker) const;
-    int _getMarkerPathIdx(TimeAndIndex *marker, const ScaleBias &sb,
+    QList<Marker*> _getMarkers() const;
+    ScaleBias _getMarkerScaleBias(Marker *marker) const;
+    QPainterPath* _getMarkerPath(Marker *marker) const;
+    int _getMarkerPathIdx(Marker *marker, const ScaleBias &sb,
                           QPainterPath* path) const;
+    int __pathIdxAtTime(QPainterPath* path,
+                        double time, int timeIdx) const;
     void _paintMarker(QPainter* painter,
-                      TimeAndIndex* marker,
+                      Marker* marker,
                       const QRect& R, const QRect &RG,
                       const QRect &C, const QRectF &M,
                       const ScaleBias& sb,

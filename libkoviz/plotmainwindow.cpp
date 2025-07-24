@@ -353,6 +353,7 @@ void PlotMainWindow::createMenu()
     _showLiveCoordAction = _optsMenu->addAction(tr("ShowLiveCoord"));
         _showLiveCoordAction->setCheckable(true);
         _showLiveCoordAction->setChecked(true);
+    _markTimeAction = _optsMenu->addAction(tr("MarkTime"));
     _refreshPlotsAction  = _optsMenu->addAction(tr("RefreshPlots"));
     _clearPlotsAction  = _optsMenu->addAction(tr("ClearPlots"));
     _clearTablesAction = _optsMenu->addAction(tr("ClearTables"));
@@ -391,6 +392,8 @@ void PlotMainWindow::createMenu()
             this, SLOT(_chooseVideoDirectory()));
     connect(_showLiveCoordAction, SIGNAL(triggered()),
             this, SLOT(_toggleShowLiveCoord()));
+    connect(_markTimeAction, SIGNAL(triggered()),
+            this, SLOT(_markTime()));
     connect(_refreshPlotsAction, SIGNAL(triggered()),
             this, SLOT(_refreshPlots()));
     connect(_clearPlotsAction, SIGNAL(triggered()),
@@ -1614,6 +1617,24 @@ void PlotMainWindow::_toggleShowLiveCoord()
         _bookModel->setData(isShowIdx,true);   // show
         _showLiveCoordAction->setChecked(true);
     }
+}
+
+void PlotMainWindow::_markTime()
+{
+    QModelIndex liveIdx = _bookModel->getDataIndex(QModelIndex(),
+                                                   "LiveCoordTime");
+    double liveTime = _bookModel->data(liveIdx).toDouble();
+    MarkerDialog dialog(liveTime,this);
+    if (dialog.exec() == QDialog::Accepted) {
+        QString label = dialog.label();
+        double time = dialog.time();
+        QModelIndex liveTimeIdxIdx = _bookModel->getDataIndex(QModelIndex(),
+                                                          "LiveCoordTimeIndex");
+        int timeIdx = _bookModel->data(liveTimeIdxIdx).toInt();
+
+        _bookView->markTime(label,time,timeIdx);
+    }
+
 }
 
 void PlotMainWindow::_refreshPlots()

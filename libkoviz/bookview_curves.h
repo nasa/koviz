@@ -235,6 +235,7 @@ public:
 
 public:
     void setCurrentCurveRunID(int runID) override;
+    void markTime(const QString& label, double time, int timeIdx) override;
 
 protected:
     void paintEvent(QPaintEvent * event) override;

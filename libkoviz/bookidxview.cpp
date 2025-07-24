@@ -128,6 +128,16 @@ void BookIdxView::setCurrentCurveRunID(int runID)
     }
 }
 
+void BookIdxView::markTime(const QString& label, double time, int timeIdx)
+{
+    foreach (QAbstractItemView* view, _childViews ) {
+        BookIdxView* bookIdxView = dynamic_cast<BookIdxView*>(view);
+        if ( bookIdxView ) {
+            bookIdxView->markTime(label,time,timeIdx);
+        }
+    }
+}
+
 // Root index of a page view will be a Page Index of a Book Model
 // Noop "template" for a child class
 void BookIdxView::dataChanged(const QModelIndex &topLeft,

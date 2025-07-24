@@ -30,6 +30,7 @@ public:
 public:
     void setCurvesView(QAbstractItemView* view);
     virtual void setCurrentCurveRunID(int runID);
+    virtual void markTime(const QString& label, double time, int timeIdx);
 
 public:
     void setModel(QAbstractItemModel *model) override;

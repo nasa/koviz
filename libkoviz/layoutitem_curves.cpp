@@ -1052,8 +1052,8 @@ void CurvesLayoutItem::paintMarkers(QPainter *painter,
     painter->setTransform(I);
 
     // Paint markers (if possible)
-    QList<TimeAndIndex*> markers = _getMarkers();
-    foreach ( TimeAndIndex* marker, markers ) {
+    QList<Marker*> markers = _getMarkers();
+    foreach ( Marker* marker, markers ) {
         QPainterPath* path = _getMarkerPath(marker);
         if ( !path ) continue;
 
@@ -1073,16 +1073,16 @@ void CurvesLayoutItem::paintMarkers(QPainter *painter,
     }
 
     // Clean up
-    foreach ( TimeAndIndex* marker, markers ) {
+    foreach ( Marker* marker, markers ) {
         delete marker;
     }
     painter->restore();
 }
 
 // Client must clean allocated markers in returned list
-QList<TimeAndIndex*> CurvesLayoutItem::_getMarkers() const
+QList<Marker*> CurvesLayoutItem::_getMarkers() const
 {
-    QList<TimeAndIndex*> markers;
+    QList<Marker*> markers;
 
     QString pres = _bookModel->getDataString(_plotIdx,
                                              "PlotPresentation","Plot");
@@ -1096,17 +1096,17 @@ QList<TimeAndIndex*> CurvesLayoutItem::_getMarkers() const
                                                           "LiveCoordTimeIndex");
     int timeIdx = _bookModel->data(liveTimeIdxIdx).toInt();
     if ( _currIdx.isValid() && (tag == "Curve" || tag == "Plot") ) {
-        TimeAndIndex* liveMarker = 0;
+        Marker* liveMarker = 0;
         if ( tag == "Plot" ) {
             if ( pres == "error" || pres == "error+compare") {
-                liveMarker = new TimeAndIndex(liveTime,timeIdx,_currIdx);
+                liveMarker = new Marker(liveTime,timeIdx,"",_currIdx);
             }
         } else if ( tag == "Curve" ) {
             if ( pres == "compare" || pres == "error+compare" ) {
-                liveMarker = new TimeAndIndex(liveTime,timeIdx,_currIdx);
+                liveMarker = new Marker(liveTime,timeIdx,"",_currIdx);
             } else if ( pres == "error" ) {
                 QModelIndex plotIdx = _currIdx.parent().parent();
-                liveMarker = new TimeAndIndex(liveTime,0,plotIdx);
+                liveMarker = new Marker(liveTime,0,"",plotIdx);
             }
         } else {
             // Should not happen
@@ -1132,8 +1132,10 @@ QList<TimeAndIndex*> CurvesLayoutItem::_getMarkers() const
                                                          "MarkerTime","Marker");
                 int markerTimeIdx = _bookModel->getDataInt(markerIdx,
                                                       "MarkerTimeIdx","Marker");
-                TimeAndIndex* marker = new TimeAndIndex(markerTime,
-                                                        markerTimeIdx,_plotIdx);
+                QString markerLabel = _bookModel->getDataString(markerIdx,
+                                                        "MarkerLabel","Marker");
+                Marker* marker = new Marker(markerTime,
+                                            markerTimeIdx,markerLabel,_plotIdx);
                 markers << marker;
             }
         }
@@ -1155,8 +1157,10 @@ QList<TimeAndIndex*> CurvesLayoutItem::_getMarkers() const
                                                          "MarkerTime","Marker");
                     int markerTimeIdx = _bookModel->getDataInt(markerIdx,
                                                       "MarkerTimeIdx","Marker");
-                    TimeAndIndex* marker = new TimeAndIndex(markerTime,
-                                                        markerTimeIdx,curveIdx);
+                    QString markerLabel = _bookModel->getDataString(markerIdx,
+                                                        "MarkerLabel","Marker");
+                    Marker* marker = new Marker(markerTime,
+                                            markerTimeIdx,markerLabel,curveIdx);
                     markers << marker;
                 }
             }
@@ -1166,7 +1170,7 @@ QList<TimeAndIndex*> CurvesLayoutItem::_getMarkers() const
     return markers;
 }
 
-ScaleBias CurvesLayoutItem::_getMarkerScaleBias(TimeAndIndex* marker) const
+ScaleBias CurvesLayoutItem::_getMarkerScaleBias(Marker* marker) const
 {
     QString tag = _bookModel->data(marker->modelIdx()).toString();
 
@@ -1205,7 +1209,7 @@ ScaleBias CurvesLayoutItem::_getMarkerScaleBias(TimeAndIndex* marker) const
 //
 // Unfortunately client needs to clean returned path if path is
 // an error plot i.e. it's a path associated with plot index
-QPainterPath *CurvesLayoutItem::_getMarkerPath(TimeAndIndex *marker) const
+QPainterPath *CurvesLayoutItem::_getMarkerPath(Marker *marker) const
 {
     QPainterPath* path = 0;
 
@@ -1233,10 +1237,12 @@ QPainterPath *CurvesLayoutItem::_getMarkerPath(TimeAndIndex *marker) const
     return path;
 }
 
-int CurvesLayoutItem::_getMarkerPathIdx(TimeAndIndex *marker,
+int CurvesLayoutItem::_getMarkerPathIdx(Marker *marker,
                                         const ScaleBias& sb,
                                         QPainterPath *path) const
 {
+    int i;  // return index i
+
     QString tag = _bookModel->data(marker->modelIdx()).toString();
 
     // Get path time (t)
@@ -1250,24 +1256,6 @@ int CurvesLayoutItem::_getMarkerPathIdx(TimeAndIndex *marker,
             t = log10(t);
         }
     }
-
-    // Get element index (i) for time (t)
-    int high = path->elementCount()-1;
-    int i = _idxAtTimeBinarySearch(path,0,high,t);
-
-    /* There may be duplicate timestamps in sequence - go to first */
-    double elementTime = path->elementAt(i).x;
-    while ( i > 0 ) {
-        if ( path->elementAt(i-1).x == elementTime ) {
-            --i;
-        } else {
-            break;
-        }
-    }
-
-    // If timestamps identical, it may be necessary to add LiveCoordTimeidx
-    int ii = marker->timeIdx();
-    i = i+ii;  // LiveCoordTimeIndex is normally 0
 
     if ( tag == "Curve" ) {
         QModelIndex curveIdx = marker->modelIdx();
@@ -1377,20 +1365,68 @@ int CurvesLayoutItem::_getMarkerPathIdx(TimeAndIndex *marker,
                 return -1;
             }
 
-            /* There may be duplicate timestamps in sequence - goto first */
-            ModelIterator* it = curveModel->begin();
-            double iTime = it->at(i)->t();
-            while ( i > 0 ) {
-                if ( it->at(i-1)->t() == iTime ) {
-                    --i;
-                } else {
-                    break;
+            if ( _bookModel->isXTime(_plotIdx) ) {  // Account for time idx
+                double elementTime = path->elementAt(i).x;
+                while ( i > 0 ) {
+                    if ( path->elementAt(i-1).x == elementTime ) {
+                        --i;
+                    } else {
+                        break;
+                    }
+                }
+
+                // When timestamps identical, account for time idx
+                int ii = marker->timeIdx();
+                if ( i+ii < path->elementCount() ) {
+                    if ( elementTime == path->elementAt(i+ii).x ) {
+                        i += ii;
+                    }
                 }
             }
-            delete it;
-            i = i + ii;
+        } else {
+            // X is time and no points culled from path, so use path solely
+            // instead of having to resort to curveModel
+            i = __pathIdxAtTime(path,t,marker->timeIdx());
         }
         curveModel->unmap();
+
+    } else if ( tag == "Plot" ){
+        // This is an error plot since tag is Plot
+        // Since it's an error plot, path x is always time so
+        // no need to resort to curvemodel to get time
+        i = __pathIdxAtTime(path,t,marker->timeIdx());
+    } else {
+        i = -1; // If tag is not curve or plot, no index
+    }
+
+    return i;
+}
+
+// Assumes that path.x is time
+int CurvesLayoutItem::__pathIdxAtTime(QPainterPath* path,
+                                      double time, int timeIdx) const
+{
+    int i; // index to return
+
+    // Get element index (i) for time (t)
+    int high = path->elementCount()-1;
+    i = _idxAtTimeBinarySearch(path,0,high,time);
+
+    double elementTime = path->elementAt(i).x;
+    while ( i > 0 ) {
+        if ( path->elementAt(i-1).x == elementTime ) {
+            --i;
+        } else {
+            break;
+        }
+    }
+
+    // When timestamps identical, account for LiveCoordTimeidx
+    int ii = timeIdx;
+    if ( i+ii < path->elementCount() ) {
+        if ( elementTime == path->elementAt(i+ii).x ) {
+            i += ii;
+        }
     }
 
     return i;
@@ -1400,7 +1436,7 @@ int CurvesLayoutItem::_getMarkerPathIdx(TimeAndIndex *marker,
 // R is curves viewport rectangle
 // Argument i is path index to paint marker at
 void CurvesLayoutItem::_paintMarker(QPainter* painter,
-                                    TimeAndIndex *marker,
+                                    Marker *marker,
                                     const QRect& R,
                                     const QRect& RG,
                                     const QRect& C,
@@ -1434,10 +1470,23 @@ void CurvesLayoutItem::_paintMarker(QPainter* painter,
         } else {
             arrow.txt = QString("(%1, %2)").arg(x).arg(y);
         }
+        if ( !marker->label().isEmpty() ) {
+            arrow.txt = QString("%1 %2").arg(marker->label()).arg(arrow.txt);
+        }
     } else if ( i == 0 ) {
-        arrow.txt = QString("init=(%1, %2)").arg(x).arg(y);
+        if ( !marker->label().isEmpty() ) {
+            arrow.txt = QString("%1 (%2, %3)").arg(marker->label())
+                                              .arg(x).arg(y);
+        } else {
+            arrow.txt = QString("init=(%1, %2)").arg(x).arg(y);
+        }
     } else if ( i == rc-1 ) {
-        arrow.txt = QString("last=(%1, %2)").arg(x).arg(y);
+        if ( !marker->label().isEmpty() ) {
+            arrow.txt = QString("%1 (%2, %3)").arg(marker->label())
+                                              .arg(x).arg(y);
+        } else {
+            arrow.txt = QString("last=(%1, %2)").arg(x).arg(y);
+        }
     } else {
         fprintf(stderr,"koviz [bad scoobs]: CurvesView::_paintMarkers()\n");
         exit(-1);
@@ -1445,7 +1494,7 @@ void CurvesLayoutItem::_paintMarker(QPainter* painter,
 
     // Show run name if more than 5 runs
     QString tag = _bookModel->data(marker->modelIdx()).toString();
-    if ( tag == "Curve") {
+    if ( tag == "Curve" && marker->label().isEmpty() ) {
         QModelIndex curveIdx = marker->modelIdx();
         if ( _bookModel->rowCount(curveIdx.parent()) > 5 ) {
             CurveModel* curveModel = _bookModel->getCurveModel(curveIdx);

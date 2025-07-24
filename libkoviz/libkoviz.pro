@@ -50,6 +50,7 @@ SOURCES += bookmodel.cpp \
            datamodel_points.cpp \
            datamodel_xy.cpp \
            dp.cpp \
+           markerdialog.cpp \
            run.cpp \
            rundir.cpp \
            runfile.cpp \
@@ -137,6 +138,7 @@ HEADERS  += bookmodel.h \
             datamodel_points.h \
             datamodel_xy.h \
             dp.h \
+            markerdialog.h \
             run.h \
             rundir.h \
             runfile.h \
