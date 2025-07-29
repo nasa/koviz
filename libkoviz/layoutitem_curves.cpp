@@ -1285,10 +1285,26 @@ int CurvesLayoutItem::_getMarkerPathIdx(Marker *marker,
                 xub = Unit::bias(loggedXUnit, bookXUnit);
             }
 
+            double yus = 1.0;
+            double yub = 0.0;
+            QString bookYUnit = _bookModel->getDataString(curveIdx,
+                                                          "CurveYUnit","Curve");
+            if ( !bookYUnit.isEmpty() && bookYUnit != "--" ) {
+                QString loggedYUnit = curveModel->y()->unit();
+                yus = Unit::scale(loggedYUnit, bookYUnit);
+                yub = Unit::bias(loggedYUnit, bookYUnit);
+            }
+
             double xb = _bookModel->getDataDouble(curveIdx,
                                                     "CurveXBias","Curve");
             double xs = _bookModel->getDataDouble(curveIdx,
                                                     "CurveXScale","Curve");
+            double yb = _bookModel->getDataDouble(curveIdx,
+                                                    "CurveYBias","Curve");
+            double ys = _bookModel->getDataDouble(curveIdx,
+                                                    "CurveYScale","Curve");
+
+
             if ( _bookModel->isXTime(_plotIdx) ) {
                 // Take time shift and scale into account
                 // Also take x time unit scale into account
@@ -1309,6 +1325,27 @@ int CurvesLayoutItem::_getMarkerPathIdx(Marker *marker,
                 }
             }
             int ii = marker->timeIdx();
+
+            // Calc time idx (iii) for paths with culled log points
+            int iii = ii;
+            it = it->at(i);
+            for (int kk = 0; kk <= ii; ++kk) {
+                double x = it->at(i+kk)->x();
+                x = x*xus + xub;
+                x = x*xs + xb;
+
+                double y = it->at(i+kk)->y();
+                y = y*yus + yub;
+                y = y*ys + yb;
+
+                if ((x == 0 && sb.isXLogScale) ||
+                    (y == 0 && sb.isYLogScale)) {
+                    --iii;
+                    continue;
+                }
+            }
+
+            // Finish accounting for time idx
             it = it->at(i+ii);
             if ( !it->isDone() ) {
                 if ( iTime == it->at(i+ii)->t() ) {
@@ -1354,11 +1391,19 @@ int CurvesLayoutItem::_getMarkerPathIdx(Marker *marker,
                     // Otherwise, scale and bias in path transform
                     // not in path
                     x = xs*x + xb;
-                    x = log10(x);
+                    if ( x == 0 ) {
+                        curveModel->unmap();
+                        return -1;
+                    }
+                    x = log10(qAbs(x));
                 }
                 if ( sb.isYLogScale ) {
                     y = ys*y + yb;    // Book scale
-                    y = log10(y);
+                    if ( y == 0 ) {
+                        curveModel->unmap();
+                        return -1;
+                    }
+                    y = log10(qAbs(y));
                 }
                 int j = (i < nels) ? i : nels - 1;
                 bool isFound = false;
@@ -1384,23 +1429,17 @@ int CurvesLayoutItem::_getMarkerPathIdx(Marker *marker,
                 return -1;
             }
 
-            if ( _bookModel->isXTime(_plotIdx) ) {  // Account for time idx
+            // Account for time idx (duplicate timestamps)
+            if ( _bookModel->isXTime(_plotIdx) ) {
                 double elementTime = path->elementAt(i).x;
-                while ( i > 0 ) {
+                while ( i > 0 ) { // set i back to first duplicated timestamp
                     if ( path->elementAt(i-1).x == elementTime ) {
                         --i;
                     } else {
                         break;
                     }
                 }
-
-                // When timestamps identical, account for time idx
-                int ii = marker->timeIdx();
-                if ( i+ii < path->elementCount() ) {
-                    if ( elementTime == path->elementAt(i+ii).x ) {
-                        i += ii;
-                    }
-                }
+                i += iii;  // iii is logarithm culled time index offset
             }
         } else {
             // X is time and no points culled from path, so use path solely

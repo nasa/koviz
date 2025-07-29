@@ -1,0 +1,15 @@
+Koviz
+
+PLOTS:
+  Page 1: ""
+
+    Plot 1: ""
+      x_variable: "x"
+        bias: 32
+        scale_factor: 2
+        units: "F"
+      y_variable: "y"
+        bias: 32
+        scale_factor: 2
+        units: "F"
+        label: "y"

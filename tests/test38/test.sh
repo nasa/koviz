@@ -1,0 +1,20 @@
+#! /usr/bin/env bash
+
+echo "---------------------------------------------------"
+echo "              Test Markers                         "
+echo "---------------------------------------------------"
+echo ""
+echo "Action1: N/A"
+echo "Expect1: Almost diamond but jig at top"
+echo ""
+echo "Action2: Use arrow keys to march over points"
+echo "Expect2: (456,96),(96,456),(96,492),(96,528),"
+echo "(96,564),(-264,96),(96,-264),(456,96)"
+echo ""
+echo "Action3: Roll over y-axis nums to put y in logscale"
+echo "Expect3: Almost star trek shape where all points"
+echo "         stay same except (96,-264) moves to (96,264)" 
+echo "         since log(-y) => log(y)"
+echo ""
+echo ""
+koviz DP_test a.csv

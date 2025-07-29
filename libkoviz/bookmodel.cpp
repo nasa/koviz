@@ -2903,12 +2903,32 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
 
         bool isXTime = (curveModel->x()->name() == curveModel->t()->name());
 
-        // Curve x bias and x scale
+        // Curve x/y bias and x/y scale
         double xs = 1.0;
         double xb = 0.0;
+        double ys = 1.0;
+        double yb = 0.0;
         if ( isXTime && tag == "Curve" ) {
             xs = getDataDouble(idx,"CurveXScale","Curve");
             xb = getDataDouble(idx,"CurveXBias","Curve");
+            ys = getDataDouble(idx,"CurveYScale","Curve");
+            yb = getDataDouble(idx,"CurveYBias","Curve");
+        }
+
+        // Plot x/y linear/log scale
+        bool isXLogScale = false;
+        bool isYLogScale = false;
+        QModelIndex plotIdx = idx;
+        if ( tag == "Curve") {
+            plotIdx = idx.parent().parent();
+        }
+        QString xscale = getDataString(plotIdx,"PlotXScale","Plot");
+        if ( xscale == "log" ) {
+            isXLogScale = true;
+        }
+        QString yscale = getDataString(plotIdx,"PlotYScale","Plot");
+        if ( yscale == "log" ) {
+            isYLogScale = true;
         }
 
         // Calculate curve time index
@@ -2942,15 +2962,31 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
             }
         }
 
+        // Live time index
         QModelIndex lctIdx = getDataIndex(QModelIndex(),
                                           "LiveCoordTimeIndex","");
         int ii = getDataInt(QModelIndex(), "LiveCoordTimeIndex","");
 
         // Calculate nextTime after liveTime
         double nextTime = liveTime;
-        it = it->at(i+1+ii);
+        double lastTime = nextTime;
+        it = it->at(i+ii+1);
         while ( !it->isDone() ) {
             if ( isXTime && tag == "Curve" ) {
+
+                // Calc y
+                QString dp_yunit = getDataString(idx,"CurveYUnit","Curve");
+                QString mo_yunit = curveModel->y()->unit();
+                double yus = 1.0;
+                double yub = 0.0;
+                if ( !dp_yunit.isEmpty() ) {
+                    yus = Unit::scale(mo_yunit,dp_yunit);
+                    yub = Unit::bias(mo_yunit,dp_yunit);
+                }
+                double y = yus*it->y() + yub;
+                y = ys*y + yb;
+
+                // Calc x (time)
                 QString xunit = getDataString(idx,"CurveXUnit","Curve");
                 QString tunit = curveModel->t()->unit();
                 double tus = 1.0;
@@ -2959,9 +2995,27 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
                     tus = Unit::scale(tunit,xunit);
                     tub = Unit::bias(tunit,xunit);
                 }
-                nextTime = it->t();
-                nextTime = tus*nextTime + tub;
-                nextTime = xs*nextTime + xb;
+                double x = it->t();
+                x = tus*x + tub;
+                x = xs*x + xb;
+                double time = x;
+
+                // If logscale, cull zeroes
+                if ( (x == 0.0 && isXLogScale) ||
+                     (y == 0.0 && isYLogScale) ) {
+                    // If x/y culled by log, continue searching for next time
+                    if ( time == lastTime ) {
+                        ++ii;         // Time not changed, incr time idx
+                    } else {
+                        i = i+ii+1;   // Move i to next non-duplicated time
+                        ii = 0;
+                    }
+                    lastTime = time;
+                    it = it->at(i+ii+1);
+                    continue;
+                }
+
+                nextTime = x;
             } else {
                 nextTime = it->t();
             }
@@ -2972,14 +3026,19 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
                 setData(lctIdx,++ii);
                 break;
             } else {
-                if ( ii != 0 ) {
+                if ( nextTime == lastTime ) {
+                    // Time duplicated, incr time index
+                    setData(lctIdx,++ii);
+                } else {
+                    // New time, reset time index
                     setData(lctIdx,0);
                 }
             }
             if ( dt > 1.0e-16 ) {
                 break;
             }
-            it->next();
+            ++i;
+            it = it->at(i+ii+1);
         }
         delete it;
 
@@ -3017,9 +3076,29 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
         // Curve x bias and x scale
         double xs = 1.0;
         double xb = 0.0;
+        double ys = 1.0;
+        double yb = 0.0;
         if ( isXTime && tag == "Curve" ) {
             xs = getDataDouble(idx,"CurveXScale","Curve");
             xb = getDataDouble(idx,"CurveXBias","Curve");
+            ys = getDataDouble(idx,"CurveYScale","Curve");
+            yb = getDataDouble(idx,"CurveYBias","Curve");
+        }
+
+        // Plot x/y linear/log scale
+        bool isXLogScale = false;
+        bool isYLogScale = false;
+        QModelIndex plotIdx = idx;
+        if ( tag == "Curve") {
+            plotIdx = idx.parent().parent();
+        }
+        QString xscale = getDataString(plotIdx,"PlotXScale","Plot");
+        if ( xscale == "log" ) {
+            isXLogScale = true;
+        }
+        QString yscale = getDataString(plotIdx,"PlotYScale","Plot");
+        if ( yscale == "log" ) {
+            isYLogScale = true;
         }
 
         // Calculate curve time index
@@ -3060,9 +3139,23 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
         QModelIndex lctIdx = getDataIndex(QModelIndex(), "LiveCoordTimeIndex","");
         int ii = getDataInt(QModelIndex(), "LiveCoordTimeIndex","");
 
+        double lastTime = prevTime;
         while ( i+ii > 0 ) {
             it = it->at(i+ii-1);
             if ( isXTime && tag == "Curve" ) {
+
+                // Calc prev y-value and continue if culled by logarithm
+                QString dp_yunit = getDataString(idx,"CurveYUnit","Curve");
+                QString mo_yunit = curveModel->y()->unit();
+                double yus = 1.0;
+                double yub = 0.0;
+                if ( !dp_yunit.isEmpty() ) {
+                    yus = Unit::scale(mo_yunit,dp_yunit);
+                    yub = Unit::bias(mo_yunit,dp_yunit);
+                }
+                double y = yus*it->y() + yub;
+                y = ys*y + yb;
+
                 QString xunit = getDataString(idx,"CurveXUnit","Curve");
                 QString tunit = curveModel->t()->unit();
                 double tus = 1.0;
@@ -3071,9 +3164,23 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
                     tus = Unit::scale(tunit,xunit);
                     tub = Unit::bias(tunit,xunit);
                 }
-                prevTime = it->t();
-                prevTime = tus*prevTime + tub;
-                prevTime = xs*prevTime + xb;
+                double x = it->t();
+                x = tus*x + tub;
+                x = xs*x + xb;
+                double time = x;
+
+                if ( (x == 0.0 && isXLogScale) ||
+                     (y == 0.0 && isYLogScale) ) {
+                    // If x/y culled by log, continue searching for prev time
+                    if ( time == lastTime ) {
+                        --ii;  // Culled indexed time point
+                    } else {
+                        --i;   // Culled non-indexed time point
+                    }
+                    lastTime = time;
+                    continue;
+                }
+                prevTime = time;
             } else {
                 prevTime = it->t();
             }

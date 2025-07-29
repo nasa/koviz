@@ -1,0 +1,11 @@
+Koviz
+
+PLOTS:
+  Page 1: ""
+
+    Plot 1: ""
+      plot_x_scale: "log"
+      plot_y_scale: "log"
+      x_variable: "sys.exec.out.time"
+      y_variable: "ball.state.out.position[0]"
+
