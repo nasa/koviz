@@ -1,0 +1,14 @@
+Koviz
+
+PLOTS:
+  Page 1: ""
+
+    Plot 1: ""
+      x_variable: "x.temperature"
+          scale_factor: 9
+          bias: 10 
+          units: "C"
+      y_variable: "y.temperature"
+          scale_factor: 18
+          bias: 20
+          units: "C"

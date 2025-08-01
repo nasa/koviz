@@ -1,0 +1,8 @@
+sys.exec.out.time, x.temperature {C}, y.temperature {C}
+0, 0,  0
+0, 50, 0
+0, 100, 0
+1, 100, 50
+1, 100, 100
+2, 50, 100
+2, 0, 100
