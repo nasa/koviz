@@ -10,18 +10,22 @@ B. Deploy koviz using windeployqt
       in the bash PATH
    3. In a gitbash terminal
         a. mkdir -p ~/deploy/koviz
-        b. cp <koviz-home>/bin/koviz.exe ~/deploy/koviz
+        b. cp <koviz>/bin/koviz.exe ~/deploy/koviz
         c. windeployqt ~/deploy/koviz/koviz.exe
-           This will put all dependencies (e.g.
+           This will put dependencies (e.g.
            all the *.dlls) in ~/deploy/koviz
+        d. cp <koviz>/win/mpv/libmpv-2.dll ~/deploy/koviz
 
 C. Create koviz-installer.exe using Inno Setup
 
    1. cp <koviz>/win/icon/koviz.ico ~/deploy/koviz
    2. cp <koviz>/win/koviz.iss ~/deploy
-   3. cp <koviz>/win/LICENSE ~/deploy/koviz
+   3. cp <koviz>/LICENSE ~/deploy/koviz
    4. vi ~/deploy/koviz/koviz.iss
-      Change deploy path if needed
+      Change deploy path to deploy.<xx>
+          * Change LicenseFile 
+          * Change SetupIconFile
+          * Change Source path 
    5. Launch Inno Setup
       Double click Inno Setup icon
    6. Inno:File->Open ~/deploy/koviz.iss
