@@ -17,12 +17,13 @@ B. Deploy koviz using windeployqt
 
 C. Create koviz-installer.exe using Inno Setup
 
-   1. cp <koviz-home>/win/koviz.ico ~/deploy/koviz
-   2. cp <koviz-home>/win/koviz.iss ~/deploy
-   3. vi ~/deploy/koviz/koviz.iss
+   1. cp <koviz>/win/icon/koviz.ico ~/deploy/koviz
+   2. cp <koviz>/win/koviz.iss ~/deploy
+   3. cp <koviz>/win/LICENSE ~/deploy/koviz
+   4. vi ~/deploy/koviz/koviz.iss
       Change deploy path if needed
-   4. Launch Inno Setup
+   5. Launch Inno Setup
       Double click Inno Setup icon
-   5. Inno:File->Open ~/deploy/koviz.iss
-   6. Select Inno->Build->Compile
-   7. See ~/deploy/Output/koviz-installer.exe
+   6. Inno:File->Open ~/deploy/koviz.iss
+   7. Select Inno->Build->Compile
+   8. See ~/deploy/Output/koviz-installer.exe
