@@ -1655,17 +1655,60 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                         }
                         it->next();
                     }
+
+                    // Set live time
+                    if ( liveTime <= start ) {
+                        liveTime = start;
+                    } else if ( liveTime >= stop ) {
+                        liveTime = stop;
+                    }
+                    model()->setData(liveTimeIdx,liveTime);
+
+                    // Set time index
+                    // Pick first defined point in duplicate timestamps
+                    int i = curveModel->indexAtTime(liveTime);
+                    double iTime = it->at(i)->t();
+                    int k = i;
+                    for (int j = i - 1; j >= 0; --j) {
+                        double jTime = it->at(j)->t();
+                        if ( iTime == jTime ) {
+                            k = j;  // Lowest idx where it->at(k)->t() == iTime
+                            continue;
+                        } else {
+                            break;
+                        }
+                    }
+                    int tidx = 0;
+                    while ( !it->isDone() ) {
+                        double kTime = it->at(k+tidx)->t();
+                        if (  kTime != iTime ) {
+                            break;
+                        }
+                        double x = it->x();
+                        x = xus*x + xub;
+                        x = xs*x + xb;
+                        double y = it->y();
+                        y = yus*y + yub;
+                        y = ys*y + yb;
+                        if ( (x == 0 && isXLogScale) ||
+                             (y == 0 && isYLogScale) ) {
+                            ++tidx;
+                            it->next();
+                            continue;
+                        } else {
+                            break;
+                        }
+
+                    }
+                    QModelIndex lctidx = _bookModel()->getDataIndex(
+                                                       QModelIndex(),
+                                                       "LiveCoordTimeIndex","");
+                    _bookModel()->setData(lctidx,tidx);
+
+
+
                     delete it;
                     curveModel->unmap();
-
-                    // Set live coord in model
-                    if ( liveTime <= start ) {
-                        model()->setData(liveTimeIdx,start);
-                    } else if ( liveTime >= stop ) {
-                        model()->setData(liveTimeIdx,stop);
-                    } else {
-                        model()->setData(liveTimeIdx,liveTime);
-                    }
                 }
 
                 viewport()->update();

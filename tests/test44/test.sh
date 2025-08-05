@@ -20,7 +20,10 @@ echo "         (100,-100),(100,0)"
 echo "Action3: Use left arrow to move through points"
 echo "Expect3: See points above"
 echo ""
-echo "Action4: Roll over x/y axis labels for log/log scale"
-echo "Expect4: Rectangle plot with (0,0) bottom left"
+echo "Action4: Roll over x/y axis tic labels for log/log scale"
+echo "Expect4: Rectangle plot with (~0,~0) bottom left"
+echo "         and (~100,~100) top right.  The reason points"
+echo "         not culled is that F->C fuzzy about zero - "
+echo "         but non-zero."
 
 koviz DP_test a.csv

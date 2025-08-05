@@ -1,0 +1,9 @@
+Koviz
+
+PLOTS:
+  Page 1: ""
+
+    Plot 1: ""
+      plot_y_scale: "log"
+      x_variable: "x.temperature"
+      y_variable: "y.temperature"

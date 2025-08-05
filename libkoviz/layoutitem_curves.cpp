@@ -1243,15 +1243,16 @@ int CurvesLayoutItem::_getMarkerPathIdx(Marker *marker,
 {
     int i;  // return index i
 
+    if ( path->elementCount() == 0 ) {
+        return -1;
+    }
+
     QString tag = _bookModel->data(marker->modelIdx()).toString();
 
     // Get path time (t)
-    double t;
-    if ( sb.xb != 0.0 || sb.xs != 1.0 ) {
+    double t = marker->time();
+    if ( _bookModel->isXTime(_plotIdx) ) {
         t = (marker->time()-sb.xb)/sb.xs;
-        ROUNDOFF(t,t);
-    } else {
-        t = marker->time();
         if ( sb.isXLogScale ) {
             t = log10(t);
         }
@@ -1273,8 +1274,6 @@ int CurvesLayoutItem::_getMarkerPathIdx(Marker *marker,
             // i is calculated from the curve model instead of the path
             // since the path does not have time
             //
-            // i is a best guess
-
             double xus = 1.0;
             double xub = 0.0;
             QString bookXUnit = _bookModel->getDataString(curveIdx,
@@ -1304,7 +1303,6 @@ int CurvesLayoutItem::_getMarkerPathIdx(Marker *marker,
             double ys = _bookModel->getDataDouble(curveIdx,
                                                     "CurveYScale","Curve");
 
-
             if ( _bookModel->isXTime(_plotIdx) ) {
                 // Take time shift and scale into account
                 // Also take x time unit scale into account
@@ -1325,122 +1323,50 @@ int CurvesLayoutItem::_getMarkerPathIdx(Marker *marker,
                 }
             }
             int ii = marker->timeIdx();
-
-            // Calc time idx (iii) for paths with culled log points
-            int iii = ii;
-            it = it->at(i);
-            for (int kk = 0; kk <= ii; ++kk) {
-                double x = it->at(i+kk)->x();
-                x = x*xus + xub;
-                x = x*xs + xb;
-
-                double y = it->at(i+kk)->y();
-                y = y*yus + yub;
-                y = y*ys + yb;
-
-                if ((x == 0 && sb.isXLogScale) ||
-                    (y == 0 && sb.isYLogScale)) {
-                    --iii;
-                    continue;
-                }
-            }
-
-            // Finish accounting for time idx
             it = it->at(i+ii);
             if ( !it->isDone() ) {
                 if ( iTime == it->at(i+ii)->t() ) {
                     i += ii;
                 }
             }
+
+            // Count culled points due to log and start/stop time
+            double start = _bookModel->getDataDouble(QModelIndex(),
+                                                     "StartTime","");
+            double stop = _bookModel->getDataDouble(QModelIndex(),
+                                                     "StopTime","");
+            bool isXTime = _bookModel->isXTime(_plotIdx) ? true : false;
+            int nc = 0;
+            it = it->at(0);
+            for (int kk = 0; kk < i; ++kk) {
+                it = it->at(kk);
+                if ( it->isDone() ) break;
+
+                double x = it->x();
+                x = x*xus + xub;
+                x = x*xs + xb;
+
+                double y = it->y();
+                y = y*yus + yub;
+                y = y*ys + yb;
+
+                double t = isXTime ? x : it->t();
+                if ( t < start || t > stop ) {
+                    ++nc;
+                    continue;
+                }
+
+                if ((x == 0 && sb.isXLogScale) ||
+                    (y == 0 && sb.isYLogScale)) {
+                    ++nc;
+                    continue;
+                }
+            }
             delete it;
 
-            if ( nels < npts ) {
-                // Points have been culled out of the data leaving the
-                // path with less elements than the curve
-                // This can happen when:
-                //    1) Log(curve) removes zeroes
-                //    2) Frequency is given, points culled out of curve
-                //    3) Start/stop time given, points lopped off ends
-                // Search for first element that matches curve point at time
-                ModelIterator* it = curveModel->begin();
-                double x = it->at(i)->x();
-                double y = it->at(i)->y();
-                delete it;
+            // Painter path index is model index minus culled points from path
+            i -= nc;
 
-                // Since X unit scale baked in path, need to unit scale
-                x = xus*x + xub;    // X Unit scale
-
-                // Since Y unit scale baked in path, need to unit scale
-                double yb = _bookModel->getDataDouble(curveIdx,
-                                                      "CurveYBias","Curve");
-                double ys = _bookModel->getDataDouble(curveIdx,
-                                                      "CurveYScale","Curve");
-                double yus = 1.0;
-                double yub = 0.0;
-                QString bookYUnit = _bookModel->getDataString(curveIdx,
-                                                              "CurveYUnit","Curve");
-                if ( !bookYUnit.isEmpty() && bookYUnit != "--" ) {
-                    QString loggedYUnit = curveModel->y()->unit();
-                    yus = Unit::scale(loggedYUnit, bookYUnit);
-                    yub = Unit::bias(loggedYUnit, bookYUnit);
-                }
-                y = yus*y + yub;  // Y Unit scale
-
-                if ( sb.isXLogScale ) {
-                    // If logscale, scale and bias baked in path
-                    // Otherwise, scale and bias in path transform
-                    // not in path
-                    x = xs*x + xb;
-                    if ( x == 0 ) {
-                        curveModel->unmap();
-                        return -1;
-                    }
-                    x = log10(qAbs(x));
-                }
-                if ( sb.isYLogScale ) {
-                    y = ys*y + yb;    // Book scale
-                    if ( y == 0 ) {
-                        curveModel->unmap();
-                        return -1;
-                    }
-                    y = log10(qAbs(y));
-                }
-                int j = (i < nels) ? i : nels - 1;
-                bool isFound = false;
-                while ( j >= 0 ) {
-                    QPainterPath::Element el = path->elementAt(j);
-                    if ( el.x == x && el.y == y ) {
-                        i = j;
-                        isFound = true;
-                        break;
-                    }
-                    --j;
-                }
-                if ( !isFound || i >= nels ) {
-                    // Point not found, bail
-                    curveModel->unmap();
-                    return -1;
-                }
-            } else if ( nels > npts ) {
-                // There are more elements in the path than points
-                // on the curve.  Shouldn't happen, but if it does
-                // don't show marker
-                curveModel->unmap();
-                return -1;
-            }
-
-            // Account for time idx (duplicate timestamps)
-            if ( _bookModel->isXTime(_plotIdx) ) {
-                double elementTime = path->elementAt(i).x;
-                while ( i > 0 ) { // set i back to first duplicated timestamp
-                    if ( path->elementAt(i-1).x == elementTime ) {
-                        --i;
-                    } else {
-                        break;
-                    }
-                }
-                i += iii;  // iii is logarithm culled time index offset
-            }
         } else {
             // X is time and no points culled from path, so use path solely
             // instead of having to resort to curveModel
@@ -1468,6 +1394,10 @@ int CurvesLayoutItem::__pathIdxAtTime(QPainterPath* path,
 
     // Get element index (i) for time (t)
     int high = path->elementCount()-1;
+    if ( high < 0 ) {
+        return -1;
+    }
+
     i = _idxAtTimeBinarySearch(path,0,high,time);
 
     double elementTime = path->elementAt(i).x;

@@ -3020,7 +3020,7 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
                 if ( (x == 0.0 && isXLogScale) ||
                      (y == 0.0 && isYLogScale) ) {
                     // If x/y culled by log, continue searching for next time
-                    if ( time == lastTime ) {
+                    if ( qAbs(time-lastTime) < 1.0e-12 ) {
                         ++ii;         // Time not changed, incr time idx
                     } else {
                         i = i+ii+1;   // Move i to next non-duplicated time
@@ -3036,9 +3036,11 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
                 nextTime = it->t();
             }
             double dt = qAbs(nextTime-liveTime);
-            if ( dt == 0.0 ) {
+            if ( dt < 1.0e-12 ) {
                 // Multiple points for same timestamp,
                 // move to next point on this curve for this same timestamp
+                // Had to use dt < 1.0e-12 for equality since unit scaling time
+                // and applying scale/bias loses floating point precision
                 setData(lctIdx,++ii);
                 break;
             } else {
@@ -3219,9 +3221,11 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
                 prevTime = it->t();
             }
             double dt = qAbs(liveTime-prevTime);
-            if ( dt == 0 ) {
+            if ( dt < 1.0e-12 ) {
                 // Multiple points for same timestamp,
                 // move to prev point on this curve for this same timestamp
+                // 1.0e-12 used since time can be unit biased, scaled and
+                // biased which causes floating point precision issues
                 setData(lctIdx,--ii);
                 break;
             } else {
