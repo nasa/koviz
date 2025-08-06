@@ -171,7 +171,8 @@ W                             [ \t]+
 
 {W} { /* Ignore white space */ }
 
-\n  { /* fprintf(stderr, "line: %d\n",  yylineno);*/ ; yylval.ival = yylineno ; }
+\n   {/*fprintf(stderr, "line: %d\n",  yylineno);*/; yylval.ival = yylineno ;}
+\r\n {/*fprintf(stderr, "line: %d\n",  yylineno);*/; yylval.ival = yylineno ;}
 
 .   { /*fprintf(stderr, "%c\n", yytext[0]);*/ ;
       yylval.ival = yylineno ;
