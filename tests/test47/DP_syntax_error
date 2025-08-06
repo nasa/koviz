@@ -1,0 +1,12 @@
+Koviz
+
+PLOTS:
+  This Is An Invalid DP syntax test
+  Page 1: ""
+
+    Plot 1: ""
+      x_variable: "sys.exec.out.time"
+          scale_factor: 2
+          bias: 50
+          units: "s"
+      y_variable: "y.temperature"
