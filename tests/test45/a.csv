@@ -1,4 +1,4 @@
-sys.exec.out.time, x.temperature {C}, y.temperature {C}
+sys.exec.out.time {s}, x.temperature {C}, y.temperature {C}
 0,0,0
 0,100,0
 0,0,0
