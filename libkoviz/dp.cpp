@@ -1,6 +1,9 @@
 #include "dp.h"
 #include "options.h"
 
+#include <setjmp.h>
+jmp_buf dpParseErrorJumpBuf; // used to jump from product_parser.y > yyerror()
+
 DPProduct* product;// hack to pass to yacc parser
 
 QString DPProduct::_err_string;
@@ -63,6 +66,7 @@ QString DPProduct::title()
 
 void DPProduct::_handleDP05File(QString &contents)
 {
+
     // Remove all characters up to PLOTS: or TABLES: key word
     QStringList keywords;
     keywords << "PLOTS:" << "TABLES:" << "PROGRAM:";
@@ -74,14 +78,34 @@ void DPProduct::_handleDP05File(QString &contents)
         }
     }
     if ( i == INT_MAX ) {
-        fprintf(stderr,"koviz [error]: no PLOTS: or TABLES: "
-                       "or PROGRAM: keywords in %s\n",
-                _fileName.toLatin1().constData());
-        exit(-1);
+        QString msg;
+        msg += "koviz [abort] : no PLOTS:, TABLES: or PROGRAM: keywords in" +
+                QString("%1").arg(_fileName);
+
+        fprintf(stderr, "koviz [error]: %s\n", msg.toLatin1().constData());
+
+        static int nErrorMsgs = 0;
+        if ( ++nErrorMsgs < 3 ) {
+            QMessageBox* box = new QMessageBox;
+            box->setAttribute(Qt::WA_DeleteOnClose);
+            box->setIcon(QMessageBox::Critical);
+            box->setWindowTitle("Error");
+            box->setText(msg);
+            box->show();
+        }
+
+        return;
     }
     contents = contents.remove(0,i-1);
 
     product = this; // TODO: product is global, need to fix the hack
+
+    // Register jump buffer for bailing on syntax errors in yyerror()
+    if (setjmp(dpParseErrorJumpBuf)) {
+        // Jumped here from product_parser.y > yyerror()
+        // Error message occurs in product_parser.y > yyerror()
+        return;
+    }
 
     YY_BUFFER_STATE state = yy_scan_string(contents.toLatin1().constData());
     yyparse();

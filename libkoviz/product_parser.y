@@ -8,12 +8,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <setjmp.h>
 #include <QString>
 #include <QList>
+#include <QMessageBox>
 
 extern int yylex(void);
 extern int yylineno;
 extern char* yytext;
+
+extern jmp_buf dpParseErrorJumpBuf;
 
 QList<double> globalFloatList;
 
@@ -22,13 +26,26 @@ QString dpFileName();
 void yyerror(const char *str)
 {
     Q_UNUSED(str);
+
     QString msg;
-    msg += "koviz [error] : DP product parser error \n";
+    msg += "koviz [abort] : DP product parser error \n";
     msg += "  Error found in file: " + dpFileName() + "\n";
     msg += "  Error found on line: " + QString("%1").arg(yylineno) + "\n";
     msg += "      Last Token Read: " + QString(yytext) + "\n";
-    fprintf(stderr, "%s\n",msg.toLatin1().constData());
-    exit(-1);
+
+    fprintf(stderr, "%s\n", msg.toLatin1().constData());
+
+    static int nErrorMsgs = 0;
+    if ( ++nErrorMsgs < 3 ) {
+        QMessageBox* box = new QMessageBox;
+        box->setAttribute(Qt::WA_DeleteOnClose);
+        box->setIcon(QMessageBox::Critical);
+        box->setWindowTitle("Error");
+        box->setText(msg);
+        box->show();
+    }
+
+    longjmp(dpParseErrorJumpBuf, 1);  // Jump to dp.cpp > _handleDP05File on err
 }
 
 int yywrap()

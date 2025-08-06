@@ -11,6 +11,7 @@
 #include <QFileInfo>
 #include <QHash>
 #include <QRectF>
+#include <QMessageBox>
 #include <stdexcept>
 #include <float.h>
 #include <limits.h>
