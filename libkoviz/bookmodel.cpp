@@ -2949,7 +2949,11 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
             logTime = tus*logTime + tub;
             i = curveModel->indexAtTime(logTime);
         } else {
-            i = curveModel->indexAtTime(liveTime);
+            if ( isXLogScale ) {
+                i = curveModel->indexAtTime(log10(liveTime));
+            } else {
+                i = curveModel->indexAtTime(liveTime);
+            }
         }
 
         /* Timestamps may duplicate, go to first in series */
@@ -2968,6 +2972,7 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
         int ii = getDataInt(QModelIndex(), "LiveCoordTimeIndex","");
 
         // Calculate nextTime after liveTime
+        double stop  = getDataDouble(QModelIndex(),"StopTime");
         double nextTime = liveTime;
         double lastTime = nextTime;
         it = it->at(i+ii+1);
@@ -3016,6 +3021,10 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
                     time = it->t();
                 }
 
+                if ( time > stop && qAbs(time-stop) > 1.0e-12 ) {
+                    break;
+                }
+
                 // If logscale, cull zeroes
                 if ( (x == 0.0 && isXLogScale) ||
                      (y == 0.0 && isYLogScale) ) {
@@ -3033,7 +3042,11 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
 
                 nextTime = time;
             } else {
-                nextTime = it->t();
+                if ( isXLogScale ) {
+                    nextTime = pow(10,it->t());
+                } else {
+                    nextTime = it->t();
+                }
             }
             double dt = qAbs(nextTime-liveTime);
             if ( dt < 1.0e-12 ) {
@@ -3061,7 +3074,6 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
         delete it;
 
         // nextTime should not exceed stop time
-        double stop  = getDataDouble(QModelIndex(),"StopTime");
         nextTime = (nextTime > stop)  ? stop  : nextTime;
 
         // Update liveTime to nextTime
@@ -3137,7 +3149,11 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
             logTime = tus*logTime + tub;
             i = curveModel->indexAtTime(logTime);
         } else {
-            i = curveModel->indexAtTime(liveTime);
+            if ( isXLogScale ) {
+                i = curveModel->indexAtTime(log10(liveTime));
+            } else {
+                i = curveModel->indexAtTime(liveTime);
+            }
         }
 
         double prevTime = liveTime;
@@ -3159,6 +3175,7 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
         int ii = getDataInt(QModelIndex(), "LiveCoordTimeIndex","");
 
         double lastTime = prevTime;
+        double start  = getDataDouble(QModelIndex(),"StartTime");
         while ( i+ii > 0 ) {
             it = it->at(i+ii-1);
             if ( tag == "Curve" ) {
@@ -3205,6 +3222,10 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
                     time = it->t();
                 }
 
+                if ( time < start && qAbs(time-start) > 1.0e-12) {
+                    break;
+                }
+
                 if ( (x == 0.0 && isXLogScale) ||
                      (y == 0.0 && isYLogScale) ) {
                     // If x/y culled by log, continue searching for prev time
@@ -3218,7 +3239,11 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
                 }
                 prevTime = time;
             } else {
-                prevTime = it->t();
+                if ( isXLogScale ) {
+                    prevTime = pow(10,it->t());
+                } else {
+                    prevTime = it->t();
+                }
             }
             double dt = qAbs(liveTime-prevTime);
             if ( dt < 1.0e-12 ) {
@@ -3250,7 +3275,6 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
         delete it;
 
         // prevTime should not precede start time
-        double start  = getDataDouble(QModelIndex(),"StartTime");
         prevTime = (prevTime < start)  ? start  : prevTime;
 
         // Update liveTime to prevTime
