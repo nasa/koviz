@@ -90,9 +90,15 @@ void TimeInput::_slotLiveTimePrev()
 
 void TimeInput::_slotStopTimeChanged()
 {
-    double max = _stopTimeInput->text().toDouble();
-    emit stopTimeChanged(max);
-    if ( max > 1.7e+308 ) {
+    double stop = _stopTimeInput->text().toDouble();
+    double live = _liveTimeInput->text().toDouble();
+    if ( live > stop ) {
+        double start = _startTimeInput->text().toDouble();
+        setLiveTime(start);
+        _slotLiveTimeChanged();
+    }
+    emit stopTimeChanged(stop);
+    if ( stop > 1.7e+308 ) {
         _stopTimeInput->clear();
     }
 }
