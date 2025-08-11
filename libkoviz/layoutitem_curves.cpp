@@ -1338,7 +1338,7 @@ int CurvesLayoutItem::_getMarkerPathIdx(Marker *marker,
             bool isXTime = _bookModel->isXTime(_plotIdx) ? true : false;
             int nc = 0;
             it = it->at(0);
-            for (int kk = 0; kk < i; ++kk) {
+            for (int kk = 0; kk <= i; ++kk) {
                 it = it->at(kk);
                 if ( it->isDone() ) break;
 
