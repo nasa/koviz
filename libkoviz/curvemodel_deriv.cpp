@@ -149,10 +149,18 @@ void CurveModelDerivative::_init(CurveModel* curveModel,
     curveModel->map();
     ModelIterator* it = curveModel->begin();
 
-    double xus = Unit::scale(curveModel->x()->unit(),xu);
-    double xub = Unit::bias(curveModel->x()->unit(),xu);
-    double yus = Unit::scale(curveModel->y()->unit(),yu);
-    double yub = Unit::bias(curveModel->y()->unit(),yu);
+    double xus = 1.0;
+    double xub = 0.0;
+    if ( !xu.isEmpty() ) {
+        xus = Unit::scale(curveModel->x()->unit(),xu);
+        xub = Unit::bias(curveModel->x()->unit(),xu);
+    }
+    double yus = 1.0;
+    double yub = 0.0;
+    if ( !yu.isEmpty() ) {
+        yus = Unit::scale(curveModel->y()->unit(),yu);
+        yub = Unit::bias(curveModel->y()->unit(),yu);
+    }
 
     _nrows = 0;
     int n = curveModel->rowCount();
