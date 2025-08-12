@@ -2949,7 +2949,7 @@ void PlotBookModel::liveTimeNext(const QModelIndex& idx)
             logTime = tus*logTime + tub;
             i = curveModel->indexAtTime(logTime);
         } else {
-            if ( isXLogScale ) {
+            if ( isXLogScale && isXTime ) {
                 i = curveModel->indexAtTime(log10(liveTime));
             } else {
                 i = curveModel->indexAtTime(liveTime);
@@ -3149,7 +3149,7 @@ void PlotBookModel::liveTimePrev(const QModelIndex &idx)
             logTime = tus*logTime + tub;
             i = curveModel->indexAtTime(logTime);
         } else {
-            if ( isXLogScale ) {
+            if ( isXLogScale && isXTime ) {
                 i = curveModel->indexAtTime(log10(liveTime));
             } else {
                 i = curveModel->indexAtTime(liveTime);
