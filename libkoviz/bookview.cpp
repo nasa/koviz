@@ -28,7 +28,6 @@ void BookView::setModel(QAbstractItemModel *model)
     BookIdxView::setModel(model);
 }
 
-
 void BookView::currentChanged(const QModelIndex &current,
                               const QModelIndex &previous)
 {
@@ -100,7 +99,7 @@ int BookView::_modelIdxToTabId(const QModelIndex &idx)
     return tabId;
 }
 
-QModelIndex BookView::_tabIdToModelIdx(int tabId)
+QModelIndex BookView::_tabIdToModelIdx(int tabId) const
 {
     QModelIndex idx;
 

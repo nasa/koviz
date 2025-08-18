@@ -54,7 +54,7 @@ private:
     QVBoxLayout* _mainLayout;
     BookViewTabWidget* _nb;
     int _modelIdxToTabId(const QModelIndex& idx);
-    QModelIndex _tabIdToModelIdx(int tabId);
+    QModelIndex _tabIdToModelIdx(int tabId) const;
 
 private:
     void _printPage(QPainter* painter, const QModelIndex& pageIdx);
