@@ -1959,8 +1959,6 @@ void PlotMainWindow::_runsRefreshed()
                             // Turn signals back on and reset bounding box
                             _bookModel->blockSignals(false);
                             QRectF bbox = _bookModel->calcCurvesBBox(curvesIdx);
-                            QRectF E; // Empty set below to force redraw
-                            _bookModel->setPlotMathRect(E,plotIdx);
                             _bookModel->setPlotMathRect(bbox,plotIdx);
                         }
                     }

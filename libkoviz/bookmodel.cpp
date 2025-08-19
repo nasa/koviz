@@ -163,9 +163,9 @@ bool PlotBookModel::setData(const QModelIndex &idx,
 }
 
 void PlotBookModel::setPlotMathRect(const QRectF& mathRect,
-                                    const QModelIndex& plotIdx)
+                                    const QModelIndex& plotIdxIn)
 {
-    QModelIndex plotMathRectIdx = getDataIndex(plotIdx, "PlotMathRect","Plot");
+    QModelIndex plotMathRectIdx = getDataIndex(plotIdxIn,"PlotMathRect","Plot");
 
     // Flip if y-axis not directed "up" (this happens with bboxes)
     QRectF M = mathRect;
@@ -174,6 +174,62 @@ void PlotBookModel::setPlotMathRect(const QRectF& mathRect,
     }
 
     setData(plotMathRectIdx, M);
+
+    // Get list of other plots to sync with input plot
+    QModelIndex pagesIdx = plotIdxIn.parent().parent().parent();
+    QModelIndexList pageIdxs = getIndexList(pagesIdx,"Page","Pages");
+    QModelIndexList otherPlotIdxs;
+    if ( isXTime(plotIdxIn) ) { // Only sync when x is time (normal case)
+        foreach ( const QModelIndex& pageIdx, pageIdxs ) {
+            QModelIndex plotsIdx = getIndex(pageIdx, "Plots", "Page");
+            QModelIndexList plotIdxs = getIndexList(plotsIdx,"Plot","Plots");
+            foreach ( const QModelIndex& plotIdx, plotIdxs ) {
+                if ( plotIdx != plotIdxIn && isXTime(plotIdx) ) {
+                    otherPlotIdxs.append(plotIdx);
+                }
+            }
+        }
+    }
+
+    // Sync plot rectangle across all plots
+    foreach ( const QModelIndex& otherPlotIdx, otherPlotIdxs ) {
+
+        QRectF O = getDataRectF(otherPlotIdx,"PlotMathRect","Plot");
+        QString O_PlotXScale = getDataString(otherPlotIdx,"PlotXScale","Plot");
+        QString M_PlotXScale = getDataString(plotIdxIn,"PlotXScale","Plot");
+        QRectF N = M;
+        if ( M_PlotXScale == "log" && O_PlotXScale == "linear" ) {
+            N.setLeft(pow(10,M.left()));
+            N.setRight(pow(10,M.right()));
+        } else if ( M_PlotXScale == "linear" && O_PlotXScale == "log") {
+            if ( M.left() != 0.0 ) {
+                N.setLeft(log10(M.left()));
+            }
+            if ( M.right() != 0.0 ) {
+                N.setRight(log10(M.right()));
+            }
+        }
+        if ( N.left() != O.left() || N.right() != O.right() ) {
+            O.setLeft(N.left());
+            O.setRight(N.right());
+            double plotXMinRange = getDataDouble(otherPlotIdx,
+                                                 "PlotXMinRange","Plot");
+            double plotXMaxRange = getDataDouble(otherPlotIdx,
+                                                 "PlotXMaxRange","Plot");
+            if ( O.left() >= plotXMinRange && O.right() <= plotXMaxRange ) {
+                // Set O if within PlotXMin/MaxRange
+                QModelIndex plotMathRectIdx = getDataIndex(otherPlotIdx,
+                                                         "PlotMathRect","Plot");
+
+                // Flip if y-axis not directed "up" (this happens with bboxes)
+                if ( O.top() < O.bottom() ) {
+                    O = QRectF(O.bottomLeft(),O.topRight());
+                }
+
+                setData(plotMathRectIdx, O);
+            }
+        }
+    }
 }
 
 QStandardItem *PlotBookModel::addChild(QStandardItem *parentItem,

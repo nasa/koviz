@@ -101,5 +101,10 @@ void LabeledRulerView::wheelEvent(QWheelEvent *e)
     }
 
     _bookModel()->setData(scaleIdx,to);
+
+    // Reset bounding box
+    QModelIndex curvesIdx = _bookModel()->getIndex(rootIndex(),"Curves","Plot");
+    QRectF bbox = _bookModel()->calcCurvesBBox(curvesIdx);
+    _bookModel()->setPlotMathRect(bbox,rootIndex());
 }
 

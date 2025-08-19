@@ -2,6 +2,7 @@
 
 CurvesView::CurvesView(QWidget *parent) :
     BookIdxView(parent),
+    _isPixmapDirty(true),
     _pixmap(0),
     _isMeasure(false),
     _isLastPoint(false),
@@ -177,6 +178,14 @@ void CurvesView::paintEvent(QPaintEvent *event)
     Q_UNUSED(event);
 
     if ( !model() ) return;
+
+    if ( _isPixmapDirty ) {
+        if ( _pixmap ) {
+            delete _pixmap;
+        }
+        _pixmap = _createLivePixmap();
+        _isPixmapDirty = false;
+    }
 
     QModelIndex curvesIdx = _bookModel()->getIndex(rootIndex(),"Curves","Plot");
     int nCurves = model()->rowCount(curvesIdx);
@@ -765,89 +774,24 @@ void CurvesView::dataChanged(const QModelIndex &topLeft,
         QRectF M = model()->data(topLeft).toRectF();
 
         if ( M.size().width() > 0 && M.size().height() != 0 && _lastM != M ) {
-            if ( _pixmap ) {
-                delete _pixmap;
-            }
-            _pixmap = _createLivePixmap();
+            _isPixmapDirty = true;
         }
 
         _lastM = M;  // Saved so that pixmap is not recreated if M unchanged
 
-    } else if ( tag == "PlotMathRect" && topLeft.parent() != rootIndex() ) {
-        // Another plot has changed its PlotMathRect.
-        // Synchronize this plot's PlotMathRect with the changed one
-        // to keep zoom/pan synchronized across plots.
-
-        // Only synchronize when x variables are time (normal case).
-        if ( _bookModel()->isXTime(topLeft.parent()) &&
-             _bookModel()->isXTime(rootIndex()) ) {
-            QRectF M = model()->data(topLeft).toRectF();
-            QModelIndex plotRectIdx = _bookModel()->getDataIndex(rootIndex(),
-                                                         "PlotMathRect","Plot");
-            QRectF R = model()->data(plotRectIdx).toRectF();
-
-            QString R_PlotXScale = _bookModel()->getDataString(rootIndex(),
-                                                               "PlotXScale",
-                                                               "Plot");
-            QString M_PlotXScale = _bookModel()->getDataString(topLeft.parent(),
-                                                               "PlotXScale",
-                                                               "Plot");
-            if ( M_PlotXScale == "log" && R_PlotXScale == "linear" ) {
-                M.setLeft(pow(10,M.left()));
-                M.setRight(pow(10,M.right()));
-            } else if ( M_PlotXScale == "linear" && R_PlotXScale == "log") {
-                if ( M.left() != 0.0 ) {
-                    M.setLeft(log10(M.left()));
-                }
-                if ( M.right() != 0.0 ) {
-                    M.setRight(log10(M.right()));
-                }
-            }
-            if ( M.left() != R.left() || M.right() != R.right() ) {
-                R.setLeft(M.left());
-                R.setRight(M.right());
-                double plotXMinRange = _bookModel()->getDataDouble(rootIndex(),
-                                                        "PlotXMinRange","Plot");
-                double plotXMaxRange = _bookModel()->getDataDouble(rootIndex(),
-                                                        "PlotXMaxRange","Plot");
-                if ( R.left() >= plotXMinRange && R.right() <= plotXMaxRange ) {
-                    // Set R if within PlotXMin/MaxRange
-                    _bookModel()->setPlotMathRect(R,rootIndex());
-                }
-            }
-        }
     } else if ( topLeft.parent().parent().parent() == rootIndex() ) {
         if ( tag == "CurveXBias" ) {
-            if ( _pixmap ) {
-                delete _pixmap;
-            }
-            _pixmap = _createLivePixmap();
+            _isPixmapDirty = true;
         } else if ( tag == "CurveYBias" ) {
-            if ( _pixmap ) {
-                delete _pixmap;
-            }
-            _pixmap = _createLivePixmap();
+            _isPixmapDirty = true;
         } else if ( tag == "CurveColor") {
-            if ( _pixmap ) {
-                delete _pixmap;
-            }
-            _pixmap = _createLivePixmap();
+            _isPixmapDirty = true;
         } else if ( tag == "CurveData") {
-            if ( _pixmap ) {
-                delete _pixmap;
-            }
-            _pixmap = _createLivePixmap();
+            _isPixmapDirty = true;
         }
     } else if ( topLeft.parent() == rootIndex() ) {
         if ( tag == "PlotXScale" || tag == "PlotYScale" ) {
-            if ( _pixmap ) {
-                delete _pixmap;
-            }
-            _pixmap = _createLivePixmap();
-            QModelIndex curvesIdx = _bookModel()->getIndex(rootIndex(),
-                                                           "Curves","Plot");
-            QRectF bbox = _bookModel()->calcCurvesBBox(curvesIdx);
-            _bookModel()->setPlotMathRect(bbox,rootIndex());
+            _isPixmapDirty = true;
         }
     }
 

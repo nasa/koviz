@@ -35,7 +35,6 @@ void XAxisLabelView::dropEvent(QDropEvent *event)
                                                               curvesIdx,
                                                               "Curve","Curves");
                 bool isError = false;
-                bool block = _bookModel()->blockSignals(true);
                 foreach ( QModelIndex curveIdx, curveIdxs ) {
                     QModelIndex xNameIdx = _bookModel()->getDataIndex(curveIdx,
                                                           "CurveXName","Curve");
@@ -70,7 +69,6 @@ void XAxisLabelView::dropEvent(QDropEvent *event)
                     QVariant v = PtrToQVariant<CurveModel>::convert(curveModel);
                     _bookModel()->setData(curveDataIdx,v);
                 }
-                _bookModel()->blockSignals(block);
 
                 if ( !isError ) {
 
@@ -78,26 +76,10 @@ void XAxisLabelView::dropEvent(QDropEvent *event)
 
                     // Reset plot math rect
                     QRectF bbox = _bookModel()->calcCurvesBBox(curvesIdx);
-                    plotIdx = curvesIdx.parent();
-                    QModelIndex pageIdx = plotIdx.parent().parent();
                     QModelIndex plotMathRectIdx = _bookModel()->getDataIndex(
                                                                  plotIdx,
                                                                  "PlotMathRect",
                                                                  "Plot");
-                    QModelIndexList siblingPlotIdxs = _bookModel()->plotIdxs(
-                                                                       pageIdx);
-                    foreach ( QModelIndex siblingPlotIdx, siblingPlotIdxs ) {
-                        bool isXTime = _bookModel()->isXTime(siblingPlotIdx);
-                        if ( isXTime ) {
-                            QRectF sibPlotRect = _bookModel()->
-                                                getPlotMathRect(siblingPlotIdx);
-                            if ( sibPlotRect.width() > 0 ) {
-                                bbox.setLeft(sibPlotRect.left());
-                                bbox.setRight(sibPlotRect.right());
-                            }
-                            break;
-                        }
-                    }
                     _bookModel()->setData(plotMathRectIdx,bbox);
                 }
 

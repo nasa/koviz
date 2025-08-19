@@ -267,6 +267,7 @@ private:
     QModelIndex _chooseCurveNearMousePoint(const QPoint& pt);
     bool _isErrorCurveNearMousePoint(const QPoint& pt);
 
+    bool _isPixmapDirty;
     QPixmap* _pixmap;
     QRectF _lastM;
     bool _isMeasure;
