@@ -72,6 +72,7 @@ private:
     QString _runsHome;
 
     QStandardItemModel* _createVarsModel(Runs* runs);
+    QString _calcRunsHome(const Runs *runs) const;
 
 
 private slots:

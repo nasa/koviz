@@ -20,28 +20,7 @@ RunsWidget::RunsWidget(Runs *runs,
     _fileModel = new QFileSystemModel;
 
     // Set initial runs home
-    QSettings settings("JSC", "koviz");
-    settings.beginGroup("PlotMainWindow");
-    QString _runsHome = settings.value("runsHome", QString("")).toString();
-    settings.endGroup();
-    if ( !_runsHome.isEmpty() ) {
-        QFileInfo fi(_runsHome);
-        if ( !fi.isDir() ) {
-            _runsHome = QString("");  // unset runs home since it DNE
-        }
-    }
-    if ( _runsHome.isEmpty() ) {
-        _runsHome = QDir::currentPath();
-        QString exePath = _runsHome + QDir::separator() + "koviz.exe";
-        QString iconPath = _runsHome + QDir::separator() + "koviz.ico";
-        if (QFile::exists(exePath) && QFile::exists(iconPath)) {
-            // If koviz.exe and koviz.ico are in the current path,
-            // assume this is being launched from a Windows install location.
-            // In this case, set runs home to user's home directory
-            _runsHome = QStandardPaths::
-                                 writableLocation(QStandardPaths::HomeLocation);
-        }
-    }
+    _runsHome = _calcRunsHome(runs);
     _fileModel->setRootPath(_runsHome);
 
     // Filter
@@ -89,6 +68,49 @@ void RunsWidget::setRunsHome(const QString &runsHomeDir)
 QString RunsWidget::runsHome()
 {
     return _runsHome;
+}
+
+QString RunsWidget::_calcRunsHome(const Runs* runs) const
+{
+    QString runsHome;
+
+    if ( runs->runPaths().isEmpty() ) {
+        // No runs given by user, try saved settings runsHome in ~/.config.
+        // If that fails try current working directory or user's home dir.
+        QSettings settings("JSC", "koviz");
+        settings.beginGroup("PlotMainWindow");
+        runsHome = settings.value("runsHome", QString("")).toString();
+        settings.endGroup();
+        if ( !runsHome.isEmpty() ) {
+            QFileInfo fi(runsHome);
+            if ( !fi.isDir() ) {
+                runsHome = QString("");  // unset runs home since it DNE
+            }
+        }
+        if ( runsHome.isEmpty() ) {
+            runsHome = QDir::currentPath();
+            QString exePath = runsHome + QDir::separator() + "koviz.exe";
+            QString iconPath = runsHome + QDir::separator() + "koviz.ico";
+            if (QFile::exists(exePath) && QFile::exists(iconPath)) {
+                // If koviz.exe and koviz.ico are in the current path,
+                // assume this is being launched from a Windows install
+                // location. In this case, set runs home to user's home dir
+                runsHome = QStandardPaths::
+                                 writableLocation(QStandardPaths::HomeLocation);
+            }
+        }
+    } else {
+        // runsHome found from first cmdline run supplied by user
+        QString path0 = runs->runPaths().first();
+        QFileInfo fi0(path0);
+        QDir dir = fi0.dir();
+        if ( dir.dirName().startsWith("MONTE_") ) {
+            dir.cdUp();
+        }
+        runsHome = dir.absolutePath();
+    }
+
+    return runsHome;
 }
 
 void RunsWidget::_runsSearchBoxReturnPressed()
