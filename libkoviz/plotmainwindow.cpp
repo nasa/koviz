@@ -1828,9 +1828,6 @@ void PlotMainWindow::_runsRefreshed()
                                           headerData(r,Qt::Vertical).toString();
                         QFileInfo fi(path);
                         if ( runPathToAppend == fi.absoluteFilePath() ) {
-                            // Turn off signals (to keep from redrawing)
-                            _bookModel->blockSignals(true);
-
                             // Make presentation "compare"
                             QModelIndex presIdx = _bookModel->getDataIndex(
                                                              plotIdx,
@@ -1903,7 +1900,6 @@ void PlotMainWindow::_runsRefreshed()
                             bool canConvertYUnit = Unit::canConvert(yUnit,
                                                        curveModel->y()->unit());
                             if( !canConvertXUnit || !canConvertYUnit ) {
-                                _bookModel->blockSignals(false);
                                 continue; // Don't add curve if units mismatch
                             }
 
@@ -1956,8 +1952,6 @@ void PlotMainWindow::_runsRefreshed()
                                                                     curveModel);
                             _bookModel->addChild(curveItem, "CurveData", v);
 
-                            // Turn signals back on and reset bounding box
-                            _bookModel->blockSignals(false);
                             QRectF bbox = _bookModel->calcCurvesBBox(curvesIdx);
                             _bookModel->setPlotMathRect(bbox,plotIdx);
                         }
@@ -2003,7 +1997,6 @@ void PlotMainWindow::_runsRefreshed()
                 QModelIndexList curveIdxs = _bookModel->curveIdxs(curvesIdx);
                 int nc = curveIdxs.size();
                 if ( nc > 0 ) {
-                    bool block = _bookModel->blockSignals(true);
                     QList<QColor> colors = _bookModel->createCurveColors(nc);
                     int i = 0;
                     // Reset colors on all curves
@@ -2014,7 +2007,6 @@ void PlotMainWindow::_runsRefreshed()
                         _bookModel->setData(curveColorIdx,color);
                         ++i;
                     }
-                    _bookModel->blockSignals(block);
 
                     QRectF currPlotRect = _bookModel->getDataRectF(plotIdx,
                                                          "PlotMathRect","Plot");
@@ -2026,11 +2018,7 @@ void PlotMainWindow::_runsRefreshed()
                             // curve removed, zoom in to newBBox
                             _bookModel->setPlotMathRect(newBBox,plotIdx);
                         } else {
-                            // Keep current bbox so curr zoom is not lost,
-                            // but force redraw using new bbox (hacky)
-                            bool block = _bookModel->blockSignals(true);
-                            _bookModel->setPlotMathRect(newBBox,plotIdx);
-                            _bookModel->blockSignals(block);
+                            // Keep current bbox so curr zoom is not lost
                             _bookModel->setPlotMathRect(currPlotRect,plotIdx);
                         }
                     }
