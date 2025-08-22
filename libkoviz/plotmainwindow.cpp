@@ -1737,10 +1737,25 @@ void PlotMainWindow::_plotAllVars()
 
 void PlotMainWindow::_runsRefreshed()
 {
+    // Setup progress dialog
+    int nPlots = 0;
     QModelIndexList pageIdxs = _bookModel->pageIdxs();
     foreach ( QModelIndex pageIdx, pageIdxs ) {
         QModelIndexList plotIdxs = _bookModel->plotIdxs(pageIdx);
+        nPlots += plotIdxs.size();
+    }
+    QProgressDialog* progress =  new QProgressDialog("Updating plots...",
+                                                     QString(), 0, nPlots, this);
+    progress->setWindowModality(Qt::WindowModal);
+    progress->setMinimumDuration(500);
+
+    int ii = 0;
+    foreach ( QModelIndex pageIdx, pageIdxs ) {
+        QModelIndexList plotIdxs = _bookModel->plotIdxs(pageIdx);
         foreach ( QModelIndex plotIdx, plotIdxs ) {
+            if ( progress ) {
+                progress->setValue(++ii);
+            }
             QModelIndex curvesIdx = _bookModel->getIndex(plotIdx,
                                                          "Curves", "Plot");
             QModelIndexList curveIdxs = _bookModel->curveIdxs(curvesIdx);
@@ -2035,6 +2050,12 @@ void PlotMainWindow::_runsRefreshed()
                 }
             }
         }
+    }
+
+    // End Progress Dialog
+    if ( progress ) {
+        progress->setValue(nPlots);
+        delete progress;
     }
 }
 
