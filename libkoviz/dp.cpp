@@ -117,15 +117,33 @@ void DPProduct::_handleDPXMLFile(const QString &xmlfile)
     _doc = new QDomDocument(xmlfile);
     QFile file(xmlfile);
     if (!file.open(QIODevice::ReadOnly)) {
-        _err_stream << "koviz [error]: could not open "
-                    << xmlfile << "\n";
-        throw std::runtime_error(_err_string.toLatin1().constData());
+        static int nErrorMsgs = 0;
+        if ( ++nErrorMsgs < 3 ) {
+            QString msg= QString("koviz [error]: could not open file=%1").
+                    arg(xmlfile);
+            QMessageBox* box = new QMessageBox;
+            box->setAttribute(Qt::WA_DeleteOnClose);
+            box->setIcon(QMessageBox::Critical);
+            box->setWindowTitle("Error");
+            box->setText(msg);
+            box->show();
+        }
+        return;
     }
     if (!_doc->setContent(&file)) {
         file.close();
-        _err_stream << "koviz [error]: could not parse "
-                    << xmlfile << "\n";
-        throw std::runtime_error(_err_string.toLatin1().constData());
+        static int nErrorMsgs = 0;
+        if ( ++nErrorMsgs < 3 ) {
+            QString msg= QString("koviz [error]: could not parse file=%1").
+                    arg(xmlfile);
+            QMessageBox* box = new QMessageBox;
+            box->setAttribute(Qt::WA_DeleteOnClose);
+            box->setIcon(QMessageBox::Critical);
+            box->setWindowTitle("Error");
+            box->setText(msg);
+            box->show();
+        }
+        return;
     }
     file.close();
 
