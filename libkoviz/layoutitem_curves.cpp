@@ -1480,7 +1480,7 @@ void CurvesLayoutItem::_paintMarker(QPainter* painter,
         exit(-1);
     }
 
-    // Show run name if more than 5 runs
+    // Show a curve label if more than 5 runs
     QString tag = _bookModel->data(marker->modelIdx()).toString();
     if ( tag == "Curve" && marker->label().isEmpty() ) {
         QModelIndex curveIdx = marker->modelIdx();
@@ -1496,7 +1496,13 @@ void CurvesLayoutItem::_paintMarker(QPainter* painter,
                         break;
                     }
                 }
-                QString runLabel = QString("%1: ").arg(runName);
+                QString runLabel;
+                if ( !runName.isEmpty() ) {
+                    runLabel = QString("%1: ").arg(runName);
+                } else {
+                    // No run path, let label be y name
+                    runLabel = QString("%1: ").arg(curveModel->y()->name());
+                }
                 arrow.txt.prepend(runLabel);
             }
         }
