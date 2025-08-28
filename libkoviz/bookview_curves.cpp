@@ -1444,7 +1444,7 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                     }
 
                     if ( rc > 0 ) {
-                        // Set live coord in model
+                        // Set live time
                         double start =_bookModel()->getDataDouble(QModelIndex(),
                                                                    "StartTime");
                         double stop = _bookModel()->getDataDouble(QModelIndex(),
@@ -1460,58 +1460,19 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                         }
                         model()->setData(liveTimeIdx,time);
 
-                        // If timestamps are identical, set liveTimeIndex so
-                        // that livecoord is set to max y value
-                        if ( plotXScale == "log") {
-                            time = log10(time);
+                        // Set live time index
+                        int lcti = 0;
+                        if ( tag == "Curve" ) {
+                            lcti = _getCurveLiveCoordTimeIdx(idx,
+                                                             time,curveModel);
+                        } else if ( tag == "Plot" && presentation == "error" ) {
+                            lcti = _getErrorPathLiveCoordTimeIdx(plotIdx,
+                                                                 time,path);
                         }
-                        int i =  _idxAtTimeBinarySearch(path,0,
-                                                        rc-1,(time-xb)/xs);
-                        double iTime = path->elementAt(i).x;
-                        int j = i;  // j is start index of identical timestamps
-                        for ( int l = i; l >= 0; --l ) {
-                            double lTime = path->elementAt(l).x;
-                            if ( iTime != lTime ) {
-                                break;
-                            } else {
-                                j = l;
-                            }
-                        }
-                        int nels = path->elementCount();
-                        int k = j; // k is last index of identical timestamps
-                        for (int l = j; l < nels; ++l) {
-                            double lTime = path->elementAt(l).x;
-                            if ( iTime != lTime ) {
-                                break;
-                            } else {
-                                k = l;
-                            }
-                        }
-                        int liveCoordTimeIdx = 0;
-                        if ( k - j > 1 ) {
-                            // Find index of max y of identical timestamps
-                            // Note: min is not used even if mouse below curve.
-                            //       This is because I simply didn't want any
-                            //       more code
-                            double maxY = -DBL_MAX;
-                            int m = 0 ;
-                            for (int l = j; l <= k; ++l) {
-                                double x = path->elementAt(l).x;
-                                double y = path->elementAt(l).y;
-                                if ( y > maxY ) {
-                                    maxY = y;
-                                    liveCoordTimeIdx = m;
-                                }
-                                if ( x != iTime ) {
-                                    break;
-                                }
-                                ++m;
-                            }
-                        }
-                        QModelIndex idx = _bookModel()->getDataIndex(
+                        QModelIndex lctidx = _bookModel()->getDataIndex(
                                                        QModelIndex(),
                                                        "LiveCoordTimeIndex","");
-                        _bookModel()->setData(idx,liveCoordTimeIdx);
+                        _bookModel()->setData(lctidx,lcti);
                     }
                 } else {  // Curve x is not time e.g. ball xy-position
 
@@ -1893,6 +1854,168 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
     } else {
         event->ignore();
     }
+}
+
+// Time can duplicate.  This method finds the time index on the curveModel
+// for a given time where y is maximum.
+int CurvesView::_getCurveLiveCoordTimeIdx(const QModelIndex &curveIdx,
+                                               double time,
+                                               CurveModel* curveModel)
+{
+    int liveCoordTimeIdx = 0;
+
+    QModelIndex plotIdx = curveIdx.parent().parent();
+    QString plotXScale = _bookModel()->getDataString(plotIdx,
+                                                     "PlotXScale","Plot");
+    QString plotYScale = _bookModel()->getDataString(plotIdx,
+                                                     "PlotYScale","Plot");
+    // Get xy scale/biases and unit scales/biases
+    double xb = _bookModel()->getDataDouble(curveIdx, "CurveXBias","Curve");
+    double xs = _bookModel()->getDataDouble(curveIdx, "CurveXScale","Curve");
+    double yb = _bookModel()->getDataDouble(curveIdx, "CurveYBias","Curve");
+    double ys = _bookModel()->getDataDouble(curveIdx, "CurveYScale","Curve");
+    double xus = 1.0;  // x time unit bias is 0, so not used
+    QString bookXUnit = _bookModel()->getDataString(currentIndex(),
+                                                    "CurveXUnit","Curve");
+    if ( !bookXUnit.isEmpty() && bookXUnit != "--" ) {
+        QString loggedXUnit = curveModel->x()->unit();
+        xus = Unit::scale(loggedXUnit, bookXUnit);
+    }
+    double yus = 1.0;
+    double yub = 0.0;
+    QString bookYUnit = _bookModel()->getDataString(
+                currentIndex(),
+                "CurveYUnit","Curve");
+    if ( !bookYUnit.isEmpty() && bookYUnit != "--" ) {
+        QString loggedYUnit = curveModel->y()->unit();
+        yus = Unit::scale(loggedYUnit, bookYUnit);
+        yub = Unit::bias(loggedYUnit, bookYUnit);
+    }
+
+    // Find index i which is model index at time
+    double t = (time-xb)/xs/xus;
+    int i = curveModel->indexAtTime(t);
+
+    // Reset i to first duplicated timestamp
+    ModelIterator* it = curveModel->begin();
+    double iTime = it->at(i)->t();
+    while ( i > 0 ) {
+        if ( it->at(i-1)->t() == iTime ) {
+            --i;
+        } else {
+            break;
+        }
+    }
+
+    int k = i; // k is last index of identical timestamps
+    int l = k;
+    while ( 1 ) {
+        it = it->at(l);
+        if ( it->isDone() ) {
+            break;
+        }
+        double lTime = it->at(l)->t();
+        if ( iTime != lTime ) {
+            break;
+        } else {
+            k = l;
+        }
+        ++l;
+    }
+
+    // Calculate time index, max y value is used in all
+    // cases, but would be nice to choose min if mouse
+    // below curve
+    double maxY = -DBL_MAX;
+    int m = 0 ;
+    for (int l = i; l <= k; ++l) {
+        it = it->at(l);
+        if ( it->isDone() ) {
+            break;
+        }
+        double x = it->x()*xus*xs + xb;
+        double y = (it->y()*yus+yub)*ys + yb;
+        if ((x == 0 && plotXScale == "log") ||
+            (y == 0 && plotYScale == "log" )) {
+            ++m;
+            continue;
+        }
+
+        if ( y > maxY ) {
+            maxY = y;
+            liveCoordTimeIdx = m;
+        }
+        ++m;
+    }
+
+    return liveCoordTimeIdx;
+}
+
+int CurvesView::_getErrorPathLiveCoordTimeIdx(const QModelIndex &plotIdx,
+                                              double time, QPainterPath *path)
+{
+    int liveCoordTimeIdx = 0;
+
+    int rc = path->elementCount();
+    if ( rc == 0 ) {
+        return 0;
+    }
+
+    // Find index i which is model index at time
+    QString plotXScale = _bookModel()->getDataString(plotIdx,
+                                                     "PlotXScale","Plot");
+    double t = time;
+    if ( plotXScale == "log" ) {
+        t = log10(t);  // Path cannot have t=0 since log baked in path
+    }
+
+    int i =  _idxAtTimeBinarySearch(path,0,rc-1,t);
+    double iTime = path->elementAt(i).x;
+
+    // Set j to start index of identical timestamps
+    int j = i;
+    for ( int l = i; l >= 0; --l ) {
+        double lTime = path->elementAt(l).x;
+        if ( iTime != lTime ) {
+            break;
+        } else {
+            j = l;
+        }
+    }
+
+    // Set k to last index of identical timestamps
+    int k = j;
+    int nels = path->elementCount();
+    for (int l = j; l < nels; ++l) {
+        double lTime = path->elementAt(l).x;
+        if ( iTime != lTime ) {
+            break;
+        } else {
+            k = l;
+        }
+    }
+
+    if ( k - j > 1 ) {
+        // Find index of max y of identical timestamps
+        // Getting the max y is arbitrary, would be nice to use
+        // min for finding time index when mouse is below curve
+        double maxY = -DBL_MAX;
+        int m = 0 ;
+        for (int l = j; l <= k; ++l) {
+            double x = path->elementAt(l).x;
+            double y = path->elementAt(l).y;
+            if ( x != iTime ) {
+                break;
+            }
+            if ( y > maxY ) {
+                maxY = y;
+                liveCoordTimeIdx = m;
+            }
+            ++m;
+        }
+    }
+
+    return liveCoordTimeIdx;
 }
 
 void CurvesView::keyPressEvent(QKeyEvent *event)

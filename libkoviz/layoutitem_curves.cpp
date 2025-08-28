@@ -1254,6 +1254,9 @@ int CurvesLayoutItem::_getMarkerPathIdx(Marker *marker,
     if ( _bookModel->isXTime(_plotIdx) ) {
         t = (marker->time()-sb.xb)/sb.xs;
         if ( sb.isXLogScale ) {
+            if ( t == 0 ) {
+                return -1; // Log10(t=0) has no index since it dne
+            }
             t = log10(t);
         }
     }

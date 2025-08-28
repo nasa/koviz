@@ -322,6 +322,10 @@ private:
     void _combinePlotCurves(CurveOperation& curveOp);
     double _getTime(bool isXTime, const QString& xUnit,
                     ModelIterator* it, const CurveInfo* curveInfo);
+    int _getCurveLiveCoordTimeIdx(const QModelIndex& curveIdx, double time,
+                                  CurveModel *curveModel);
+    int _getErrorPathLiveCoordTimeIdx(const QModelIndex& plotIdx, double time,
+                                  QPainterPath* path);
 
 private slots:
     void _keyPressBSliderChanged(int value);
