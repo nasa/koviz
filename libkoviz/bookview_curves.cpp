@@ -1515,11 +1515,13 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                     QTransform T = _coordToPixelTransform();
                     curveModel->map();
                     ModelIterator* it = curveModel->begin();
+                    QPointF closestPt;
                     while ( !it->isDone() ) {
                         // find closest point on curve to mouse
                         double x = it->x();
                         x = xus*x + xub;
                         x = xs*x + xb;
+                        double closestX = x;
                         if ( isXLogScale ) {
                             if ( x > 0 ) {
                                 x = log10(x);
@@ -1537,6 +1539,7 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                         double y = it->y();
                         y = yus*y + yub;
                         y = ys*y + yb;
+                        double closestY = y;
                         if ( isYLogScale ) {
                             if ( y > 0 ) {
                                 y = log10(y);
@@ -1557,6 +1560,7 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                         if ( d < dMin && start <= it->t() && it->t() <= stop ) {
                             dMin = d;
                             liveTime = it->t();
+                            closestPt = QPointF(closestX,closestY);
                         }
                         it->next();
                     }
@@ -1587,6 +1591,7 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                     while ( !it->isDone() ) {
                         double kTime = it->at(k+tidx)->t();
                         if (  kTime != iTime ) {
+                            // If closest point not found, use max time index
                             break;
                         }
                         double x = it->x();
@@ -1595,15 +1600,17 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                         double y = it->y();
                         y = yus*y + yub;
                         y = ys*y + yb;
-                        if ( (x == 0 && isXLogScale) ||
-                             (y == 0 && isYLogScale) ) {
-                            ++tidx;
-                            it->next();
-                            continue;
-                        } else {
+
+                        bool isPointOK = !((x == 0 && isXLogScale) ||
+                                           (y == 0 && isYLogScale));
+                        bool isClosest = (x == closestPt.x() &&
+                                          y == closestPt.y()) ;
+                        if ( isPointOK && isClosest ) {
+                            // Found point closest to curve at time index
                             break;
                         }
-
+                        ++tidx;
+                        it->next();
                     }
                     QModelIndex lctidx = _bookModel()->getDataIndex(
                                                        QModelIndex(),
