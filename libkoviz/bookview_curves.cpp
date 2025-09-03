@@ -1317,6 +1317,28 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                         QPainterPath::Element el = path->elementAt(i);
                         QPointF p(el.x*xs+xb,el.y*ys+yb);
 
+                        // The binary search doesn't necessarily return the
+                        // index closest point to time.  Search about i for a
+                        // closer point.  The search is not exhaustive across
+                        // all path points (+-100 pts) since paths can have
+                        // millions of points
+                        QTransform U = _coordToPixelTransform();
+                        QPointF wp = U.map(p);
+                        double dp = QLineF(wPt,wp).length();
+                        for ( int j = i-100; j < i+100; ++j ) {
+                            if ( j >= 0 && j < path->elementCount() ) {
+                                el = path->elementAt(j);
+                                QPointF q(el.x*xs+xb,el.y*ys+yb);
+                                QPointF wq = U.map(q);
+                                double dq = QLineF(wPt,wq).length();
+                                if ( dq < dp ) {
+                                    p = q;
+                                    dp = dq;
+                                    i = j;
+                                }
+                            }
+                        }
+
                         //
                         // Make "neighborhood" around mouse point
                         //
@@ -1463,10 +1485,12 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                         // Set live time index
                         int lcti = 0;
                         if ( tag == "Curve" ) {
-                            lcti = _getCurveLiveCoordTimeIdx(idx,
+                            curveModel->map();
+                            lcti = _getCurveLiveCoordTimeIdx(idx,mPt,
                                                              time,curveModel);
+                            curveModel->unmap();
                         } else if ( tag == "Plot" && presentation == "error" ) {
-                            lcti = _getErrorPathLiveCoordTimeIdx(plotIdx,
+                            lcti = _getErrorPathLiveCoordTimeIdx(plotIdx,mPt,
                                                                  time,path);
                         }
                         QModelIndex lctidx = _bookModel()->getDataIndex(
@@ -1866,8 +1890,9 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
 // Time can duplicate.  This method finds the time index on the curveModel
 // for a given time where y is maximum.
 int CurvesView::_getCurveLiveCoordTimeIdx(const QModelIndex &curveIdx,
-                                               double time,
-                                               CurveModel* curveModel)
+                                          const QPointF& mPt,
+                                          double time,
+                                          CurveModel* curveModel)
 {
     int liveCoordTimeIdx = 0;
 
@@ -1897,6 +1922,16 @@ int CurvesView::_getCurveLiveCoordTimeIdx(const QModelIndex &curveIdx,
         QString loggedYUnit = curveModel->y()->unit();
         yus = Unit::scale(loggedYUnit, bookYUnit);
         yub = Unit::bias(loggedYUnit, bookYUnit);
+    }
+
+    QPointF mathMousePt(mPt);
+    if ( plotXScale == "log" ) {
+        double x10 = pow(10,mPt.x());
+        mathMousePt.setX(x10);
+    }
+    if ( plotYScale == "log" ) {
+        double y10 = pow(10,mPt.y());
+        mathMousePt.setY(y10);
     }
 
     // Find index i which is model index at time
@@ -1930,10 +1965,8 @@ int CurvesView::_getCurveLiveCoordTimeIdx(const QModelIndex &curveIdx,
         ++l;
     }
 
-    // Calculate time index, max y value is used in all
-    // cases, but would be nice to choose min if mouse
-    // below curve
-    double maxY = -DBL_MAX;
+    // Calculate time index, choose point closest to mouse
+    double dMin = DBL_MAX;
     int m = 0 ;
     for (int l = i; l <= k; ++l) {
         it = it->at(l);
@@ -1948,8 +1981,11 @@ int CurvesView::_getCurveLiveCoordTimeIdx(const QModelIndex &curveIdx,
             continue;
         }
 
-        if ( y > maxY ) {
-            maxY = y;
+        QPointF p(x,y);
+        double d = QLineF(mathMousePt,p).length();
+
+        if ( d < dMin ) {
+            dMin = d;
             liveCoordTimeIdx = m;
         }
         ++m;
@@ -1959,6 +1995,7 @@ int CurvesView::_getCurveLiveCoordTimeIdx(const QModelIndex &curveIdx,
 }
 
 int CurvesView::_getErrorPathLiveCoordTimeIdx(const QModelIndex &plotIdx,
+                                              const QPointF& mPt,
                                               double time, QPainterPath *path)
 {
     int liveCoordTimeIdx = 0;
@@ -2002,11 +2039,9 @@ int CurvesView::_getErrorPathLiveCoordTimeIdx(const QModelIndex &plotIdx,
         }
     }
 
+    double dMin = DBL_MAX;
     if ( k - j > 1 ) {
-        // Find index of max y of identical timestamps
-        // Getting the max y is arbitrary, would be nice to use
-        // min for finding time index when mouse is below curve
-        double maxY = -DBL_MAX;
+        // Find index of closest point to mouse
         int m = 0 ;
         for (int l = j; l <= k; ++l) {
             double x = path->elementAt(l).x;
@@ -2014,8 +2049,10 @@ int CurvesView::_getErrorPathLiveCoordTimeIdx(const QModelIndex &plotIdx,
             if ( x != iTime ) {
                 break;
             }
-            if ( y > maxY ) {
-                maxY = y;
+            QPointF p(x,y);
+            double d = QLineF(mPt,p).length();
+            if ( d < dMin ) {
+                dMin = d;
                 liveCoordTimeIdx = m;
             }
             ++m;
