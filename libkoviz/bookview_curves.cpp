@@ -1312,20 +1312,20 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
 
                     } else if ( rc >= 3 ) {
 
-                        int i =  _idxAtTimeBinarySearch(path,0,rc-1,
-                                                        (mPt.x()-xb)/xs);
+                        double time = (mPt.x()-xb)/xs;
+                        int i =  _idxAtTimeBinarySearch(path,0,rc-1,time);
                         QPainterPath::Element el = path->elementAt(i);
                         QPointF p(el.x*xs+xb,el.y*ys+yb);
 
                         // The binary search doesn't necessarily return the
-                        // index closest point to time.  Search about i for a
-                        // closer point.  The search is not exhaustive across
-                        // all path points (+-100 pts) since paths can have
-                        // millions of points
+                        // index closest point to time.  Search about i (+-2)
+                        // for a closer point.
                         QTransform U = _coordToPixelTransform();
                         QPointF wp = U.map(p);
                         double dp = QLineF(wPt,wp).length();
-                        for ( int j = i-100; j < i+100; ++j ) {
+                        int iCloser = i;
+                        for ( int j = i-2; j < i+2; ++j ) {
+                            if ( j == i ) continue; // no need to check i
                             if ( j >= 0 && j < path->elementCount() ) {
                                 el = path->elementAt(j);
                                 QPointF q(el.x*xs+xb,el.y*ys+yb);
@@ -1334,10 +1334,11 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                                 if ( dq < dp ) {
                                     p = q;
                                     dp = dq;
-                                    i = j;
+                                    iCloser = j;
                                 }
                             }
                         }
+                        i = iCloser;
 
                         //
                         // Make "neighborhood" around mouse point
@@ -1372,14 +1373,28 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                         }
 
                         //
-                        // Find local min/maxs in neighborhood
+                        // Find local min/maxs in neighborhood and
+                        // closest close point in neighborhood to mouse
                         //
+                        int dClose = this->fontMetrics().averageCharWidth();
+                        bool isClosePt = false;
+                        QPointF closePt;
+                        double dMin = DBL_MAX;
                         QList<QPointF> localMaxs;
                         QList<QPointF> localMins;
                         QList<QPointF> flatChangePOIs;
                         for (int m = j; m <= k; ++m ) {
                             QPointF pt(path->elementAt(m).x*xs+xb,
                                        path->elementAt(m).y*ys+yb);
+                            QPointF wp = U.map(pt);
+                            double d = QLineF(wPt,wp).length();
+                            if ( d < dMin ) {
+                                dMin = d;
+                                if ( d <= dClose ) {
+                                    isClosePt = true;
+                                    closePt = pt;
+                                }
+                            }
                             if ( m > 0 && m < k ) {
                                 double yPrev = path->elementAt(m-1).y*ys+yb;
                                 double y  = path->elementAt(m).y*ys+yb;
@@ -1418,49 +1433,53 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
                             }
                         }
 
-                        //
-                        // Choose live coord based on local mins/maxs
-                        // and proximity to start/end points
-                        //
-                        if ( j == 0 || wPt.x()/W.width() < 0.02 ) {
-                            // Mouse near curve start or left 2% of window,
-                            // set to start pt
-                            liveCoord = QPointF(path->elementAt(0).x*xs+xb,
-                                                path->elementAt(0).y*ys+yb);
-                        } else if ( k == rc-1 || wPt.x()/W.width() > 0.98 ) {
-                            // Mouse near curve end or right 2% of window,
-                            // set to last pt
-                            liveCoord = QPointF(path->elementAt(k).x*xs+xb,
-                                                path->elementAt(k).y*ys+yb);
+                        if ( isClosePt ) {
+                            // Choose closest close point to mouse
+                            liveCoord = closePt;
                         } else {
-                            bool isMaxs = localMaxs.isEmpty() ? false : true;
-                            bool isMins = localMins.isEmpty() ? false : true;
-                            if ( isMaxs && !isMins ) {
-                                liveCoord = localMaxs.first();
-                            } else if ( !isMaxs && isMins ) {
-                                liveCoord = localMins.first();
-                            } else if ( isMaxs && isMins ) {
-                                // There are local mins and maxes
-                                if ( wPt.y()/W.height() < 0.125 ) {
-                                    // Mouse in top 1/8th of window
-                                    liveCoord = localMaxs.first();
-                                } else if ( mPt.y() > localMaxs.first().y() ) {
-                                    // Mouse above curve
-                                    liveCoord = localMaxs.first();
-                                } else {
-                                    // Mouse below curve
-                                    liveCoord = localMins.first();
-                                }
-                            } else if ( !isMaxs && !isMins ) {
-                                if ( !flatChangePOIs.isEmpty() ) {
-                                    liveCoord = flatChangePOIs.first();
-                                } else {
-                                    liveCoord = p;
-                                }
+                            // Mouse is far away from curve, choose best point
+                            // based on local mins/maxs and proximity to
+                            // start/end points
+                            if ( j == 0 || wPt.x()/W.width() < 0.02 ) {
+                                // Mouse near curve start or left 2% of window,
+                                // set to start pt
+                                liveCoord = QPointF(path->elementAt(0).x*xs+xb,
+                                                    path->elementAt(0).y*ys+yb);
+                            } else if (k == rc-1 || wPt.x()/W.width() > 0.98) {
+                                // Mouse near curve end or right 2% of window,
+                                // set to last pt
+                                liveCoord = QPointF(path->elementAt(k).x*xs+xb,
+                                                    path->elementAt(k).y*ys+yb);
                             } else {
-                                fprintf(stderr,"koviz [bad scoobs]:3: "
+                                bool isMaxs = localMaxs.isEmpty() ? false :true;
+                                bool isMins = localMins.isEmpty() ? false :true;
+                                if ( isMaxs && !isMins ) {
+                                    liveCoord = localMaxs.first();
+                                } else if ( !isMaxs && isMins ) {
+                                    liveCoord = localMins.first();
+                                } else if ( isMaxs && isMins ) {
+                                    // There are local mins and maxes
+                                    if ( wPt.y()/W.height() < 0.125 ) {
+                                        // Mouse in top 1/8th of window
+                                        liveCoord = localMaxs.first();
+                                    } else if (mPt.y() > localMaxs.first().y()){
+                                        // Mouse above curve
+                                        liveCoord = localMaxs.first();
+                                    } else {
+                                        // Mouse below curve
+                                        liveCoord = localMins.first();
+                                    }
+                                } else if ( !isMaxs && !isMins ) {
+                                    if ( !flatChangePOIs.isEmpty() ) {
+                                        liveCoord = flatChangePOIs.first();
+                                    } else {
+                                        liveCoord = p;
+                                    }
+                                } else {
+                                    fprintf(stderr,"koviz [bad scoobs]:3: "
                                               "CurvesView::mouseMoveEvent()\n");
-                                exit(-1);
+                                    exit(-1);
+                                }
                             }
                         }
                     }
@@ -1888,7 +1907,7 @@ void CurvesView::mouseMoveEvent(QMouseEvent *event)
 }
 
 // Time can duplicate.  This method finds the time index on the curveModel
-// for a given time where y is maximum.
+// for a given time closest to mouse
 int CurvesView::_getCurveLiveCoordTimeIdx(const QModelIndex &curveIdx,
                                           const QPointF& mPt,
                                           double time,
