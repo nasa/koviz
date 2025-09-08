@@ -741,9 +741,16 @@ QHash<QPair<QString, QString>, double> Unit::_initScales()
     map.insert(QPair<QString,QString>("kg*m2","sl*ft2"), 
                                       14.5939029300000*0.3048*0.3048);
 
-    // Ball screw lead factor
+    // Ball screw lead
     map.insert(QPair<QString,QString>("m/rad","m/rad"),  1.0);
     map.insert(QPair<QString,QString>("m/rad","mm/rad"), 0.001);
+    map.insert(QPair<QString,QString>("m/rad","m/rev"),1.0/6.28318530717958647);
+    map.insert(QPair<QString,QString>("m/rad","m/revolution"),
+                                                       1.0/6.28318530717958647);
+    map.insert(QPair<QString,QString>("m/rad","mm/rev"),
+                                                       1.0/6283.18530717958647);
+    map.insert(QPair<QString,QString>("m/rad","mm/revolution"),
+                                                       1.0/6283.18530717958647);
 
     // Miscellaneous
     map.insert(QPair<QString,QString>("rad2/s2","rad2/s2"), 1.0);
