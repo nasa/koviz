@@ -586,15 +586,15 @@ QHash<QPair<QString, QString>, double> Unit::_initScales()
     map.insert(QPair<QString,QString>("N","kip"), 4448.2216152605);
 
     // Torque
-    map.insert(QPair<QString,QString>("N*m","N*m"),      1.0);
-    map.insert(QPair<QString,QString>("N*m","N*M"),      1.0);
-    map.insert(QPair<QString,QString>("N*m","Nm"),       1.0);
-    map.insert(QPair<QString,QString>("N*m","N.m"),      1.0);
-    map.insert(QPair<QString,QString>("N*m","lbf*ft"),   1.35581795);
-    map.insert(QPair<QString,QString>("N*m","kip-ft"),   1355.81795);
-    map.insert(QPair<QString,QString>("N*m","lbf*in"),   4.4482216152605*0.0254);
-    map.insert(QPair<QString,QString>("N*m","oz*in"),    0.00706155195);
-    map.insert(QPair<QString,QString>("N*m","N*cm"),     0.01);
+    map.insert(QPair<QString,QString>("N*m","N*m"),     1.0);
+    map.insert(QPair<QString,QString>("N*m","N*M"),     1.0);
+    map.insert(QPair<QString,QString>("N*m","Nm"),      1.0);
+    map.insert(QPair<QString,QString>("N*m","N.m"),     1.0);
+    map.insert(QPair<QString,QString>("N*m","lbf*ft"),  1.35581795);
+    map.insert(QPair<QString,QString>("N*m","kip-ft"),  1355.81795);
+    map.insert(QPair<QString,QString>("N*m","lbf*in"),  4.4482216152605*0.0254);
+    map.insert(QPair<QString,QString>("N*m","oz*in"),   0.00706155195);
+    map.insert(QPair<QString,QString>("N*m","N*cm"),    0.01);
 
     // Linear Impulse
     map.insert(QPair<QString,QString>("N*s","N*s"),     1.0);
@@ -633,12 +633,15 @@ QHash<QPair<QString, QString>, double> Unit::_initScales()
     // Friction constant
     map.insert(QPair<QString,QString>("N*s/m","N*s/m"), 1.0);
     map.insert(QPair<QString,QString>("N*s/m","N*s/mm"), 1000.0);
-    map.insert(QPair<QString,QString>("N*s/m","lbf*s/ft"), 4.4482216152605/0.3048);
+    map.insert(QPair<QString,QString>("N*s/m","lbf*s/ft"),
+                                                        4.4482216152605/0.3048);
 
     // Torsional friction
     map.insert(QPair<QString,QString>("N*m*s/r","N*m*s/r"), 1.0);
-    map.insert(QPair<QString,QString>("N*m*s/r","N*cm*min/rev"), 60.0/(100.0*6.28318530717958647));
-    map.insert(QPair<QString,QString>("N*m*s/r","N*m*s/d"), 1.0/0.0174532925199433);
+    map.insert(QPair<QString,QString>("N*m*s/r","N*cm*min/rev"),
+                                              60.0/(100.0*6.28318530717958647));
+    map.insert(QPair<QString,QString>("N*m*s/r","N*m*s/d"),
+                                                        1.0/0.0174532925199433);
 
     // Density
     map.insert(QPair<QString,QString>("kg/m3","kg/m3"),     1.0);
@@ -718,7 +721,8 @@ QHash<QPair<QString, QString>, double> Unit::_initScales()
     map.insert(QPair<QString,QString>("1/r","one/r"), 1.0);
     map.insert(QPair<QString,QString>("1/r","1/d"),   1.0/0.0174532925199433);
     map.insert(QPair<QString,QString>("1/r","one/d"), 1.0/0.0174532925199433);
-    map.insert(QPair<QString,QString>("1/r","one/degree"), 1.0/0.0174532925199433);
+    map.insert(QPair<QString,QString>("1/r","one/degree"),
+                                                      1.0/0.0174532925199433);
 
     // Q-Bar-Alpha (has to do with dynamic pressure and angle of attack)
     map.insert(QPair<QString,QString>("N*r/m2","N*r/m2"), 1.0);
@@ -736,6 +740,10 @@ QHash<QPair<QString, QString>, double> Unit::_initScales()
     map.insert(QPair<QString,QString>("kg*m2","kg*m2"), 1.0);
     map.insert(QPair<QString,QString>("kg*m2","sl*ft2"), 
                                       14.5939029300000*0.3048*0.3048);
+
+    // Ball screw lead factor
+    map.insert(QPair<QString,QString>("m/rad","m/rad"),  1.0);
+    map.insert(QPair<QString,QString>("m/rad","mm/rad"), 0.001);
 
     // Miscellaneous
     map.insert(QPair<QString,QString>("rad2/s2","rad2/s2"), 1.0);
