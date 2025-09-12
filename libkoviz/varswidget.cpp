@@ -156,7 +156,7 @@ void VarsWidget::_varsSelectModelSelectionChanged(
                                                   QItemSelectionModel::Current);
                 int secs = qRound(timer.nsecsElapsed()/1.0e9);
                 div_t d = div(secs,60);
-                QString msg = QString("Loaded %1 of %2 curves (%3 min %4 sec)")
+                QString msg = QString("Loaded %1 of %2 vars (%3 min %4 sec)")
                              .arg(r+1).arg(rc).arg(d.quot).arg(d.rem);
                 progress.setLabelText(msg);
             }

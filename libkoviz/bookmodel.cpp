@@ -1445,14 +1445,18 @@ void PlotBookModel::__appendDataToPainterPath(CurveModel *curveModel,
     } else if ( nels > nrows ) {
         // If the model has less rows than the path, the model (like TV)
         // has been been reset.  In this case, simply do not append
+        delete it;
         return;
     }
 
     bool isXLogScale = ( plotXScale == "log" ) ? true : false;
     bool isYLogScale = ( plotYScale == "log" ) ? true : false;
 
+    QModelIndex statusIdx = getDataIndex(QModelIndex(),"StatusBarMessage","");
+
     double f = getDataDouble(QModelIndex(),"Frequency");
     int cntNANs = 0;
+    int nPointsLoaded = 0;
     while ( !it->isDone() ) {
         double t = it->t();
         if ( f > 0.0 ) {
@@ -1578,8 +1582,21 @@ void PlotBookModel::__appendDataToPainterPath(CurveModel *curveModel,
             }
         }
 
+        nPointsLoaded++;
+        if ( nPointsLoaded%250000 == 0 ) {
+           QString msg = QString("Loaded %1 of %2 points.\n").
+                                 arg(nPointsLoaded).arg(nrows);
+            setData(statusIdx,msg);
+            QCoreApplication::processEvents();
+        }
+
         it->next();
     }
+    QString msg = QString("Loaded %1 of %2 points.\n").
+                           arg(nPointsLoaded).arg(nrows);
+    setData(statusIdx,msg);
+    QCoreApplication::processEvents();
+
     delete it;
     curveModel->unmap();
 }
@@ -2614,9 +2631,13 @@ void PlotBookModel::createCurves(QModelIndex curvesIdx,
     }
 
     // Setup progress bar dialog for time intensive loads
-    QProgressDialog progress("Loading curves...", "Abort", 0, rc, parent);
-    progress.setWindowModality(Qt::WindowModal);
-    progress.setMinimumDuration(500);
+    QProgressDialog* progress = nullptr;
+    if ( rc > 10 ) {
+        progress = new QProgressDialog("z:Loading curves...",
+                                       "Abort", 0, rc, parent);
+        progress->setWindowModality(Qt::WindowModal);
+        progress->setMinimumDuration(500);
+    }
 
     QElapsedTimer timer;
     timer.start();
@@ -2640,9 +2661,11 @@ void PlotBookModel::createCurves(QModelIndex curvesIdx,
     for ( int r = 0; r < rc; ++r) {
 
         // Update progress dialog
-        progress.setValue(r);
-        if (progress.wasCanceled()) {
-            break;
+        if ( progress ) {
+            progress->setValue(r);
+            if (progress->wasCanceled()) {
+                break;
+            }
         }
 
         CurveModel* curveModel = createCurve(r,timeName,timeName,yName);
@@ -2909,7 +2932,10 @@ void PlotBookModel::createCurves(QModelIndex curvesIdx,
         div_t d = div(secs,60);
         QString msg = QString("Loaded %1 of %2 curves (%3 min %4 sec)")
                              .arg(r+1).arg(rc).arg(d.quot).arg(d.rem);
-        progress.setLabelText(msg);
+        if ( progress ) {
+            progress->setLabelText(msg);
+            QCoreApplication::processEvents();
+        }
 
         ++ii;
     }
@@ -2918,7 +2944,9 @@ void PlotBookModel::createCurves(QModelIndex curvesIdx,
     blockSignals(block);
 
     // Update progress dialog
-    progress.setValue(rc);
+    if ( progress ) {
+        progress->setValue(rc);
+    }
 
     // Initialize plot math rect
     QRectF bbox = calcCurvesBBox(curvesIdx);
@@ -3812,6 +3840,9 @@ QList<PlotBookModel::LegendElement> PlotBookModel::_legendElements(
         }
         if ( !isGroups ) {
             CurveModel* curve = getCurveModel(curveIdx);
+            if ( !curve ) {
+                return els;
+            }
             QString runDir = QFileInfo(curve->runPath()).absoluteFilePath();
             lbl = runDir + ":" + lbl;
         }

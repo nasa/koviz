@@ -70,7 +70,8 @@ class CsvModel : public DataModel
     int _idxAtTimeBinarySearch (CsvModelIterator *it,
                                int low, int high, double time);
 
-    inline double _convert(const QString& s);
+    inline double _strtod(const char* ptr, const char *eof, char **endptr);
+    QHash<QString,int> _str2id;
 };
 
 class CsvModelIterator : public ModelIterator

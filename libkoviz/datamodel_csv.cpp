@@ -96,72 +96,101 @@ void CsvModel::_init()
     _iteratorTimeIndex = new CsvModelIterator(0,this,
                                               _timeCol,_timeCol,_timeCol);
 
-    QElapsedTimer timer;
-    timer.start();
-
-    // Get number of data rows in csv file
-    QString msgCnt("Counting number rows in csv");
-    QProgressDialog progressCnt(msgCnt, QString(), 0, 0, 0);
-    progressCnt.setRange(0, 0);
-    progressCnt.setWindowModality(Qt::WindowModal);
-    while ( !in.atEnd() ) {
-        if (progressCnt.wasCanceled()) {
-             break;
-        }
-        if ( _nrows % 10000 == 0 ) {
-            int secs = qRound(timer.nsecsElapsed()/1.0e9);
-
-            div_t d = div(secs,60);
-            QString m = QString("%1, nrows=%2 (%3 min %4 sec)")
-                                .arg(msgCnt).arg(_nrows).arg(d.quot).arg(d.rem);
-            progressCnt.setLabelText(m);
-            progressCnt.setValue(_nrows);
-        }
-        in.readLine();
-        ++_nrows;
+    qint64 fileSize = file.size();
+    if (fileSize == 0) {
+        delete _iteratorTimeIndex ;
+        file.close();
+        return;
     }
-    progressCnt.close();
+    const char* data = reinterpret_cast<const char*>(file.map(0, fileSize));
+    if (!data) {
+        delete _iteratorTimeIndex ;
+        file.close();
+        return;
+    }
+    const char* eof = data + fileSize;
+    for (qint64 i = 0; i < fileSize; ++i) {
+        if (data[i] == '\n') {
+            ++_nrows;
+        }
+    }
+    bool isEndNewLine = false;
+    if (fileSize > 0) {
+        qint64 i = fileSize - 1;
+        // Skip trailing spaces/tabs/CR
+        while (i >= 0 && (data[i] == ' ' ||
+                          data[i] == '\t' || data[i] == '\r')) {
+            --i;
+        }
+        if (i >= 0 && data[i] == '\n') {
+            isEndNewLine = true;
+        }
+    }
+    if (!isEndNewLine && fileSize > 0) {
+        ++_nrows;  // count last row without newline
+    }
+    if ( _nrows > 0 ) {
+        --_nrows; // take off header
+    }
+
+    // Return if no data
+    if ( _nrows == 0 || _ncols == 0 ) {
+        delete _iteratorTimeIndex ;
+        file.unmap(reinterpret_cast<uchar*>(const_cast<char*>(data)));
+        file.close();
+        return;
+    }
 
     // Allocate to hold *all* parsed data
     _data = (double*)malloc(_nrows*_ncols*sizeof(double));
 
     // Begin Loading Progress Dialog
+    QElapsedTimer timer;
     timer.start();
     QString msg("Loading ");
     msg += QFileInfo(fileName()).fileName();
     msg += "...";
     QProgressDialog progressLoad(msg, "Abort", 0, _nrows-1, 0);
     progressLoad.setWindowModality(Qt::WindowModal);
+
+    // Skip over header
+    qint64 pos = 0;
+    while (pos < fileSize && data[pos] != '\n') {
+        ++pos;
+    }
+    ++pos; // Skip over '\n'
+
     int row = 0;
-
-    // Read in data
-    in.seek(0);
-    in.readLine(); // csv header line
-    int i = 0;
-    while ( !in.atEnd() ) {
-        if (progressLoad.wasCanceled()) {
-             break;
+    col = 0;
+    const char* ptr = &data[pos];
+    while (ptr < eof) {
+        char* endptr;
+        double val = _strtod(ptr,eof,&endptr);
+        _data[row*_ncols+col] = val;
+        ptr = endptr;
+        while (ptr < eof && *ptr != ',' && *ptr != '\n') {
+            ++ptr; // Advance pointer to delimeter (e.g. past trailing spaces)
         }
-        if ( row % 10000 == 0 ) {
-            progressLoad.setValue(row);
-        }
-        ++row;
-
-        QString line = in.readLine();
-        int from = 0;
-        while (1) {
-            int j = line.indexOf(',',from);
-            if ( j < 0 ) {
-                _data[i] = _convert(line.mid(from,line.size()-from));
-                ++i;
-                break;
+        if ( *ptr == ',') {
+            ++col;
+            ++ptr;
+        } else if ( *ptr == '\n' ) {
+            col = 0;
+            ++row;
+            ++ptr;
+        } else if ( *ptr == '\r' ) {
+            // Handle Windows line ending ^M (\r\n)
+            ++ptr;
+            if ( *ptr == '\n' ) {
+                ++ptr;
             }
-            _data[i] = _convert(line.mid(from,j-from));
-            from = j+1;
-            ++i;
+            col = 0;
+            ++row;
+        } else {
+            break;
         }
-
-        if ( row % 10000 == 0 ) {
+        if ( row % 100000 == 0 ) {
+            progressLoad.setValue(row);
             int secs = qRound(timer.nsecsElapsed()/1.0e9);
             div_t d = div(secs,60);
             QString msg = QString("Loaded %1 of %2 lines "
@@ -174,7 +203,59 @@ void CsvModel::_init()
     // End Progress Dialog
     progressLoad.setValue(_nrows-1);
 
+    // Cleanup
+    file.unmap(reinterpret_cast<uchar*>(const_cast<char*>(data)));
     file.close();
+}
+
+// This behaves like strtod().  It parses out the value pointed at by ptr,
+// and then sets the endptr to character after last char of numeric
+double CsvModel::_strtod(const char *ptr, const char* eof, char **endptr)
+{
+    if ( ptr >= eof || ptr[0] == ',' || ptr[0] == '\n' || ptr[0] == '\r' ) {
+        // Empty field, return NaN
+        *endptr = const_cast<char*>(ptr);
+        return (std::numeric_limits<double>::quiet_NaN());
+    }
+
+    double val = strtod(ptr,endptr);
+    if ( **endptr == ':' ) {
+        // Timestamp hh:mm:ss
+        double hh = val;
+        ptr = *endptr;
+        ++ptr;
+        double mm = strtod(ptr,endptr);
+        ptr = *endptr;
+        ++ptr;
+        double ss = strtod(ptr,endptr);
+        val = hh*3600 + mm*60 + ss;
+    } else if ( ptr == *endptr ) {
+        // strtod skipped value since non-numeric,
+        // so try to parse string into a value
+        const char* eptr = ptr;
+        while (*eptr != ',' && *eptr != '\n' && eptr != eof ) {
+            ++eptr;
+        }
+        *endptr = const_cast<char*>(eptr);
+        if ( eptr == ptr ) {
+            // Empty column -> NaN
+            val = std::numeric_limits<double>::quiet_NaN();
+        } else {
+            QString s = QString::fromUtf8(ptr,eptr-ptr);
+            QString st = s.trimmed();
+            if ( st.size() == 1) {
+                val = st.at(0).unicode();
+            } else {
+                // Map string to an id
+                if ( !_str2id.contains(s) ) {
+                    int id = _str2id.size(); // id = 0,1,2...
+                    _str2id.insert(s,id);
+                }
+                val = _str2id.value(s);
+            }
+        }
+    }
+    return val;
 }
 
 void CsvModel::map()
@@ -272,35 +353,6 @@ int CsvModel::_idxAtTimeBinarySearch (CsvModelIterator* it,
                                                       mid+1, high, time);
                 }
         }
-}
-
-double CsvModel::_convert(const QString &s)
-{
-    double val = 0.0;
-
-    bool ok;
-    val = s.toDouble(&ok);
-    if ( !ok ) {
-        QStringList vals = s.split(":");
-        if (vals.length() == 3 ) {
-            // Try converting to a utc timestamp
-            val = 3600.0*vals.at(0).toDouble(&ok);
-            if ( ok ) {
-                val += 60.0*vals.at(1).toDouble(&ok);
-                if ( ok ) {
-                    val += vals.at(2).toDouble(&ok);
-                }
-            }
-        }
-    }
-    if ( !ok ) {
-        // If single char, convert to unicode value
-        if ( s.size() == 1 ) {
-            val = s.at(0).unicode();
-        }
-    }
-
-    return val;
 }
 
 int CsvModel::rowCount(const QModelIndex &pidx) const

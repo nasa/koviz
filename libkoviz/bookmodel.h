@@ -13,6 +13,7 @@
 #include <QWidget>
 #include <QProgressDialog>
 #include <QElapsedTimer>
+#include <QCoreApplication>
 #if QT_VERSION >= 0x050000
 #include <QRegularExpressionMatch>
 #include <QHashFunctions>

@@ -376,7 +376,27 @@ void DPTreeWidget::_createDPPages(const QString& dpfile)
     QModelIndex page0Idx = _bookModel->index(0,0,pagesIdx);
     QModelIndexList siblingPlotIdxs = _bookModel->plotIdxs(page0Idx);
 
+    // Count curves to plot
+    int nCurvesTotal = 0;
+    foreach (DPPage* page, dp.pages() ) {
+        foreach (DPPlot* plot, page->plots() ) {
+            nCurvesTotal += rc*plot->curves().size();
+        }
+    }
 
+    QProgressDialog* progress = nullptr;
+    if ( nCurvesTotal > 500 ) {
+        progress = new QProgressDialog("Loading curves...","Abort",0,
+                                       nCurvesTotal,this);
+        progress->setWindowModality(Qt::WindowModal);
+        progress->setMinimumDuration(500);
+    }
+
+    int nPages = dp.pages().count();
+    int iPage = 0;
+    int iCurve = 0;
+    QElapsedTimer timer;
+    timer.start();
     foreach (DPPage* page, dp.pages() ) {
 
         // Page
@@ -504,15 +524,6 @@ void DPTreeWidget::_createDPPages(const QString& dpfile)
             int i = 0;
             foreach (DPCurve* dpcurve, plot->curves() ) {
 
-                // Setup progress bar dialog for time intensive loads
-                QProgressDialog progress("Loading curves...", "Abort",
-                                         0, rc, this);
-                progress.setWindowModality(Qt::WindowModal);
-                progress.setMinimumDuration(500);
-
-                QElapsedTimer timer;
-                timer.start();
-
                 QString default_style = "plain";
 
                 QString ux0;
@@ -564,21 +575,26 @@ void DPTreeWidget::_createDPPages(const QString& dpfile)
                         }
                     }
 
-                    int secs = qRound(timer.nsecsElapsed()/1.0e9);
-                    div_t d = div(secs,60);
-                    QString msg = QString("Loaded %1 of %2 curves "
-                                          "(%3 min %4 sec)")
-                                       .arg(r+1).arg(rc).arg(d.quot).arg(d.rem);
-                    progress.setLabelText(msg);
-                    progress.setValue(r);
-                    if (progress.wasCanceled()) {
-                        break;
+                    if ( progress && iCurve%250 == 0 ) {
+                        int secs = qRound(timer.nsecsElapsed()/1.0e9);
+                        div_t d = div(secs,60);
+                        QString msg = QString("Loading %1 of %2 pages.\n"
+                                              "Loaded %3 of %4 curves.\n"
+                                              "%5 min %6 sec.").
+                                              arg(iPage).arg(nPages).
+                                              arg(iCurve).arg(nCurvesTotal).
+                                              arg(d.quot).arg(d.rem);
+                        progress->setLabelText(msg);
+                        if (progress->wasCanceled()) {
+                            break;
+                        }
+                        QCoreApplication::processEvents();
                     }
-                }
 
-                // Update progress dialog
-                progress.setValue(rc);
+                    ++iCurve;
+                }
             }
+
 
             // Turn signals back on before adding curveModel
             _bookModel->blockSignals(block);
@@ -638,6 +654,16 @@ void DPTreeWidget::_createDPPages(const QString& dpfile)
                 }
             }
         }
+        ++iPage;
+        if (progress) {
+            if (progress->wasCanceled()) {
+                break;
+            }
+        }
+    }
+    if ( progress ) {
+        progress->setValue(nPages);
+        delete progress;
     }
 
     this->setCursor(currCursor);
