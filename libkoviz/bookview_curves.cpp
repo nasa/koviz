@@ -2650,7 +2650,7 @@ void CurvesView::_keyPressBSliderChanged(int value)
                                                            "CurveData","Curve");
             _bookModel()->setData(curveDataIdx,v);
             curveModel->_real = 0; // Zero out cache since bw now owns it
-            delete curveModel;
+            curveModel->deleteLater();
         }
     }
     _bookModel()->blockSignals(block);
@@ -3802,7 +3802,7 @@ void CurvesView::_keyPressGSliderChanged(int value)
                                                            "CurveData","Curve");
             _bookModel()->setData(curveDataIdx,v);
             curveModel->_real = 0; // Zero out cache since sg now owns it
-            delete curveModel;
+            curveModel->deleteLater();
         }
     }
     _bookModel()->blockSignals(block);
