@@ -1895,6 +1895,10 @@ bool writeCsv(const QString& fcsv, const QStringList& timeNames,
     QString header;
     header = timeNames.at(0) + ",";
     foreach ( DPVar* var, dpTable->vars() ) {
+        if ( timeNames.contains(var->name()) ) {
+            // Skip time since auto included
+            continue;
+        }
         QString unit("");
         //unit = " {--}"; // TODO: Unit name and unit conversion
         header += var->name() +  unit + ",";
@@ -1906,6 +1910,10 @@ bool writeCsv(const QString& fcsv, const QStringList& timeNames,
     // Csv body
     QStringList params;
     foreach ( DPVar* var, dpTable->vars() ) {
+        if ( timeNames.contains(var->name()) ) {
+            // Skip time since auto included
+            continue;
+        }
         params << var->name() ;
     }
 
