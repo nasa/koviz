@@ -13,11 +13,11 @@ class SpringSimObject : public Trick::SimObject {
 
     public:
 
-        double mass;      // kg 
-        double stiffness; // N/m
-        double damping;   // N*s/m
-        double zeta;      // --
-        double omega;     // rad/s
+        double m;  // kg  mass
+        double k;  // N/m stiffness
+        double c;  // N*s/m damping
+        double z;  // -- zeta
+        double w;  // rad/s omega
         double init_pos;  // m
         double init_vel;  // m/s
 
@@ -26,8 +26,12 @@ class SpringSimObject : public Trick::SimObject {
         double acc;       // m/s2
         double force;     // N
 
+        double analytic_pos; // m
+        double analytic_vel; // m/s
+        double analytic_acc; // m/s2
+
         SpringSimObject() : 
-            mass(1.0), stiffness(39.47842), zeta(0.1),
+            m(1.0), k(39.47842), z(0.1),
             init_pos(0), init_vel(0.1),
             pos(0), vel(0), acc(0)
         {
@@ -40,15 +44,26 @@ class SpringSimObject : public Trick::SimObject {
         {
             pos = init_pos;
             vel = init_vel;
-            omega = sqrt(stiffness/mass);
-            damping = 2*zeta*omega*mass;
+            w = sqrt(k/m);
+            c = 2*z*w*m;
             return 0;
         }
 
         int spring_deriv()
         {
-            force = -(stiffness*pos + damping*vel);
-            acc = force/mass ;
+            force = -(k*pos + c*vel);
+            acc = force/m ;
+
+            double W = w*sqrt(1-z*z);
+            double A = init_pos;
+            double B = (init_vel + z*w*init_pos)/W;
+            double t = exec_get_sim_time(); 
+            analytic_pos = exp(-z*w*t)*(A*cos(W*t) + B*sin(W*t));
+            analytic_vel = exp(-z*w*t)*((B*W-A*z*w)*cos(W*t) + 
+                                        (-B*z*w-A*W)*sin(W*t));
+            analytic_acc = -2.0*z*w*analytic_vel - w*w*analytic_pos;
+
+
             return 0;
         }
 

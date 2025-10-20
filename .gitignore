@@ -35,3 +35,4 @@ varserver_log
 MONTE_RUN_test
 
 sims/SIM_spring/RUN_realtime/log_*
+sims/SIM_spring/RUN_test/log_*
