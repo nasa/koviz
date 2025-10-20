@@ -57,6 +57,7 @@ TrickTableModel::TrickTableModel(const QStringList& timeNames,
                 const Parameter* param = trkModel->param(i);
                 if ( timeNames.contains(param->name()) ) {
                     timeName = param->name();
+                    _param2model.insert(timeName,trkModel);
                     continue;
                 }
                 if ( param->name() == paramName ) {
@@ -172,4 +173,14 @@ QVariant TrickTableModel::headerData(int section,
         v = _params.at(section);
     }
     return v;
+}
+
+const Parameter *TrickTableModel::param(int col) const
+{
+    const Parameter* param = 0;
+    QString paramName = _params.at(col);
+    DataModel* dataModel = _param2model.value(paramName);
+    int c = dataModel->paramColumn(paramName);
+    param = dataModel->param(c);
+    return param;
 }

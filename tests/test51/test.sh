@@ -1,0 +1,15 @@
+#! /usr/bin/env bash
+
+echo "---------------------------------------------------------"
+echo "  Test -vars2csv                                         "
+echo ""
+echo "---------------------------------------------------------"
+echo ""
+echo "Action1: cp -r ~/dev/sims/Ball/SIM_ball_L2/RUN_test ."
+echo "Expect1: N/A"
+echo "Action2: koviz RUN_test -vars2csv moo.csv -vars \"ball.state.out.position[0] {ft} bias(100) scale(2),ball.state.out.velocity[0] {mph}\""
+echo "Expect2: moo.csv first data line:"
+echo "         pos[0] = 132.8084"
+echo "         vel[0] = 5.5361"
+echo "Action3: rm -rf RUN_test moo.csv"
+echo "Expect3: N/A"

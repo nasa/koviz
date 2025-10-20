@@ -11,7 +11,6 @@
 #include <string>
 using namespace std;
 
-#include <QDir>
 #include <QFileInfo>
 #include <QTextStream>
 #include <stdio.h>
@@ -38,7 +37,8 @@ bool writeTrk(const QString& ftrk, const QString &timeName,
               double start, double stop, double timeShift,
               QStringList& paramList, Runs* runs);
 bool writeCsv(const QString& fcsv, const QStringList& timeNames,
-              DPTable* dpTable, const QString &runPath,
+              const QList<DPVar*>& vars,
+              const QString& runPath,
               double startTime, double stopTime, double tolerance);
 bool convert2csv(const QStringList& timeNames,
                  const QString& ftrk, const QString& fcsv);
@@ -75,7 +75,8 @@ class SnapOptions : public Options
     unsigned int endRun;
     QString pdfOutFile;
     QString dp2trkOutFile;
-    QString csvOutFile;
+    QString dp2csvOutFile;
+    QString vars2csvFile;
     QString title1;
     QString title2;
     QString title3;
@@ -206,9 +207,11 @@ int main(int argc, char *argv[])
     opts.add("-dp2trk", &opts.dp2trkOutFile, QString(""),
              "Create trk from DP_ vars, "
              "e.g. koviz DP_foo RUN_a -dp2trk foo.trk");
-    opts.add("-dp2csv", &opts.csvOutFile, QString(""),
+    opts.add("-dp2csv", &opts.dp2csvOutFile, QString(""),
              "Create csv from DP_ vars, "
              "e.g. koviz DP_foo RUN_a -dp2csv foo.csv");
+    opts.add("-vars2csv", &opts.vars2csvFile, QString(""),
+             "Create csv from -vars list");
     opts.add("-trk2csv", &opts.trk2csvFile, QString(""),
              "Name of trk file to convert to csv (fname subs trk with csv)",
              presetExistsFile);
@@ -652,11 +655,17 @@ int main(int argc, char *argv[])
         }
 
         bool isCsv = false;
-        if ( !opts.csvOutFile.isEmpty() ) {
+        if ( !opts.dp2csvOutFile.isEmpty() ) {
             isCsv = true;
         }
 
-        if ( (isPdf && isTrk) || (isPdf && isCsv) || (isTrk && isCsv) ) {
+        bool isVars2Csv = false;
+        if ( !opts.vars2csvFile.isEmpty() ) {
+            isVars2Csv = true;
+        }
+
+        if ( (isPdf && isTrk) || (isPdf && isCsv) || (isTrk && isCsv) ||
+             (isPdf && isVars2Csv) ) {
             fprintf(stderr,
                     "koviz [error] : you may not use the -pdf, -trk and -csv "
                     "options together.");
@@ -688,6 +697,15 @@ int main(int argc, char *argv[])
                     "koviz [error] : when using the -csv option you must "
                     "specify a DP product file and RUN directory\n");
             exit(-1);
+        }
+
+        // If using the -vars2csv option, the -vars and RUN options must be set
+        if ( isVars2Csv && (opts.vars.isEmpty() || runPaths.size() == 0) ) {
+            fprintf(stderr,
+                    "koviz [error] : when using the -vars2csv option you must "
+                    "specify a non-empty -vars list as well as a RUN\n");
+            exit(-1);
+
         }
 
         bool isMonte = false;
@@ -1361,7 +1379,7 @@ int main(int argc, char *argv[])
             foreach ( QString dpFileName, dps ) {
                 DPProduct dp(dpFileName);
                 foreach ( DPTable* dpTable, dp.tables() ) {
-                    QString fname = opts.csvOutFile;
+                    QString fname = opts.dp2csvOutFile;
                     if ( dp.tables().size() > 1 ) {
                         // Multiple files to output, so index the name
                         QString dpName = QFileInfo(dpFileName).baseName();
@@ -1378,7 +1396,8 @@ int main(int argc, char *argv[])
                         ++i;
                     }
 
-                    bool r = writeCsv(fname,timeNames,dpTable,runPaths.at(0),
+                    bool r = writeCsv(fname,timeNames,dpTable->vars(),
+                                      runPaths.at(0),
                                       startTime, stopTime, tolerance);
                     if ( r ) {
                         ret = 0;
@@ -1392,6 +1411,132 @@ int main(int argc, char *argv[])
                 if ( ret == -1 ) {
                     break;
                 }
+            }
+
+
+        } else if ( isVars2Csv ) {
+
+
+            if ( runPaths.size() != 1 ) {
+                fprintf(stderr, "koviz [error]: Exactly one RUN dir must be "
+                                "specified with the -vars2csv option.\n");
+                exit(-1);
+            }
+
+            if ( opts.vars.isEmpty() ) {
+                fprintf(stderr, "koviz [error]: -vars2csv option specified but"
+                                "-vars option has no vars listed.\n");
+                exit(-1);
+            }
+
+            QList<DPVar*> dpvars;
+            QList<QPair<QString,QString>> var_units;
+            QStringList vars = opts.vars.split(",", skipEmptyParts);
+            bool isError = false;
+            foreach (QString var, vars ) {
+                QString v = var;
+                if ( v.at(0) == '@' ) {
+                    v = var.mid(1);
+                }
+
+                // Get unit from var {unit} string
+                QString dpunit;
+                int i = v.lastIndexOf('{');
+                int j = -1;
+                if ( i != -1 ) {
+                    j = v.indexOf('}',i);
+                }
+                if ( i != -1 && j != -1 && i < j ) {
+                    dpunit = v.mid(i+1,j-i-1).trimmed();
+                    v = v.remove(i,j-i+1).trimmed();
+                }
+                if ( !dpunit.isEmpty() && !Unit::isUnit(dpunit) ) {
+                    fprintf(stderr, "koviz [error]: var=\"%s\" "
+                                    "from -vars option has bad unit\n",
+                                    var.toLatin1().constData());
+                    isError = true;
+                    break;
+                }
+
+                // Get scale from var {unit} scale(double) string
+                double scale = 1.0;
+                int i0 = v.indexOf(QRegularExpression("scale\\s*\\("));
+                if ( i0 != -1 ) {
+                    i = v.indexOf('(',i0);
+                    j = v.indexOf(')',i+1);
+                    if ( i != -1 && j != -1 && i < j ) {
+                        QString s = v.mid(i+1, j-i-1).trimmed();
+                        bool ok = false;
+                        double val = s.toDouble(&ok);
+                        if ( ok ) {
+                            scale = val;
+                        } else {
+                            fprintf(stderr, "koviz [error]: Bad scale value=%s "
+                                    "for var=%s\n",
+                                    s.toLatin1().constData(),
+                                    var.toLatin1().constData());
+                            isError = true;
+                            break;
+                        }
+                        v = v.remove(i0,j-i0+1).trimmed();
+                    }
+                }
+
+                // Get bias from var {unit} scale(double) bias(double) string
+                double bias = 0.0;
+                i0 = v.indexOf(QRegularExpression("bias\\s*\\("));
+                if ( i0 != -1 ) {
+                    i = v.indexOf('(',i0);
+                    j = v.indexOf(')',i+1);
+                    if ( i != -1 && j != -1 && i < j ) {
+                        QString s = v.mid(i+1, j-i-1).trimmed();
+                        bool ok = false;
+                        double val = s.toDouble(&ok);
+                        if ( ok ) {
+                            bias = val;
+                        } else {
+                            fprintf(stderr, "koviz [error]: Bad bias value=%s "
+                                    "for var=%s\n",
+                                    s.toLatin1().constData(),
+                                    var.toLatin1().constData());
+                            isError = true;
+                            break;
+                        }
+                        v = v.remove(i0,j-i0+1).trimmed();
+                    }
+                }
+
+                if ( !runs->params().contains(v) ) {
+                    fprintf(stderr, "koviz [error]: Cannot find var=\"%s\" "
+                                    "from -vars option.  Run(s) do not contain "
+                                    "this variable or syntax error with unit,"
+                                    "scale or bias specs.\n",
+                                    var.toLatin1().constData());
+                    isError = true;
+                    break;
+                }
+
+                DPVar* dpvar = new DPVar(v.toLatin1().constData());
+                dpvar->setUnit(dpunit.toLatin1().constData());
+                dpvar->setScaleFactor(scale);
+                dpvar->setBias(bias);
+                dpvars.append(dpvar);
+            }
+            if ( isError ) {
+                foreach ( DPVar* dpvar, dpvars ) {
+                    delete dpvar;
+                }
+                exit(-1);
+            }
+            bool r = writeCsv(opts.vars2csvFile,timeNames,dpvars,
+                              runPaths.at(0),startTime,stopTime,tolerance);
+            foreach ( DPVar* dpvar, dpvars ) {
+                delete dpvar;
+            }
+            if ( !r ) {
+                fprintf(stderr, "koviz [error]: -vars2csv had issue with "
+                                "writing a csv file.  Aborting!\n");
+                exit(-1);
             }
 
 
@@ -1866,9 +2011,16 @@ bool writeTrk(const QString& ftrk, const QString& timeName,
 }
 
 bool writeCsv(const QString& fcsv, const QStringList& timeNames,
-              DPTable* dpTable, const QString& runPath,
+              const QList<DPVar*>& vars,
+              const QString& runPath,
               double startTime, double stopTime, double tolerance)
 {
+    if ( timeNames.size() != 1 ) {
+        fprintf(stderr, "koviz [error]: writeCsv expects -timeNames to be a "\
+                        "single time name e.g. sys.exec.out.time\n");
+        return false;
+    }
+
     QFileInfo fcsvi(fcsv);
     if ( fcsvi.exists() ) {
         fprintf(stderr, "koviz [error]: Will not overwrite %s\n",
@@ -1891,41 +2043,105 @@ bool writeCsv(const QString& fcsv, const QStringList& timeNames,
     out.setPadChar(' ');
     out.setRealNumberPrecision(15);
 
-    // Csv header
-    QString header;
-    header = timeNames.at(0) + ",";
-    foreach ( DPVar* var, dpTable->vars() ) {
-        if ( timeNames.contains(var->name()) ) {
-            // Skip time since auto included
-            continue;
-        }
-        QString unit("");
-        //unit = " {--}"; // TODO: Unit name and unit conversion
-        header += var->name() +  unit + ",";
-    }
-    header.chop(1);
-    out << header;
-    out << "\n";
-
-    // Csv body
     QStringList params;
-    foreach ( DPVar* var, dpTable->vars() ) {
+    foreach ( DPVar* var, vars ) {
         if ( timeNames.contains(var->name()) ) {
             // Skip time since auto included
             continue;
         }
-        params << var->name() ;
+        params << var->name();
     }
 
     TrickTableModel ttm(timeNames, runPath, params);
     int rc = ttm.rowCount();
     int cc = ttm.columnCount();
+
+    // Get unit names, scales, biases and dp scales/biases
+    QList<QString> uns;
+    QList<double> uss;
+    QList<double> ubs;
+    QList<double> dpss;
+    QList<double> dpbs;
+    for ( int c = 0 ; c < cc; ++c ) {
+        const Parameter* param = ttm.param(c);
+        bool isFound = false;
+        foreach ( DPVar* var, vars ) {
+            if ( param->name() == var->name() ) {
+                isFound = true;
+                QString dp_unit = var->unit();
+                QString mo_unit = param->unit();
+                if ( !dp_unit.isEmpty() ) {
+                    uns.append(dp_unit);
+                } else {
+                    uns.append(mo_unit);
+                }
+
+                double us = 1.0;
+                double ub = 0.0;
+                if ( !mo_unit.isEmpty() && !dp_unit.isEmpty() ) {
+                    if ( Unit::canConvert(mo_unit,dp_unit) ) {
+                        us = Unit::scale(mo_unit,dp_unit);
+                        ub = Unit::bias(mo_unit,dp_unit);
+                    } else {
+                        fprintf(stderr, "koviz [error]: writeCsv is getting "
+                                "conflicting units model_unit=%s dp_unit=%s "
+                                "for var=%s. Aborting!\n",
+                                mo_unit.toLatin1().constData(),
+                                dp_unit.toLatin1().constData(),
+                                var->name().toLatin1().constData());
+                        return false;
+                    }
+                }
+                uss.append(us);
+                ubs.append(ub);
+                dpss.append(var->scaleFactor());
+                dpbs.append(var->bias());
+                break;
+            }
+        }
+        if ( !isFound ) {
+            // Should be time since time doesn't have to be specified by user
+            if ( param->name() == timeNames.at(0) ) {
+                uns.append(param->unit());
+                uss.append(1.0);
+                ubs.append(0.0);
+                dpss.append(1.0);
+                dpbs.append(0.0);
+            } else {
+                fprintf(stderr, "koviz [bad scoobs]: Should see this since "
+                        "param=%s should exist and will have been checked for "
+                        "existence before this point.\n",
+                        param->name().toLatin1().constData());
+                return false;
+            }
+        }
+    }
+
+    // Csv header
+    QString header;
+    for ( int c = 0 ; c < cc; ++c ) {
+        const Parameter* param = ttm.param(c);
+        header += param->name() + " {" + uns.at(c) + "}" + ",";
+    }
+    header.chop(1);
+    out << header;
+    out << "\n";
+
+    // Csv data
     double epsilon = tolerance/2.0;
     for ( int r = 0 ; r < rc; ++r ) {
         bool isWriteRecord = true;
         for ( int c = 0 ; c < cc; ++c ) {
             QModelIndex idx = ttm.index(r,c);
             double v = ttm.data(idx).toDouble();
+
+            // Apply unit and dp scales/biases to value
+            double us = uss.at(c);
+            double ub = ubs.at(c);
+            double dps = dpss.at(c);
+            double dpb = dpbs.at(c);
+            v = (v*us+ub)*dps+dpb;
+
             if ( c == 0 ) {
                 if ( v < startTime-epsilon || v > stopTime+epsilon ) {
                     isWriteRecord = false;
