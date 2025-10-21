@@ -7,6 +7,7 @@
 #include <QList>
 #include <QHash>
 #include <QTextStream>
+#include <QDir>
 #include "datamodel.h"
 #include "timestamps.h"
 
@@ -41,10 +42,10 @@ private:
     int _colCount;
     QList<double> _timeStamps;
 
-    QList<DataModel*> _trkModels;
+    QList<DataModel*> _dataModels;
     QStringList _params;
     QHash<QString,DataModel*> _param2model;
-    QStringList _trks(const QString& runDir);
+    QStringList _runPaths(const QString& runDir);
 
 
     static QString _err_string;
