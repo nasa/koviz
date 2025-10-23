@@ -1988,6 +1988,11 @@ QString PlotBookModel::getCurvesXUnit(const QModelIndex &curvesIdx)
         QModelIndex curve0Idx = index(0,0,curvesIdx);
         QString xunit0 = getDataString(curve0Idx,"CurveXUnit","Curve");
         if ( xunit0 == "--" || xunit0.isEmpty() ) {
+
+            CurveModel* curveModel0 = getCurveModel(curve0Idx);
+            if ( !curveModel0 ) {
+                return xunit; // return empty xunit if no model
+            }
             xunit0 = getCurveModel(curve0Idx)->x()->unit();
         }
         for (int i = 0; i < rc; ++i) {
@@ -1995,6 +2000,9 @@ QString PlotBookModel::getCurvesXUnit(const QModelIndex &curvesIdx)
             xunit = getDataString(curveIdx,"CurveXUnit","Curve");
             if ( xunit == "--" || xunit.isEmpty() ) {
                 CurveModel* curveModel = getCurveModel(curveIdx);
+                if ( !curveModel ) {
+                    return xunit; // return empty xunit if no model
+                }
                 xunit = curveModel->x()->unit();
             }
             if ( xunit != xunit0 ) {
@@ -2027,13 +2035,20 @@ QString PlotBookModel::getCurvesYUnit(const QModelIndex &curvesIdx)
         QModelIndex curve0Idx = index(0,0,curvesIdx);
         QString yunit0 = getDataString(curve0Idx,"CurveYUnit","Curve");
         if ( yunit0.isEmpty() ) {
-            yunit0 = getCurveModel(curve0Idx)->y()->unit();
+            CurveModel* curveModel0 = getCurveModel(curve0Idx);
+            if ( !curveModel0 ) {
+                return QString(); // No curve model, return empty unit
+            }
+            yunit0 = curveModel0->y()->unit();
         }
         for (int i = 0; i < rc; ++i) {
             QModelIndex curveIdx = index(i,0,curvesIdx);
             yunit = getDataString(curveIdx,"CurveYUnit","Curve");
             if ( yunit.isEmpty() ) {
                 CurveModel* curveModel = getCurveModel(curveIdx);
+                if ( !curveModel ) {
+                    return QString();  // No curve model, return empty unit
+                }
                 yunit = curveModel->y()->unit();
             }
             if ( yunit != yunit0 ) {
