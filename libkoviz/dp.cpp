@@ -237,8 +237,8 @@ QStringList DPProduct::tableParamList(const QString &fileName)
 
     DPProduct dp(fileName);
     foreach (DPTable* table, dp.tables() ) {
-        foreach ( DPVar* var, table->vars() ) {
-            params << var->name();
+        foreach ( DPVar var, table->vars() ) {
+            params << var.name();
         }
     }
 
@@ -1041,23 +1041,20 @@ DPTable::DPTable(const char *title) :
      _delimiter(","),
     _startTime(-DBL_MAX),
     _stopTime(DBL_MAX),
-    _vars(QList<DPVar*>())
+    _vars(QList<DPVar>())
 {
 }
 
 DPTable::~DPTable()
 {
-    foreach ( DPVar* var, _vars ) {
-        delete var;
-    }
     _vars.clear();
 }
 
-DPVar *DPTable::addVar(const char *title)
+DPVar* DPTable::addVar(const char *title)
 {
-    DPVar* var = new DPVar(title);
+    DPVar var(title);
     _vars.append(var);
-    return var;
+    return &_vars.last();
 }
 
 DPProgram::~DPProgram()

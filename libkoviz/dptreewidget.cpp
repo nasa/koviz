@@ -706,7 +706,7 @@ void DPTreeWidget::_createDPTables(const QString &dpfile)
         // If time is not first variable in table var list, set flag to add it
         bool isTime = false;
         if ( !table->vars().isEmpty() ) {
-            if (table->vars().at(0)->name() == _timeName ) {
+            if (table->vars().at(0).name() == _timeName ) {
                 isTime = true;
             }
         }
@@ -743,27 +743,27 @@ void DPTreeWidget::_createDPTables(const QString &dpfile)
                 _addChild(varItem, "TableVarData",v);
             }
 
-            foreach (DPVar* var, table->vars() ) {
+            foreach (DPVar var, table->vars() ) {
 
                 QStandardItem *varItem = _addChild(varsItem,"TableVar");
 
                 // The actual data for the variable will be a trick curve model
                 CurveModel* curveModel = _bookModel->createCurve(i, _timeName,
-                                                      var->name(), var->name());
+                                                      var.name(), var.name());
                 if ( !curveModel ) {
                     _err_stream << "koviz [error]: couldn't find parameter:\n\n"
                                 << "        " << "("
                                 << _timeName << " , "
-                                << var->name() << " , "
-                                << var->name() << ") \n";
+                                << var.name() << " , "
+                                << var.name() << ") \n";
                     throw std::runtime_error(
                                             _err_string.toLatin1().constData());
                 }
 
                 // Children
-                _addChild(varItem, "TableVarName",     var->name());
-                _addChild(varItem, "TableVarLabel",    var->label());
-                QString vUnit = var->unit();
+                _addChild(varItem, "TableVarName",     var.name());
+                _addChild(varItem, "TableVarLabel",    var.label());
+                QString vUnit = var.unit();
                 if ( !_unitOverrides.isEmpty() ) {
                     foreach ( QString overrideUnit, _unitOverrides ) {
                         Unit mUnit = Unit::map(curveModel->y()->unit(),
@@ -775,11 +775,11 @@ void DPTreeWidget::_createDPTables(const QString &dpfile)
                     }
                 }
                 _addChild(varItem, "TableVarUnit",     vUnit);
-                _addChild(varItem, "TableVarScale",    var->scaleFactor());
-                _addChild(varItem, "TableVarBias",     var->bias());
-                _addChild(varItem, "TableVarMinRange", var->minRange());
-                _addChild(varItem, "TableVarMaxRange", var->maxRange());
-                _addChild(varItem, "TableVarFormat",   var->format());
+                _addChild(varItem, "TableVarScale",    var.scaleFactor());
+                _addChild(varItem, "TableVarBias",     var.bias());
+                _addChild(varItem, "TableVarMinRange", var.minRange());
+                _addChild(varItem, "TableVarMaxRange", var.maxRange());
+                _addChild(varItem, "TableVarFormat",   var.format());
                 _addChild(varItem, "TableVarRunID",    i);
 
 

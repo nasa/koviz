@@ -110,6 +110,11 @@ QStringList TrickTableModel::_runPaths(const QString &runDir)
     QStringList filter;
     filter << "*.trk" << "*.csv" << "*.mot";
     foreach(QString path, dir.entryList(filter, QDir::Files)) {
+        if ( path == "_init_log.csv" ||
+             path == "log_timeline.csv" ||
+             path == "log_timeline_init.csv" ) {
+            continue;
+        }
         paths.append(dir.absoluteFilePath(path));
     }
     if ( paths.empty() ) {

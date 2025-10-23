@@ -51,7 +51,7 @@ class DPVar
 public:
     DPVar(const QDomElement& e);
     DPVar(const char* name);
-    QString name() { return _name; }
+    QString name() const { return _name; }
     QString label() { return _label; }
     QString unit() { return _unit; }
     QString lineColor() { return _lineColor; }
@@ -308,7 +308,7 @@ public:
     QString delimiter() const { return _delimiter; }
     double startTime() const { return _startTime; }
     double stopTime() const { return _stopTime; }
-    QList<DPVar*> vars() const { return _vars; }
+    QList<DPVar> vars() const { return _vars; }
     QString tabLabel() const { return _tabLabel; }
 
     void setDelimiter(const QString& d) { _delimiter = d; }
@@ -323,7 +323,7 @@ private:
     QString _delimiter;
     double _startTime;
     double _stopTime;
-    QList<DPVar*> _vars;
+    QList<DPVar> _vars;
     QString _tabLabel;
 };
 
