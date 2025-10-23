@@ -15,6 +15,10 @@ using namespace std;
 #include <QTextStream>
 #include <stdio.h>
 #include <float.h>
+#include <cfloat>
+#ifndef DBL_DECIMAL_DIG
+#define DBL_DECIMAL_DIG 17
+#endif
 
 #include "libkoviz/options.h"
 #include "libkoviz/runs.h"
@@ -2177,7 +2181,7 @@ bool printVarValuesAtTime(double time, double tmt, const QStringList& timeNames,
                     printf(",");
                 }
                 if ( qAbs(time-tval) <= tmt ) {
-                    printf("%g",yval);
+                    printf("%.*g",DBL_DECIMAL_DIG,yval);
                     isValAtTime = true;
                 } else {
                     // Time doesn't match so no value printed
