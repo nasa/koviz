@@ -2184,6 +2184,7 @@ bool printVarValuesAtTime(double time, double tmt, const QStringList& timeNames,
                 }
                 isFirst = false;
                 dataModel->unmap();
+                delete it;
                 break;  // Found value so break from iterating over dataModels
             }
             dataModel->unmap();
