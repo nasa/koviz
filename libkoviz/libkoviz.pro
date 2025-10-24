@@ -81,7 +81,6 @@ SOURCES += bookmodel.cpp \
            datamodel.cpp \
            datamodel_trick.cpp \
            datamodel_csv.cpp \
-           tricktablemodel.cpp \
            plotmainwindow.cpp \
            timeinput.cpp \
            curvemodel.cpp \
@@ -170,7 +169,6 @@ HEADERS  += bookmodel.h \
             snaptable.h \
             timestamps.h \
             trick_types.h \
-            tricktablemodel.h \
             plotmainwindow.h \
             timeinput.h \
             datamodel.h \

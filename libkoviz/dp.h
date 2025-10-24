@@ -52,15 +52,15 @@ public:
     DPVar(const QDomElement& e);
     DPVar(const char* name);
     QString name() const { return _name; }
-    QString label() { return _label; }
-    QString unit() { return _unit; }
-    QString lineColor() { return _lineColor; }
-    QString lineStyle() { return _lineStyle; }
-    double scaleFactor() { return _scaleFactor; }
-    double bias() { return _bias; }
-    QString symbolStyle() { return _symbol; }
-    QString symbolSize() { return _symbolSize; }
-    QString symbolEnd() { return _symbolEnd; }
+    QString label() const { return _label; }
+    QString unit() const { return _unit; }
+    QString lineColor() const { return _lineColor; }
+    QString lineStyle() const { return _lineStyle; }
+    double scaleFactor() const { return _scaleFactor; }
+    double bias() const { return _bias; }
+    QString symbolStyle() const { return _symbol; }
+    QString symbolSize() const { return _symbolSize; }
+    QString symbolEnd() const { return _symbolEnd; }
     QString timeName() const { return _timeName; }
     QString format() const { return _format; }
     double  minRange() const { return _minRange; }

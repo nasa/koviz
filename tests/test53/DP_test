@@ -1,0 +1,17 @@
+Koviz
+
+Tables:
+  Table 1: ""
+
+      variable: "sys.exec.out.time"
+        units: "hr"
+        scale_factor: 2
+        bias: 3
+      variable: "a"
+        units: "cm"
+        scale_factor: 10
+        bias: 4
+      variable: "b"
+        units: "cm"
+        scale_factor: -1
+        bias: 3

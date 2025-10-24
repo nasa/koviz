@@ -25,7 +25,6 @@ using namespace std;
 #include "libkoviz/plotmainwindow.h"
 #include "libkoviz/roundoff.h"
 #include "libkoviz/timestamps.h"
-#include "libkoviz/tricktablemodel.h"
 #include "libkoviz/dp.h"
 #include "libkoviz/snap.h"
 #include "libkoviz/csv.h"
@@ -40,10 +39,11 @@ QStandardItemModel* createVarsModel(Runs* runs);
 bool writeTrk(const QString& ftrk, const QString &timeName,
               double start, double stop, double timeShift,
               QStringList& paramList, Runs* runs);
-bool writeCsv(const QString& fcsv, const QStringList& timeNames,
+bool writeCsv(const QString& fcsv,
+              const QStringList& timeNames,
               const QList<DPVar> &vars,
               const QString& runPath,
-              double startTime, double stopTime, double tolerance);
+              double startTime, double stopTime, double tmt);
 bool printVarValuesAtTime(double time, double tmt, const QStringList& timeNames,
                           const QString& varsOptString,
                           const QString& runPath, Runs* runs);
@@ -665,9 +665,9 @@ int main(int argc, char *argv[])
             }
         }
 
-        bool isCsv = false;
+        bool isDP2Csv = false;
         if ( !opts.dp2csvOutFile.isEmpty() ) {
-            isCsv = true;
+            isDP2Csv = true;
         }
 
         bool isVars2Csv = false;
@@ -680,7 +680,7 @@ int main(int argc, char *argv[])
             isVars2Vals = true;
         }
 
-        if ( (isPdf && isTrk) || (isPdf && isCsv) || (isTrk && isCsv) ||
+        if ( (isPdf && isTrk) || (isPdf && isDP2Csv) || (isTrk && isDP2Csv) ||
              (isPdf && isVars2Csv) || (isPdf && isVars2Vals) ) {
             fprintf(stderr,
                     "koviz [error] : you may not use the -pdf, -trk, -csv and "
@@ -708,7 +708,7 @@ int main(int argc, char *argv[])
         }
 
         // If outputting to csv, you must have a DP file and RUN
-        if ( isCsv && (dps.size() == 0 || runPaths.size() == 0) ) {
+        if ( isDP2Csv && (dps.size() == 0 || runPaths.size() == 0) ) {
             fprintf(stderr,
                     "koviz [error] : when using the -csv option you must "
                     "specify a DP product file and RUN directory\n");
@@ -1372,7 +1372,7 @@ int main(int argc, char *argv[])
                 exit(-1);
             }
 
-        } else if ( isCsv ) {
+        } else if ( isDP2Csv ) {
 
 
             if ( runPaths.size() != 1 ) {
@@ -1942,10 +1942,11 @@ bool writeTrk(const QString& ftrk, const QString& timeName,
     return true;
 }
 
-bool writeCsv(const QString& fcsv, const QStringList& timeNames,
-              const QList<DPVar>& vars,
-              const QString& runPath,
-              double startTime, double stopTime, double tolerance)
+bool writeCsv(const QString& fcsv,
+               const QStringList& timeNames,
+               const QList<DPVar>& vars,
+               const QString& runPath,
+               double startTime, double stopTime, double tmt)
 {
     if ( timeNames.size() != 1 ) {
         fprintf(stderr, "koviz [error]: writeCsv expects -timeNames to be a "\
@@ -1970,44 +1971,97 @@ bool writeCsv(const QString& fcsv, const QStringList& timeNames,
     QTextStream out(&csv);
 
     // Format output
-    out.setFieldAlignment(QTextStream::AlignRight);
-    out.setFieldWidth(16);
-    out.setPadChar(' ');
-    out.setRealNumberPrecision(15);
+    out.setRealNumberPrecision(DBL_DECIMAL_DIG);  // Precision normally 17
+    out.setRealNumberNotation(QTextStream::SmartNotation); // like printf %g
 
-    QStringList params;
-    foreach ( const DPVar var, vars ) {
-        if ( timeNames.contains(var.name()) ) {
-            // Skip time since auto included
-            continue;
+    // Make list of dataModels for given run
+    QList<DataModel*> dataModels;
+    QFileInfo fi(runPath);
+    if ( fi.isFile() ) {
+        DataModel* dataModel = DataModel::createDataModel(timeNames,
+                                                          runPath, runPath);
+        dataModels.append(dataModel);
+    } else if ( fi.isDir() ) {
+
+        QDir dir(runPath);
+
+        QStringList filter;
+        filter << "*.trk" << "*.csv" << "*.mot";
+        foreach(QString fileName, dir.entryList(filter, QDir::Files)) {
+            if ( fileName == "_init_log.csv" ||
+                 fileName == "log_timeline.csv" ||
+                 fileName == "log_timeline_init.csv" ) {
+                continue;
+            }
+            QString fullName = dir.absoluteFilePath(fileName);
+            DataModel* dataModel = DataModel::createDataModel(timeNames,runPath,
+                                                              fullName);
+            dataModels.append(dataModel);
         }
-        params << var.name();
+        if ( dataModels.empty() ) {
+            fprintf(stderr,"koviz [error]: no trk,csv,mot logfiles found in "
+                           "runPath=%s\n", runPath.toLatin1().constData());
+            exit(-1);
+        }
     }
 
-    TrickTableModel ttm(timeNames, runPath, params);
-    int rc = ttm.rowCount();
-    int cc = ttm.columnCount();
+    // Get time unit, scale and bias
+    QString dp_tunit("s"); // If vars doesn't have time, default to seconds
+    double ts = 1.0;
+    double tb = 0.0;
+    foreach ( const DPVar var, vars ) {
+        if ( timeNames.contains(var.name()) ) {
+            dp_tunit = var.unit();
+            ts = var.scaleFactor();
+            tb = var.bias();
+            break;
+        }
+    }
 
-    // Get unit names, scales, biases and dp scales/biases
+    // Get index aligned list of params, iterators, units, scales and biases
+    QStringList params;
+    QList<ModelIterator*> its;
+    QList<double> tuss; // time unit scales
     QList<QString> uns;
     QList<double> uss;
     QList<double> ubs;
     QList<double> dpss;
     QList<double> dpbs;
-    for ( int c = 0 ; c < cc; ++c ) {
-        const Parameter* param = ttm.param(c);
+    foreach ( const DPVar var, vars ) {
+        if ( timeNames.contains(var.name()) ) {
+            // Skip time since time printed to csv independently
+            continue;
+        }
+
+        // Params
+        params << var.name();
+
         bool isFound = false;
-        foreach ( DPVar var, vars ) {
-            if ( param->name() == var.name() ) {
-                isFound = true;
+        foreach ( DataModel* dataModel, dataModels ) {
+            int ycol = dataModel->paramColumn(var.name());
+            if ( ycol >= 0 ) {
+                int tcol = dataModel->paramColumn(timeNames.at(0));
+                int xcol = dataModel->paramColumn(timeNames.at(0));
+
+                // Iterator
+                ModelIterator* it = dataModel->begin(tcol,xcol,ycol);
+                its.append(it);
+
+                // Time unit scale
+                QString mo_tunit = dataModel->param(tcol)->unit();
+                double tus = Unit::scale(mo_tunit,dp_tunit);
+                tuss.append(tus);
+
+                // Unit name
                 QString dp_unit = var.unit();
-                QString mo_unit = param->unit();
+                QString mo_unit = dataModel->param(ycol)->unit();
                 if ( !dp_unit.isEmpty() ) {
                     uns.append(dp_unit);
                 } else {
                     uns.append(mo_unit);
                 }
 
+                // Unit bias/scale
                 double us = 1.0;
                 double ub = 0.0;
                 if ( !mo_unit.isEmpty() && !dp_unit.isEmpty() ) {
@@ -2026,74 +2080,125 @@ bool writeCsv(const QString& fcsv, const QStringList& timeNames,
                 }
                 uss.append(us);
                 ubs.append(ub);
+
+                // Var bias/scale
                 dpss.append(var.scaleFactor());
                 dpbs.append(var.bias());
+
+                isFound = true;
                 break;
             }
         }
         if ( !isFound ) {
-            // Should be time since time doesn't have to be specified by user
-            if ( param->name() == timeNames.at(0) ) {
-                uns.append(param->unit());
-                uss.append(1.0);
-                ubs.append(0.0);
-                dpss.append(1.0);
-                dpbs.append(0.0);
-            } else {
-                fprintf(stderr, "koviz [bad scoobs]: Should see this since "
-                        "param=%s should exist and will have been checked for "
-                        "existence before this point.\n",
-                        param->name().toLatin1().constData());
-                return false;
+            fprintf(stderr, "koviz [error]: writeCsv could not find"
+                            "var=%s in run=%s\n",
+                    var.name().toLatin1().constData(),
+                    runPath.toLatin1().constData());
+            foreach (ModelIterator *it, its) {
+                delete it;
             }
+            foreach (DataModel *dataModel, dataModels) {
+                delete dataModel;
+            }
+            return false;
         }
+    }
+
+    // Map all data models
+    foreach ( DataModel* dataModel, dataModels ) {
+        dataModel->map();
     }
 
     // Csv header
     QString header;
-    for ( int c = 0 ; c < cc; ++c ) {
-        const Parameter* param = ttm.param(c);
-        header += param->name() + " {" + uns.at(c) + "}" + ",";
+    int c = 0;
+    header += timeNames.at(0) + " {" + dp_tunit + "},";
+    foreach ( QString param, params ) {
+        header += param + " {" + uns.at(c++) + "}" + ",";
     }
     header.chop(1);
     out << header;
     out << "\n";
 
     // Csv data
-    double epsilon = tolerance/2.0;
-    for ( int r = 0 ; r < rc; ++r ) {
-        bool isWriteRecord = true;
-        for ( int c = 0 ; c < cc; ++c ) {
-            QModelIndex idx = ttm.index(r,c);
-            double v = ttm.data(idx).toDouble();
-
-            // Apply unit and dp scales/biases to value
-            double us = uss.at(c);
-            double ub = ubs.at(c);
-            double dps = dpss.at(c);
-            double dpb = dpbs.at(c);
-            v = (v*us+ub)*dps+dpb;
-
-            if ( c == 0 ) {
-                if ( v < startTime-epsilon || v > stopTime+epsilon ) {
-                    isWriteRecord = false;
-                    break;
-                }
+    while ( 1 ) {
+        // Get current min time from iterators
+        double minTime = DBL_MAX;
+        int c = 0;
+        foreach ( ModelIterator* it, its ) {
+            if ( it->isDone() ) {
+                ++c;
+                continue;
             }
-            out << v;
-            if ( c < cc-1 ) {
-                int fw = out.fieldWidth();
-                out.setFieldWidth(0);
-                out << ",";
-                out.setFieldWidth(fw);
+            double time = it->t();
+            time = ts*tuss.at(c)*time + tb;
+            if ( time < minTime ) {
+                minTime = time;
+            }
+            ++c;
+        }
+
+        if ( startTime-tmt <= minTime && minTime <= stopTime+tmt ) {
+            // Print timestamp to csv
+            out << minTime << ',';
+
+            // Print values at min/current time
+            bool isFirst = true;
+            c = 0;
+            foreach ( ModelIterator* it, its ) {
+                double tval = it->t();
+                tval = ts*tuss.at(c)*tval + tb;
+                double yval = it->y();
+                yval = dpss.at(c)*(uss.at(c)*yval+ubs.at(c)) + dpbs.at(c);
+                if ( !isFirst ) {
+                    out << ",";
+                }
+                if ( qAbs(minTime-tval) <= tmt ) {
+                    out << yval;
+                } else {
+                    // Time doesn't match so no value printed
+                }
+                isFirst = false;
+                ++c;
+            }
+            out << "\n";
+        }
+
+        // Increment iterators that are on min time to next time
+        c = 0;
+        foreach ( ModelIterator* it, its ) {
+            double tval = it->t();
+            tval = ts*tuss.at(c)*tval + tb;
+            if ( qAbs(minTime-tval) <= tmt ) {
+                it->next();
+            }
+            ++c;
+        }
+
+        // Break when iterators all done or past stop time
+        bool isDone = true;
+        foreach ( ModelIterator* it, its ) {
+            if ( !it->isDone() ) {
+                isDone = false;
+                break;
             }
         }
-        if ( isWriteRecord && r < rc-1 ) {
-            out << "\n";
+        if ( isDone ) {
+            break;
+        }
+        if ( minTime > stopTime+tmt ) {
+            break;
         }
     }
 
     // Clean up
+    foreach ( ModelIterator* it, its ) {
+        delete it;
+    }
+    foreach ( DataModel* dataModel, dataModels ) {
+        dataModel->unmap();
+        delete dataModel;
+    }
     csv.close();
 
     return true;
@@ -2145,6 +2250,21 @@ bool printVarValuesAtTime(double time, double tmt, const QStringList& timeNames,
         }
     }
 
+    // Get time unit, scale and bias
+    QString dp_tunit("s"); // If vars doesn't have time, default to seconds
+    double ts = 1.0;
+    double tb = 0.0;
+    foreach ( const DPVar var, dpvars ) {
+        if ( timeNames.contains(var.name()) ) {
+            if (!var.unit().isEmpty()) {
+                dp_tunit = var.unit();
+            }
+            ts = var.scaleFactor();
+            tb = var.bias();
+            break;
+        }
+    }
+
     bool isValAtTime = false;
     bool isFirst = true;
     foreach (DPVar dpvar, dpvars) {
@@ -2153,28 +2273,45 @@ bool printVarValuesAtTime(double time, double tmt, const QStringList& timeNames,
             int tcol = dataModel->paramColumn(timeNames.at(0));
             int ycol = dataModel->paramColumn(dpvar.name());
             if ( tcol >= 0 && ycol >= 0 ) {
-                const Parameter* param = dataModel->param(ycol);
+
+                const Parameter* tparam = dataModel->param(tcol);
+                QString mo_tunit = tparam->unit();
+                double tus = 1.0; // Time unit has no bias, just scale
+                if ( Unit::canConvert(mo_tunit,dp_tunit) ) {
+                    tus = Unit::scale(mo_tunit,dp_tunit);
+                } else {
+                    fprintf(stderr, "koviz [error]: -vars option has time "
+                                    "variable with unit=%s but is logged with "
+                                    "unit=%s.  Cannot convert!  Bailing!\n",
+                            dp_tunit.toLatin1().constData(),
+                            mo_tunit.toLatin1().constData());
+                    return false;
+                }
+
+                const Parameter* yparam = dataModel->param(ycol);
                 double us = 1.0;
                 double ub = 0.0;
                 double ds = dpvar.scaleFactor();
                 double db = dpvar.bias();
                 if ( !dpvar.unit().isEmpty() ) {
-                    if ( Unit::canConvert(param->unit(),dpvar.unit()) ) {
-                        us = Unit::scale(param->unit(),dpvar.unit());
-                        ub = Unit::bias(param->unit(),dpvar.unit());
+                    if ( Unit::canConvert(yparam->unit(),dpvar.unit()) ) {
+                        us = Unit::scale(yparam->unit(),dpvar.unit());
+                        ub = Unit::bias(yparam->unit(),dpvar.unit());
                     } else {
                         fprintf(stderr, "koviz [error]: -vars option has a "
                                 "variable=%s with unit=%s but is logged with "
                                 "unit=%s.  Cannot convert!  Bailing!\n",
                                 dpvar.name().toLatin1().constData(),
                                 dpvar.unit().toLatin1().constData(),
-                                param->unit().toLatin1().constData());
+                                yparam->unit().toLatin1().constData());
                         exit(-1);
                     }
                 }
-                int row = dataModel->indexAtTime(time);
+                double mo_time = (time-tb)/ts/tus;
+                int row = dataModel->indexAtTime(mo_time);
                 ModelIterator* it = dataModel->begin(tcol,ycol,ycol);
                 double tval = it->at(row)->t();
+                tval = ts*(tus*tval)+tb;
                 double yval = it->at(row)->y();
                 yval = ds*(us*yval+ub)+db;
                 if ( !isFirst ) {
@@ -2184,7 +2321,10 @@ bool printVarValuesAtTime(double time, double tmt, const QStringList& timeNames,
                     printf("%.*g",DBL_DECIMAL_DIG,yval);
                     isValAtTime = true;
                 } else {
-                    // Time doesn't match so no value printed
+                    // If this is time, print time, otherwise leave empty field
+                    if ( dpvar.name() == timeNames.at(0) ) {
+                        printf("%.*g",DBL_DECIMAL_DIG,time);
+                    }
                 }
                 isFirst = false;
                 dataModel->unmap();
