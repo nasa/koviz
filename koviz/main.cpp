@@ -23,27 +23,34 @@ using namespace std;
 #include "libkoviz/options.h"
 #include "libkoviz/runs.h"
 #include "libkoviz/plotmainwindow.h"
-#include "libkoviz/roundoff.h"
-#include "libkoviz/timestamps.h"
 #include "libkoviz/dp.h"
 #include "libkoviz/snap.h"
 #include "libkoviz/csv.h"
 #include "libkoviz/datamodel_trick.h"
-#include "libkoviz/curvemodel.h"
 #include "libkoviz/trick_types.h"
 #include "libkoviz/session.h"
 #include "libkoviz/versionnumber.h"
 #include "libkoviz/mapvalue.h"
 
 QStandardItemModel* createVarsModel(Runs* runs);
-bool writeTrk(const QString& ftrk, const QString &timeName,
-              double start, double stop, double timeShift,
-              QStringList& paramList, Runs* runs);
+bool writeTrk(const QString& ftrk,
+              const QStringList& timeNames,
+              const QList<DPVar>& vars,
+              const QString& runPath,
+              double start, double stop,
+              double timeShift, double tmt);
+bool writeData(QDataStream* outTrk, QTextStream* outCsv,
+                  const QList<DPVar>& vars, const QString& runPath,
+                  const QStringList& timeNames,
+                  double start, double stop, double timeShift, double tmt);
+QList<DataModel*> runDataModels(const QString& runPath,
+                                const QStringList& timeNames);
 bool writeCsv(const QString& fcsv,
               const QStringList& timeNames,
               const QList<DPVar> &vars,
               const QString& runPath,
-              double startTime, double stopTime, double tmt);
+              double start, double stop,
+              double timeShift, double tmt);
 bool printVarValuesAtTime(double time, double tmt, const QStringList& timeNames,
                           const QString& varsOptString,
                           const QString& runPath, Runs* runs);
@@ -647,9 +654,9 @@ int main(int argc, char *argv[])
         QStandardItemModel* varsModel = 0;
         QStandardItemModel* monteInputsModel = 0;
 
-        bool isTrk = false;
+        bool isDP2Trk = false;
         if ( !opts.dp2trkOutFile.isEmpty() ) {
-            isTrk = true;
+            isDP2Trk = true;
         }
 
         QString pdfOutFile;
@@ -680,7 +687,8 @@ int main(int argc, char *argv[])
             isVars2Vals = true;
         }
 
-        if ( (isPdf && isTrk) || (isPdf && isDP2Csv) || (isTrk && isDP2Csv) ||
+        if ( (isPdf && isDP2Trk) || (isPdf && isDP2Csv) ||
+             (isDP2Trk && isDP2Csv) ||
              (isPdf && isVars2Csv) || (isPdf && isVars2Vals) ) {
             fprintf(stderr,
                     "koviz [error] : you may not use the -pdf, -trk, -csv and "
@@ -700,7 +708,7 @@ int main(int argc, char *argv[])
         }
 
         // If outputting to trk, you must have a DP file and RUN
-        if ( isTrk && (dps.size() == 0 || runPaths.size() == 0) ) {
+        if ( isDP2Trk && (dps.size() == 0 || runPaths.size() == 0) ) {
             fprintf(stderr,
                     "koviz [error] : when using the -trk option you must "
                     "specify a DP product file and RUN directory\n");
@@ -747,16 +755,16 @@ int main(int argc, char *argv[])
         }
 
         // Time match tolerance
-        double tolerance = opts.timeMatchTolerance;
-        if ( tolerance == DBL_MAX ) {
+        double tmt = opts.timeMatchTolerance;
+        if ( tmt == DBL_MAX ) {
             if ( session ) {
-                tolerance = session->timeMatchTolerance();
+                tmt = session->timeMatchTolerance();
             } else {
-                tolerance = 0.0000001;  // 10th of a microsecond
+                tmt = 0.0000001;  // 10th of a microsecond
             }
         }
 
-        runs = new Runs(timeNames,tolerance,runPaths,varMap,
+        runs = new Runs(timeNames,tmt,runPaths,varMap,
                         filterPattern,
                         excludePattern,
                         opts.beginRun,opts.endRun,
@@ -1084,6 +1092,18 @@ int main(int argc, char *argv[])
         }
         QHash<QString,QVariant> shifts = getShiftHash(shiftString,runPaths);
 
+        // Get time shift for single run
+        double timeShift = 0.0;
+        if ( shifts.size() == 1 ) {
+            bool ok;
+            timeShift = shifts.values().at(0).toDouble(&ok);
+            if ( !ok ) {
+                fprintf(stderr, "koviz [bad scoobs]: -shift <value> "
+                                "cannot be converted to a double.\n");
+                exit(-1);
+            }
+        }
+
         bool isShowPageTitle = opts.isShowPageTitle;
         if ( isShowPageTitle == true  && session ) {
             isShowPageTitle = session->isShowPageTitle();
@@ -1254,7 +1274,7 @@ int main(int argc, char *argv[])
         }
         QStandardItem *rootItem = bookModel->invisibleRootItem();
         bookModel->addChild(rootItem, "Orientation", orient);
-        bookModel->addChild(rootItem, "TimeMatchTolerance", tolerance);
+        bookModel->addChild(rootItem, "TimeMatchTolerance", tmt);
         bookModel->addChild(rootItem, "Frequency", frequency);
         bookModel->addChild(rootItem, "IsLegend", isLegend);
         if ( colors.size() == 7 ) {
@@ -1333,47 +1353,7 @@ int main(int argc, char *argv[])
         bookModel->addChild(rootItem,"ShowVideo",showVideo );
         bookModel->addChild(rootItem,"VideoDir", videoDir);
 
-        if ( isTrk ) {
-
-            QStringList params = DPProduct::tableParamList(dps,timeName);
-            if ( params.isEmpty() ) {
-                params = DPProduct::paramList(dps,timeName);
-            }
-
-            if ( runs->runPaths().count() == 1 ) {
-                QHash<QString,QVariant> shifts = getShiftHash(shiftString,
-                                                              runPaths);
-                double timeShift = 0.0;
-                if ( shifts.size() == 1 ) {
-                    bool ok;
-                    timeShift = shifts.values().at(0).toDouble(&ok);
-                    if ( !ok ) {
-                        fprintf(stderr, "koviz [bad scoobs]: -shift <value> "
-                                        "cannot be converted to a double.\n");
-                        exit(-1);
-                    }
-                }
-                bool r = writeTrk(opts.dp2trkOutFile,
-                                  timeName,
-                                  startTime,
-                                  stopTime,
-                                  timeShift,
-                                  params,runs);
-                if ( r ) {
-                    ret = 0;
-                } else {
-                    fprintf(stderr, "koviz [error]: Failed to write: %s\n",
-                            opts.dp2trkOutFile.toLatin1().constData());
-                    ret = -1;
-                }
-            } else {
-                fprintf(stderr, "koviz [error]: Only one RUN allowed with "
-                                 "the -trk and -dp2trk options.\n");
-                exit(-1);
-            }
-
-        } else if ( isDP2Csv ) {
-
+        if ( isDP2Csv || isDP2Trk ) {
 
             if ( runPaths.size() != 1 ) {
                 fprintf(stderr, "koviz [error]: Exactly one RUN dir must be "
@@ -1398,12 +1378,22 @@ int main(int argc, char *argv[])
             foreach ( QString dpFileName, dps ) {
                 DPProduct dp(dpFileName);
                 foreach ( DPTable* dpTable, dp.tables() ) {
-                    QString fname = opts.dp2csvOutFile;
+                    QString fname;
+                    if ( isDP2Csv ) {
+                        fname = opts.dp2csvOutFile;
+                    } else if ( isDP2Trk ) {
+                        fname = opts.dp2trkOutFile;
+                    }
                     if ( dp.tables().size() > 1 ) {
                         // Multiple files to output, so index the name
                         QString dpName = QFileInfo(dpFileName).baseName();
                         QFileInfo fi(fname);
-                        QString extension("csv");
+                        QString extension;
+                        if ( isDP2Csv ) {
+                            extension = "csv";
+                        } else if ( isDP2Trk ) {
+                            extension = "trk";
+                        }
                         if ( !fi.suffix().isEmpty() ) {
                             extension = fi.suffix();
                         }
@@ -1415,9 +1405,16 @@ int main(int argc, char *argv[])
                         ++i;
                     }
 
-                    bool r = writeCsv(fname,timeNames,dpTable->vars(),
-                                      runPaths.at(0),
-                                      startTime, stopTime, tolerance);
+                    bool r = false;
+                    if ( isDP2Csv ) {
+                        r = writeCsv(fname,timeNames,dpTable->vars(),
+                                     runPaths.at(0),
+                                     startTime, stopTime, timeShift, tmt);
+                    } else if ( isDP2Trk ) {
+                        r = writeTrk(fname,timeNames,dpTable->vars(),
+                                     runPaths.at(0),
+                                     startTime, stopTime, timeShift, tmt);
+                    }
                     if ( r ) {
                         ret = 0;
                     } else {
@@ -1434,7 +1431,6 @@ int main(int argc, char *argv[])
 
 
         } else if ( isVars2Csv ) {
-
 
             if ( runPaths.size() != 1 ) {
                 fprintf(stderr, "koviz [error]: Exactly one RUN dir must be "
@@ -1455,7 +1451,8 @@ int main(int argc, char *argv[])
                 exit(-1);
             }
             bool r = writeCsv(opts.vars2csvFile,timeNames,dpvars,
-                              runPaths.at(0),startTime,stopTime,tolerance);
+                              runPaths.at(0),
+                              startTime,stopTime,timeShift,tmt);
             if ( !r ) {
                 fprintf(stderr, "koviz [error]: -vars2csv had issue with "
                                 "writing a csv file.  Aborting!\n");
@@ -1470,7 +1467,7 @@ int main(int argc, char *argv[])
                                 "option.\n");
                 exit(-1);
             }
-            printVarValuesAtTime(opts.vars2valsAtTime,tolerance,timeNames,
+            printVarValuesAtTime(opts.vars2valsAtTime,tmt,timeNames,
                                  opts.vars,runPaths.at(0),runs);
         } else {
 
@@ -1750,203 +1747,11 @@ void presetplotLegendPosition(QString* presVar,const QString& position,bool* ok)
     }
 }
 
-bool writeTrk(const QString& ftrk, const QString& timeName,
-              double start, double stop, double timeShift,
-              QStringList& paramList, Runs* runs)
-{
-    QFileInfo ftrki(ftrk);
-    if ( ftrki.exists() ) {
-        fprintf(stderr, "koviz [error]: Will not overwrite %s\n",
-                ftrk.toLatin1().constData());
-        return false;
-    }
-
-    // Print message
-    fprintf(stderr, "\nkoviz [info]: extracting the following params "
-                    "into %s:\n\n",
-                    ftrk.toLatin1().constData());
-    foreach ( QString param, paramList ) {
-        fprintf(stderr, "    %s\n", param.toLatin1().constData());
-    }
-    fprintf(stderr, "\n");
-
-    //
-    // Make param list
-    // And make curves list (based on param list)
-    //
-    QList<TrickParameter> params;
-    QList<CurveModel*> curves;
-
-    // Time is first "param"
-    TrickParameter timeParam;
-    timeParam.setName(timeName);
-    timeParam.setUnit("s");
-    timeParam.setType(TRICK_10_DOUBLE);
-    timeParam.setSize(sizeof(double));
-    params << timeParam;
-
-    // Each param gets a curve. Make the first curve null since
-    // there is no actual curve to go with timeStamps
-    curves << 0;
-
-    foreach ( QString yParam, paramList ) {
-
-        // If time is in param list, then skip it  since timestamps
-        // are generated and inserted into the first column of the trk
-        if ( yParam == timeName ) {
-            continue;
-        }
-
-        CurveModel* c = runs->curveModel(0,timeName,timeName,yParam);
-
-        // Error check: see if MonteModel could not find curve (timeName,yParam)
-        if ( !c) {
-            fprintf(stderr, "koviz [error]: could not find curve: \n    ("
-                    "%s,%s)\n",
-                    timeName.toLatin1().constData(),
-                    yParam.toLatin1().constData());
-            foreach ( CurveModel* curveModel, curves ) {
-                delete curveModel;
-            }
-            delete c;
-            return false;
-        }
-
-        // Map Curve
-        c->map();
-
-        // Error check:   make sure curve has data
-        if ( c->rowCount() == 0 ) {
-            // No data
-            fprintf(stderr, "koviz [error]: no data found in %s\n",
-                    c->fileName().toLatin1().constData());
-            foreach ( CurveModel* curveModel, curves ) {
-                delete curveModel;
-            }
-            delete c;
-            return false;
-        }
-
-        // Make a Param (for trk header)
-        TrickParameter p;
-        p.setName(yParam);
-        p.setUnit(c->y()->unit());
-        p.setType(TRICK_10_DOUBLE);
-        p.setSize(sizeof(double));
-
-        // Make params/curves lists (lazily mapping params to curves)
-        params.append(p);
-        curves.append(c);
-
-        // Unmap Curve
-        c->unmap();
-    }
-    if ( params.size() < 2 ) {
-        fprintf(stderr,"koviz [error]: Could not find any params in RUN that "
-                       "are in DP files\n\n");
-        return false;
-    }
-
-    // Make time stamps list
-    QList<double> timeStamps;
-    foreach ( CurveModel* curve, curves ) {
-
-        if ( !curve ) continue ;
-
-        curve->map();
-
-        ModelIterator* it = curve->begin();
-        while ( !it->isDone() ) {
-            double t = it->t();
-            if ( t < start ) {
-                it->next();
-                continue;
-            }
-            if ( t > stop ) {
-                break;
-            }
-            TimeStamps::insert(t,timeStamps);
-            it->next();
-        }
-        delete it;
-        curve->unmap();
-    }
-
-    // Open trk file for writing
-    QFile trk(ftrk);
-    if (!trk.open(QIODevice::WriteOnly)) {
-        fprintf(stderr,"koviz: [error] could not open %s\n",
-                ftrk.toLatin1().constData());
-        return false;
-    }
-    QDataStream out(&trk);
-
-    // Write Trk Header
-    TrickModel::writeTrkHeader(out,params);
-    trk.flush();
-
-    // Resize Trk file to fit all the data + header
-    qint64 headerSize = trk.size();
-    qint64 nParams = params.size();
-    qint64 recordSize = nParams*sizeof(double);
-    qint64 nRecords = timeStamps.count();
-    qint64 dataSize = nRecords*recordSize;
-    qint64 fileSize = headerSize + dataSize;
-    trk.resize(fileSize);
-
-    int nTimeStamps = timeStamps.count();
-
-    // Write time stamps and data
-    int i = 0;
-    foreach ( CurveModel* curve, curves ) {
-
-        if ( !curve ) {
-            // write time stamps
-            for ( int j = 0 ; j < nTimeStamps; ++j ) {
-                qint64 recordOffset = j*recordSize;
-                qint64 paramOffset = 0;
-                qint64 offset = headerSize + recordOffset + paramOffset;
-                trk.seek(offset);
-                out << timeStamps.at(j)+timeShift;
-            }
-        } else {
-            // write curve data
-            curve->map();
-            ModelIterator* it = curve->begin();
-            for ( int j = 0 ; j < nTimeStamps; ++j ) {
-
-                double timeStamp = timeStamps.at(j);
-                int k = curve->indexAtTime(timeStamp);
-                double v = it->at(k)->y();
-
-                qint64 recordOffset = j*recordSize;
-                qint64 paramOffset = i*sizeof(double);
-                qint64 offset = headerSize + recordOffset + paramOffset;
-                trk.seek(offset);
-                out << v;
-            }
-            delete it;
-            curve->unmap();
-        }
-        ++i;
-    }
-
-    //
-    // Clean up
-    //
-    trk.close();
-    foreach ( CurveModel* curveModel, curves ) {
-        delete curveModel;
-    }
-
-    return true;
-}
-
 bool writeCsv(const QString& fcsv,
                const QStringList& timeNames,
                const QList<DPVar>& vars,
                const QString& runPath,
-               double startTime, double stopTime, double tmt)
+               double start, double stop, double timeShift, double tmt)
 {
     if ( timeNames.size() != 1 ) {
         fprintf(stderr, "koviz [error]: writeCsv expects -timeNames to be a "\
@@ -1974,44 +1779,85 @@ bool writeCsv(const QString& fcsv,
     out.setRealNumberPrecision(DBL_DECIMAL_DIG);  // Precision normally 17
     out.setRealNumberNotation(QTextStream::SmartNotation); // like printf %g
 
-    // Make list of dataModels for given run
-    QList<DataModel*> dataModels;
-    QFileInfo fi(runPath);
-    if ( fi.isFile() ) {
-        DataModel* dataModel = DataModel::createDataModel(timeNames,
-                                                          runPath, runPath);
-        dataModels.append(dataModel);
-    } else if ( fi.isDir() ) {
+    bool r = writeData(nullptr,&out,vars,runPath,timeNames,
+                       start,stop,timeShift,tmt);
 
-        QDir dir(runPath);
+    // Clean up
+    csv.close();
 
-        QStringList filter;
-        filter << "*.trk" << "*.csv" << "*.mot";
-        foreach(QString fileName, dir.entryList(filter, QDir::Files)) {
-            if ( fileName == "_init_log.csv" ||
-                 fileName == "log_timeline.csv" ||
-                 fileName == "log_timeline_init.csv" ) {
-                continue;
-            }
-            QString fullName = dir.absoluteFilePath(fileName);
-            DataModel* dataModel = DataModel::createDataModel(timeNames,runPath,
-                                                              fullName);
-            dataModels.append(dataModel);
-        }
-        if ( dataModels.empty() ) {
-            fprintf(stderr,"koviz [error]: no trk,csv,mot logfiles found in "
-                           "runPath=%s\n", runPath.toLatin1().constData());
-            exit(-1);
-        }
+    return r;
+}
+
+bool writeTrk(const QString& ftrk,
+               const QStringList& timeNames,
+               const QList<DPVar>& vars,
+               const QString& runPath,
+               double start, double stop,
+               double timeShift, double tmt)
+{
+    if ( timeNames.size() != 1 ) {
+        fprintf(stderr, "koviz [error]: writeTrk expects -timeNames to be a "\
+                        "single time name e.g. sys.exec.out.time\n");
+        return false;
     }
 
-    // Get time unit, scale and bias
+    QFileInfo ftrki(ftrk);
+    if ( ftrki.exists() ) {
+        fprintf(stderr, "koviz [error]: Will not overwrite %s\n",
+                ftrk.toLatin1().constData());
+        return false;
+    }
+
+    // Print message
+    fprintf(stderr, "\nkoviz [info]: extracting the following params "
+                    "into %s:\n\n",
+                    ftrk.toLatin1().constData());
+    foreach ( const DPVar var, vars ) {
+        fprintf(stderr, "    %s\n", var.name().toLatin1().constData());
+    }
+    fprintf(stderr, "\n");
+
+    // Open trk file for writing
+    QFile trk(ftrk);
+    if (!trk.open(QIODevice::WriteOnly)) {
+        fprintf(stderr,"koviz: [error] could not open %s\n",
+                ftrk.toLatin1().constData());
+        return false;
+    }
+    QDataStream out(&trk);
+
+    // Write Trk
+    writeData(&out,nullptr,vars,runPath,timeNames,start,stop,timeShift,tmt);
+
+    // Clean up
+    trk.close();
+
+    return true;
+}
+
+// If outTrk/Csv streams are not-null, they will be written to.  This makes
+// it so writing to trk and csv are as close as possible with just minor
+// output changes (other than headers!)  Lambdas could have been used
+// or maybe an abstract DataBodyWriter class with TrkBodyWriter
+// and CsvBodyWriter, but this keeps it simple. This also outputs
+// csv/trk headers.
+bool writeData(QDataStream* outTrk, QTextStream* outCsv,
+               const QList<DPVar>& vars,
+               const QString& runPath,
+               const QStringList& timeNames,
+               double start, double stop, double timeShift, double tmt)
+{
+    // Get data models for given run
+    QList<DataModel*> dataModels = runDataModels(runPath,timeNames);
+
     QString dp_tunit("s"); // If vars doesn't have time, default to seconds
     double ts = 1.0;
     double tb = 0.0;
     foreach ( const DPVar var, vars ) {
         if ( timeNames.contains(var.name()) ) {
-            dp_tunit = var.unit();
+            if ( !var.unit().isEmpty() ) {
+                dp_tunit = var.unit();
+            }
             ts = var.scaleFactor();
             tb = var.bias();
             break;
@@ -2104,78 +1950,80 @@ bool writeCsv(const QString& fcsv,
         }
     }
 
-    // Map all data models
+    // Csv header
+    if ( outCsv ) {
+        QString header;
+        int c = 0;
+        header += timeNames.at(0) + " {" + dp_tunit + "},";
+        foreach ( QString param, params ) {
+            header += param + " {" + uns.at(c++) + "}" + ",";
+        }
+        header.chop(1);
+        *outCsv << header;
+        *outCsv << "\n";
+    }
+
+    // Trk header
+    if ( outTrk ) {
+        // Make list of Trick params for making Trick header
+        bool isTimeInserted = false;
+        QList<TrickParameter> trick_params;
+        foreach ( const DPVar var, vars ) {
+            TrickParameter p;
+            p.setName(var.name());
+            if ( !var.unit().isEmpty() ) {
+                p.setUnit(var.unit());
+            } else {
+                // Use model unit
+                foreach ( DataModel* dataModel, dataModels ) {
+                    int col = dataModel->paramColumn(var.name());
+                    if ( col >= 0 ) {
+                        QString mo_unit = dataModel->param(col)->unit();
+                        p.setUnit(mo_unit);
+                        break;
+                    }
+                }
+            }
+            p.setType(TRICK_10_DOUBLE);
+            p.setSize(sizeof(double));
+            if ( var.name() == timeNames.at(0) ) {
+                if ( isTimeInserted ) {
+                    continue;  // ignore multiple timestamps
+                }
+                trick_params.prepend(p);
+                isTimeInserted = true;
+            } else {
+                trick_params.append(p);
+            }
+        }
+        if ( !isTimeInserted ) {
+            TrickParameter p;
+            p.setName(timeNames.at(0));
+            // Use model unit
+            foreach ( DataModel* dataModel, dataModels ) {
+                int col = dataModel->paramColumn(timeNames.at(0));
+                if ( col >= 0 ) {
+                    QString mo_unit = dataModel->param(col)->unit();
+                    p.setUnit(mo_unit);
+                    break;
+                }
+            }
+            p.setType(TRICK_10_DOUBLE);
+            p.setSize(sizeof(double));
+            trick_params.prepend(p);
+        }
+
+        // Write Trk Header
+        TrickModel::writeTrkHeader(*outTrk,trick_params);
+    }
+
+    // Write data block
     foreach ( DataModel* dataModel, dataModels ) {
         dataModel->map();
     }
-
-    // Csv header
-    QString header;
-    int c = 0;
-    header += timeNames.at(0) + " {" + dp_tunit + "},";
-    foreach ( QString param, params ) {
-        header += param + " {" + uns.at(c++) + "}" + ",";
-    }
-    header.chop(1);
-    out << header;
-    out << "\n";
-
-    // Csv data
     while ( 1 ) {
-        // Get current min time from iterators
-        double minTime = DBL_MAX;
-        int c = 0;
-        foreach ( ModelIterator* it, its ) {
-            if ( it->isDone() ) {
-                ++c;
-                continue;
-            }
-            double time = it->t();
-            time = ts*tuss.at(c)*time + tb;
-            if ( time < minTime ) {
-                minTime = time;
-            }
-            ++c;
-        }
 
-        if ( startTime-tmt <= minTime && minTime <= stopTime+tmt ) {
-            // Print timestamp to csv
-            out << minTime << ',';
-
-            // Print values at min/current time
-            bool isFirst = true;
-            c = 0;
-            foreach ( ModelIterator* it, its ) {
-                double tval = it->t();
-                tval = ts*tuss.at(c)*tval + tb;
-                double yval = it->y();
-                yval = dpss.at(c)*(uss.at(c)*yval+ubs.at(c)) + dpbs.at(c);
-                if ( !isFirst ) {
-                    out << ",";
-                }
-                if ( qAbs(minTime-tval) <= tmt ) {
-                    out << yval;
-                } else {
-                    // Time doesn't match so no value printed
-                }
-                isFirst = false;
-                ++c;
-            }
-            out << "\n";
-        }
-
-        // Increment iterators that are on min time to next time
-        c = 0;
-        foreach ( ModelIterator* it, its ) {
-            double tval = it->t();
-            tval = ts*tuss.at(c)*tval + tb;
-            if ( qAbs(minTime-tval) <= tmt ) {
-                it->next();
-            }
-            ++c;
-        }
-
-        // Break when iterators all done or past stop time
+        // Break if iterators all done or past stop time
         bool isDone = true;
         foreach ( ModelIterator* it, its ) {
             if ( !it->isDone() ) {
@@ -2186,7 +2034,66 @@ bool writeCsv(const QString& fcsv,
         if ( isDone ) {
             break;
         }
-        if ( minTime > stopTime+tmt ) {
+
+        // Get current min time from iterators
+        double minTime = DBL_MAX;
+        int c = 0;
+        foreach ( ModelIterator* it, its ) {
+            if ( it->isDone() ) {
+                ++c;
+                continue;
+            }
+            double time = it->t();
+            time = ts*tuss.at(c)*time + tb + timeShift;
+            if ( time < minTime ) {
+                minTime = time;
+            }
+            ++c;
+        }
+
+        if ( start-tmt <= minTime && minTime <= stop+tmt ) {
+            // Output timestamp
+            if ( outTrk ) *outTrk << minTime;
+            if ( outCsv ) *outCsv << minTime << ",";
+
+            // Output values at min/current time
+            bool isFirst = true;
+            c = 0;
+            foreach ( ModelIterator* it, its ) {
+                double tval = it->t();
+                tval = ts*tuss.at(c)*tval + tb + timeShift;
+                double yval = it->y();
+                yval = dpss.at(c)*(uss.at(c)*yval+ubs.at(c)) + dpbs.at(c);
+                if ( !isFirst ) {
+                    if ( outCsv ) *outCsv << ",";
+                }
+                if ( qAbs(minTime-tval) <= tmt ) {
+                    if ( outTrk ) *outTrk << yval;
+                    if ( outCsv ) *outCsv << yval;
+                } else {
+                    // No value since time dne for this point
+                    if ( outTrk ) *outTrk << qQNaN();  // Output NaN for trk
+                    if ( outCsv ) {} // Leave field empty - do nothing
+                }
+                isFirst = false;
+                ++c;
+            }
+            if ( outCsv ) *outCsv << "\n";
+        }
+
+        // Increment iterators that are on min time to next time
+        c = 0;
+        foreach ( ModelIterator* it, its ) {
+            double tval = it->t();
+            tval = ts*tuss.at(c)*tval + tb + timeShift;
+            if ( qAbs(minTime-tval) <= tmt ) {
+                it->next();
+            }
+            ++c;
+        }
+
+        // Break if past stop time
+        if ( minTime > stop+tmt ) {
             break;
         }
     }
@@ -2199,10 +2106,48 @@ bool writeCsv(const QString& fcsv,
         dataModel->unmap();
         delete dataModel;
     }
-    csv.close();
 
     return true;
 }
+
+// Client must clean up returned allocated dataModels
+QList<DataModel*> runDataModels(const QString& runPath,
+                                const QStringList& timeNames)
+{
+    // Make list of dataModels for given run
+    QList<DataModel*> dataModels;
+    QFileInfo fi(runPath);
+    if ( fi.isFile() ) {
+        DataModel* dataModel = DataModel::createDataModel(timeNames,
+                                                          runPath, runPath);
+        dataModels.append(dataModel);
+    } else if ( fi.isDir() ) {
+
+        QDir dir(runPath);
+
+        QStringList filter;
+        filter << "*.trk" << "*.csv" << "*.mot";
+        foreach(QString fileName, dir.entryList(filter, QDir::Files)) {
+            if ( fileName == "_init_log.csv" ||
+                 fileName == "log_timeline.csv" ||
+                 fileName == "log_timeline_init.csv" ) {
+                continue;
+            }
+            QString fullName = dir.absoluteFilePath(fileName);
+            DataModel* dataModel = DataModel::createDataModel(timeNames,runPath,
+                                                              fullName);
+            dataModels.append(dataModel);
+        }
+        if ( dataModels.empty() ) {
+            fprintf(stderr,"koviz [error]: no trk,csv,mot logfiles found in "
+                           "runPath=%s\n", runPath.toLatin1().constData());
+            exit(-1);
+        }
+    }
+
+    return dataModels;
+}
+
 
 // This will print the value closest to the record with timestamp.  This is
 // important if the RUN has files with multiple frequencies or if timestamp
