@@ -130,9 +130,24 @@ class TrickModel : public DataModel
     static void _write_binary_param(QDataStream& out, const TrickParameter &p);
     static void _write_binary_qstring(QDataStream& out, const QString& str);
 
+    void _toDoubleErrorMessage(int col, int paramtype) const
+    {
+        static bool isPrintedErrorMsg = false;
+        if ( !isPrintedErrorMsg ) {
+            const Parameter *p = param(col);
+            fprintf(stderr,
+                    "koviz [error]: can't handle trick 10 type \"%d\"\n"
+                    "for parameter=%s\n"
+                    "Look in trick_types.h for type.\n"
+                    "Only printing first error encountered.\n",
+                    paramtype, p->name().toLatin1().constData());
+            isPrintedErrorMsg = true;
+        }
+    }
+
   private:
 
-    inline double _toDouble(ptrdiff_t addr, int paramtype) const
+    inline double _toDouble(ptrdiff_t addr, int paramtype, int col) const
     {
         if ( _trick_version == TrickVersion07 ) {
             switch (paramtype) {
@@ -188,11 +203,8 @@ class TrickModel : public DataModel
             }
             default:
             {
-                fprintf(stderr,
-                        "koviz [error]: can't handle trick 07 type \"%d\"\n"
-                        "              Look in trick_types.h for type.\n",
-                        paramtype);
-                exit(-1);
+                _toDoubleErrorMessage(col,paramtype);
+                return qQNaN();
             }
             }
         } else {
@@ -257,11 +269,8 @@ class TrickModel : public DataModel
             }
             default:
             {
-                fprintf(stderr,
-                        "koviz [error]: can't handle trick 10 type \"%d\"\n"
-                        "              Look in trick_types.h for type\n.",
-                        paramtype);
-                exit(-1);
+                _toDoubleErrorMessage(col,paramtype);
+                return qQNaN();
             }
             }
         }
@@ -287,6 +296,7 @@ class TrickModelIterator : public ModelIterator
                               int tcol, int xcol, int ycol):
         i(row),
         _model(model),
+        _tcol(tcol),_xcol(xcol),_ycol(ycol),
         _row_count(model->rowCount()),
         _row_size(model->_row_size),_data(model->_data),
         _tco(_model->_col2offset.value(tcol)),
@@ -324,23 +334,26 @@ class TrickModelIterator : public ModelIterator
 
     inline double t() const override
     {
-        return _model->_toDouble(_data+i*_row_size+_tco,_ttype);
+        return _model->_toDouble(_data+i*_row_size+_tco,_ttype,_tcol);
     }
 
     inline double x() const override
     {
-        return _model->_toDouble(_data+i*_row_size+_xco,_xtype);
+        return _model->_toDouble(_data+i*_row_size+_xco,_xtype,_xcol);
     }
 
     inline double y() const override
     {
-        return _model->_toDouble(_data+i*_row_size+_yco,_ytype);
+        return _model->_toDouble(_data+i*_row_size+_yco,_ytype,_ycol);
     }
 
   private:
 
     qint64 i;
     const TrickModel* _model;
+    int _tcol;
+    int _xcol;
+    int _ycol;
     int _row_count;
     int _row_size;
     ptrdiff_t _data;

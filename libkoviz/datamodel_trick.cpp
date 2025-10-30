@@ -345,7 +345,7 @@ QVariant TrickModel::data(const QModelIndex &idx, int role) const
             qint64 _pos_data = row*_row_size + _col2offset.value(col);
             ptrdiff_t addr = _data+_pos_data;
             int paramtype =  _paramtypes.at(col);
-            val = _toDouble(addr,paramtype);
+            val = _toDouble(addr,paramtype,col);
         }
     }
 
