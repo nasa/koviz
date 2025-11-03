@@ -150,8 +150,11 @@ void CsvModel::_init()
     QString msg("Loading ");
     msg += QFileInfo(fileName()).fileName();
     msg += "...";
-    QProgressDialog progressLoad(msg, "Abort", 0, _nrows-1, 0);
-    progressLoad.setWindowModality(Qt::WindowModal);
+    QProgressDialog* progressLoad = nullptr;
+    if ( QApplication::instance() ) {
+        progressLoad = new QProgressDialog(msg, "Abort", 0, _nrows-1, 0);
+        progressLoad->setWindowModality(Qt::WindowModal);
+    }
 
     // Skip over header
     qint64 pos = 0;
@@ -190,18 +193,23 @@ void CsvModel::_init()
             break;
         }
         if ( row % 100000 == 0 ) {
-            progressLoad.setValue(row);
-            int secs = qRound(timer.nsecsElapsed()/1.0e9);
-            div_t d = div(secs,60);
-            QString msg = QString("Loaded %1 of %2 lines "
-                                  "(%3 min %4 sec)")
-                    .arg(row).arg(_nrows).arg(d.quot).arg(d.rem);
-            progressLoad.setLabelText(msg);
+            if ( progressLoad ) {
+                progressLoad->setValue(row);
+                int secs = qRound(timer.nsecsElapsed()/1.0e9);
+                div_t d = div(secs,60);
+                QString msg = QString("Loaded %1 of %2 lines "
+                                      "(%3 min %4 sec)")
+                        .arg(row).arg(_nrows).arg(d.quot).arg(d.rem);
+                progressLoad->setLabelText(msg);
+            }
         }
     }
 
     // End Progress Dialog
-    progressLoad.setValue(_nrows-1);
+    if ( progressLoad ) {
+        progressLoad->setValue(_nrows-1);
+        delete progressLoad;
+    }
 
     // Cleanup
     file.unmap(reinterpret_cast<uchar*>(const_cast<char*>(data)));

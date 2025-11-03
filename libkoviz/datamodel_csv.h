@@ -10,6 +10,7 @@
 #include <QProgressDialog>
 #include <QFileInfo>
 #include <QElapsedTimer>
+#include <QApplication>
 #include <stdexcept>
 
 #include "datamodel.h"
