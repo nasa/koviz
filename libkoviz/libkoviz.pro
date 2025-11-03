@@ -72,7 +72,6 @@ SOURCES += bookmodel.cpp \
            utils.cpp \
            unit.cpp \
            versionnumber.cpp \
-           csv.cpp \
            monte.cpp \
            parameter.cpp \
            runs.cpp \
@@ -159,7 +158,6 @@ HEADERS  += bookmodel.h \
             utils.h \
             unit.h \
             versionnumber.h \
-            csv.h \
             monte.h \
             numsortitem.h \
             parameter.h \

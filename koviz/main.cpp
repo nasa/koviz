@@ -25,8 +25,8 @@ using namespace std;
 #include "libkoviz/plotmainwindow.h"
 #include "libkoviz/dp.h"
 #include "libkoviz/snap.h"
-#include "libkoviz/csv.h"
 #include "libkoviz/datamodel_trick.h"
+#include "libkoviz/datamodel_csv.h"
 #include "libkoviz/trick_types.h"
 #include "libkoviz/session.h"
 #include "libkoviz/versionnumber.h"
@@ -57,7 +57,9 @@ bool printVarValuesAtTime(double time, double tmt, const QStringList& timeNames,
 QList<DPVar> makeVarsList(const QString& varsOptString,Runs* runs);
 bool convert2csv(const QStringList& timeNames,
                  const QString& ftrk, const QString& fcsv);
-bool convert2trk(const QString& csvFileName, const QString &trkFileName);
+bool convert2trk(const QString& csvFileName, const QString &trkFileName,
+                 const QStringList &timeNames,
+                 double start, double stop, double shift, double tmt);
 QHash<QString,QVariant> getShiftHash(const QString& shiftString,
                                 const QStringList &runPaths);
 QHash<QString,QStringList> getVarMap(const QString& mapString);
@@ -462,6 +464,27 @@ int main(int argc, char *argv[])
     QStringList timeNames = getTimeNames(timeName);
     timeName = timeNames.at(0);
 
+    // Start time
+    double startTime = opts.start;
+    if ( startTime == -DBL_MAX && session ) {
+        startTime = session->start();
+    }
+
+    // Stop time
+    double stopTime = opts.stop;
+    if ( stopTime == DBL_MAX && session ) {
+        stopTime = session->stop();
+    }
+
+    // Time match tolerance
+    double tmt = opts.timeMatchTolerance;
+    if ( tmt == DBL_MAX ) {
+        if ( session ) {
+            tmt = session->timeMatchTolerance();
+        } else {
+            tmt = 0.0000001;  // 10th of a microsecond
+        }
+    }
 
     // Check to ensure time isn't scaled or biased via the map
     foreach (QString key, varMap.keys() ) {
@@ -607,7 +630,13 @@ int main(int argc, char *argv[])
             trkOutFile = fi.absolutePath() + "/" +
                          QString("%1.trk").arg(fi.baseName());
         }
-        bool ret = convert2trk(opts.csv2trkFile, trkOutFile);
+        bool ok = false;
+        double shift = opts.shiftString.toDouble(&ok);
+        if ( !ok ) {
+            shift = 0.0;
+        }
+        bool ret = convert2trk(opts.csv2trkFile,trkOutFile,timeNames,
+                               startTime,stopTime,shift,tmt);
         if ( !ret )  {
             fprintf(stderr, "koviz [error]: Aborting csv to trk conversion!\n");
             return -1;
@@ -752,16 +781,6 @@ int main(int argc, char *argv[])
         bool isShowProgress = true;
         if ( isPdf ) {
             isShowProgress = false;
-        }
-
-        // Time match tolerance
-        double tmt = opts.timeMatchTolerance;
-        if ( tmt == DBL_MAX ) {
-            if ( session ) {
-                tmt = session->timeMatchTolerance();
-            } else {
-                tmt = 0.0000001;  // 10th of a microsecond
-            }
         }
 
         runs = new Runs(timeNames,tmt,runPaths,varMap,
@@ -1061,18 +1080,6 @@ int main(int argc, char *argv[])
         QString bg = opts.background;
         if ( bg.isEmpty() && session ) {
             bg = session->background();
-        }
-
-        // Start time
-        double startTime = opts.start;
-        if ( startTime == -DBL_MAX && session ) {
-            startTime = session->start();
-        }
-
-        // Stop time
-        double stopTime = opts.stop;
-        if ( stopTime == DBL_MAX && session ) {
-            stopTime = session->stop();
         }
 
         // Orientation
@@ -2493,113 +2500,24 @@ bool convert2csv(const QStringList& timeNames,
     return true;
 }
 
-bool convert2trk(const QString& csvFileName, const QString& trkFileName)
+bool convert2trk(const QString& csvFileName, const QString& trkFileName,
+                 const QStringList& timeNames,
+                 double start, double stop, double shift, double tmt)
 {
-    QFile file(csvFileName);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)){
-        fprintf(stderr, "koviz [error]: Cannot read file %s!",
-                csvFileName.toLatin1().constData());
-    }
-    CSV csv(&file);
+    CsvModel csvModel(timeNames,csvFileName,csvFileName);
 
-    // Parse first line to get param list
-    QList<TrickParameter> params;
-    QStringList list = csv.parseLine() ;
-    if ( list.isEmpty() ) {
-        fprintf(stderr, "koviz [error]: Empty csv file \"%s\"",
-                csvFileName.toLatin1().constData());
-        return false;
-    }
-    foreach ( QString s, list ) {
-        TrickParameter p;
-        QStringList plist = s.split(" ", skipEmptyParts);
-        p.setName(plist.at(0));
-        if ( plist.size() > 1 ) {
-            QString unitString = plist.at(1);
-            if ( unitString.startsWith('{') ) {
-                unitString = unitString.remove(0,1);
-            }
-            if ( unitString.endsWith('}') ) {
-                unitString.chop(1);
-            }
-            Unit u;
-            if ( u.isUnit(unitString.toLatin1().constData()) ) {
-                p.setUnit(unitString);
-            }
-        }
-        p.setType(TRICK_10_DOUBLE);
-        p.setSize(sizeof(double));
-        params.append(p);
+    QList<DPVar> vars;
+    for ( int c = 0; c < csvModel.columnCount(); ++c ) {
+        const Parameter* param = csvModel.param(c);
+        DPVar var(param->name().toLatin1().constData());
+        var.setUnit(param->unit().toLatin1().constData());
+        vars.append(var);
     }
 
-    QFileInfo ftrki(trkFileName);
-    if ( ftrki.exists() ) {
-        fprintf(stderr, "koviz [error]: Will not overwrite %s\n",
-                trkFileName.toLatin1().constData());
-        return false;
-    }
+    bool r = writeTrk(trkFileName, timeNames, vars, csvFileName,
+                      start,stop,shift,tmt);
 
-    QFile trk(trkFileName);
-
-    if (!trk.open(QIODevice::WriteOnly)) {
-        fprintf(stderr,"koviz [error]: could not open %s\n",
-                trkFileName.toLatin1().constData());
-        return false;
-    }
-    QDataStream out(&trk);
-
-    // Write trk header
-    TrickModel::writeTrkHeader(out,params);
-
-    //
-    // Write param values
-    //
-    int line = 1;
-    while ( 1 ) {
-        ++line;
-        QStringList list = csv.parseLine() ;
-        if ( list.isEmpty() ) break;  // end of file, hopefully!!!
-        foreach ( QString s, list ) {
-            bool ok;
-            double val = s.toDouble(&ok);
-            if ( !ok ) {
-                QStringList vals = s.split(":");
-                if (vals.length() == 3 ) {
-                    // Try converting to a utc timestamp
-                    val = 3600.0*vals.at(0).toDouble(&ok);
-                    if ( ok ) {
-                        val += 60.0*vals.at(1).toDouble(&ok);
-                        if ( ok ) {
-                            val += vals.at(2).toDouble(&ok);
-                        }
-                    }
-                }
-            }
-            if ( !ok ) {
-                // If a single char, convert to unicode numeric value
-                if ( s.size() == 1 ) {
-                    val = s.at(0).unicode();
-                    ok = true;
-                }
-            }
-            if ( !ok ) {
-                QFileInfo fi(csvFileName);
-                fprintf(stderr,
-                 "koviz [error]: Bad value \"%s\" on line %d in file %s\n",
-                        s.toLatin1().constData(),
-                        line,
-                        fi.absoluteFilePath().toLatin1().constData());
-                file.close();
-                trk.remove();
-                return false;
-            }
-            out << val;
-        }
-    }
-
-    file.close();
-
-    return true;
+    return r;
 }
 
 // shiftString has the form "[RUN_0:]val0[,RUN_1:val1,...]"
