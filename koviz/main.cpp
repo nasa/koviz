@@ -56,7 +56,8 @@ bool printVarValuesAtTime(double time, double tmt, const QStringList& timeNames,
                           const QString& runPath, Runs* runs);
 QList<DPVar> makeVarsList(const QString& varsOptString,Runs* runs);
 bool convert2csv(const QStringList& timeNames,
-                 const QString& ftrk, const QString& fcsv);
+                 const QString& ftrk, const QString& fcsv,
+                 double start, double stop, double shift, double tmt);
 bool convert2trk(const QString& csvFileName, const QString &trkFileName,
                  const QStringList &timeNames,
                  double start, double stop, double shift, double tmt);
@@ -610,9 +611,15 @@ int main(int argc, char *argv[])
             csvOutFile = fi.absolutePath() + "/" +
                          QString("%1.csv").arg(fi.baseName());
         }
+        bool ok = false;
+        double shift = opts.shiftString.toDouble(&ok);
+        if ( !ok ) {
+            shift = 0.0;
+        }
         bool ret;
         try {
-            ret = convert2csv(timeNames,opts.trk2csvFile, csvOutFile);
+            ret = convert2csv(timeNames,opts.trk2csvFile, csvOutFile,
+                              startTime,stopTime,shift,tmt);
         } catch (std::exception &e) {
             fprintf(stderr,"\n%s\n",e.what());
             exit(-1);
@@ -2445,59 +2452,22 @@ void presetExistsFile(QString* ignoreMe, const QString& fname, bool* ok)
 }
 
 bool convert2csv(const QStringList& timeNames,
-                 const QString& ftrk, const QString& fcsv)
+                 const QString& ftrk, const QString& fcsv,
+                 double start, double stop, double shift, double tmt)
 {
     TrickModel m(timeNames, ftrk, ftrk);
 
-    QFileInfo fcsvi(fcsv);
-    if ( fcsvi.exists() ) {
-        fprintf(stderr, "koviz [error]: Will not overwrite %s\n",
-                fcsv.toLatin1().constData());
-        return false;
+    QList<DPVar> vars;
+    for ( int c = 0; c < m.columnCount(); ++c ) {
+        const Parameter* param = m.param(c);
+        DPVar var(param->name().toLatin1().constData());
+        var.setUnit(param->unit().toLatin1().constData());
+        vars.append(var);
     }
 
-    // Open csv file stream
-    QFile csv(fcsv);
-    if (!csv.open(QIODevice::WriteOnly)) {
-        fprintf(stderr,"koviz: [error] could not open %s\n",
-                fcsv.toLatin1().constData());
-        return false;
-    }
-    QTextStream out(&csv);
+    bool r = writeCsv(fcsv,timeNames,vars,ftrk,start,stop,shift,tmt);
 
-    // Write csv param list (top line in csv file)
-    int cc = m.columnCount();
-    for ( int i = 0; i < cc; ++i) {
-        QString pName = m.param(i)->name();
-        QString pUnit = m.param(i)->unit();
-        out << pName << " {" << pUnit << "}";
-        if ( i < cc-1 ) {
-            out << ",";
-        }
-    }
-    out << "\n";
-
-    //
-    // Write param values
-    //
-    QLocale cLocale(QLocale::C);
-    int rc = m.rowCount();
-    for ( int r = 0 ; r < rc; ++r ) {
-        for ( int c = 0 ; c < cc; ++c ) {
-            QModelIndex idx = m.index(r,c);
-            out << cLocale.toString(m.data(idx).toDouble());
-            if ( c < cc-1 ) {
-                out << ",";
-            } else {
-                out << "\n";
-            }
-        }
-    }
-
-    // Clean up
-    csv.close();
-
-    return true;
+    return r;
 }
 
 bool convert2trk(const QString& csvFileName, const QString& trkFileName,
