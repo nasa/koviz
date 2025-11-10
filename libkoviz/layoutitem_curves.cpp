@@ -1003,25 +1003,27 @@ void CurvesLayoutItem::paintHLines(QPainter *painter,
         double placement = _bookModel->getDataDouble(hlineIdx,
                                                      "HLineLabelPlacement");
         QFontMetrics fm = painter->fontMetrics();
-        QRect txtRect = fm.boundingRect(label);
+        int txtWidth = fm.horizontalAdvance(label);
+        int chw = fm.averageCharWidth();
         if ( placement == 0 ) {
-            // drawPt is on left, and already set, so nothing to do
+            // drawPt is on left, add a character width margin
+            drawPt.setX(drawPt.x()+chw);
         } else if ( placement == 1 ) {
             QPointF p(M.right(),0);
             p = T.map(p);
-            drawPt.setX(p.x()-txtRect.width());
+            drawPt.setX(p.x()-txtWidth-chw);
         } else {
             QPointF p(placement*(M.right()-M.left()),0);
             p = T.map(p);
-            drawPt.setX(p.x()-txtRect.width()/2);
+            drawPt.setX(p.x()-txtWidth/2);
             if ( drawPt.x() < 0 ) {
                 // Label would go offscreen on left, clamp to 0
                 drawPt.setX(0);
-            } else if ( (drawPt.x()+txtRect.width()) > R.right() ) {
+            } else if ( (drawPt.x()+txtWidth) > R.right() ) {
                 // Label would go offscreen on right, clamp to right
                 QPointF p(M.right(),0);
                 p = T.map(p);
-                drawPt.setX(p.x()-txtRect.width());
+                drawPt.setX(p.x()-txtWidth);
             }
         }
 

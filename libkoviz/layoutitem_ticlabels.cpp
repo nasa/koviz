@@ -140,13 +140,13 @@ void TicLabelsLayoutItem::paint(QPainter *painter,
                 painter->drawText(box.bb,Qt::AlignRight|Qt::AlignVCenter,
                                  box.strVal);
             } else if ( plotYScale == "log" ) {
-                _paint10Exponent(painter,box);
+                _paint10Exponent(painter,box,Qt::AlignRight);
             }
         } else if ( alignment() == Qt::AlignBottom ) {
             if ( plotXScale == "linear" ) {
                 painter->drawText(box.bb,Qt::AlignCenter,box.strVal);
             } else if ( plotXScale == "log" ) {
-                _paint10Exponent(painter,box);
+                _paint10Exponent(painter,box,Qt::AlignBottom);
             }
         }
     }
@@ -190,30 +190,39 @@ QString TicLabelsLayoutItem::_format(double tic) const
 }
 
 void TicLabelsLayoutItem::_paint10Exponent(QPainter *painter,
-                                           const RulerLabelBox& box) const
+                                           const RulerLabelBox& box,
+                                           int alignment) const
 {
-    QFont fontOrig = painter->font();
-    QFontMetrics fm(painter->font());
-    QFont font8 = painter->font();
-    font8.setPointSizeF(8);
-    QFontMetrics fm8(font8);
-    QRectF B = _boundingRect(box.strVal); // strVal is exponent
-    B.moveCenter(box.bb.center());
-    B.moveRight(box.bb.right());
+    QString s = QString("10<sup>%1</sup>").arg(box.strVal);
 
-    painter->setFont(fontOrig);
-    QRectF box10 = fm.boundingRect("10 ");
-    box10.moveBottomLeft(B.bottomLeft());
-    painter->drawText(B,Qt::AlignLeft|Qt::AlignBottom,"10");
+    QTextDocument doc;
+    doc.setDefaultFont(painter->font());
+    doc.setHtml(s);
 
-    painter->setFont(font8);
-    QRectF boxExponent = fm8.boundingRect(box.strVal);
-    boxExponent.moveTopRight(B.topRight());
-    boxExponent.translate(-fm8.averageCharWidth()/2.0,0);
-    boxExponent.setRight(B.right());
-    painter->drawText(boxExponent,box.strVal);
+    // Compute width and height using the doc:
+    int w = doc.idealWidth();
+    int h = doc.size().height();
 
-    painter->setFont(fontOrig);
+    // Now right-align using the *actual* rendered size:
+    QPointF pos = box.center;
+    if ( alignment == Qt::AlignRight ) {
+        pos.setX(box.bb.right() - w);
+        pos.setY(box.bb.center().y() - h/2);
+    } else if ( alignment == Qt::AlignBottom ) {
+        pos.setX(box.bb.center().x() - w/2);
+        pos.setY(box.bb.top());
+    } else {
+        // Should never happen since right and bottom only supported
+        fprintf(stderr,"koviz [bad scoobs]: TicLabelsLayoutItem::"
+                       "_paint10Exponent() unsupported Alignment=%d\n",
+                       alignment);
+        exit(-1);
+    }
+
+    painter->save();
+    painter->translate(pos);
+    doc.drawContents(painter);
+    painter->restore();
 }
 
 QSize TicLabelsLayoutItem::_sizeHintLeft() const

@@ -265,6 +265,20 @@ void BookView::_printPage(QPainter *painter, const QModelIndex& pageIdx)
     QModelIndexList plotIdxs = _bookModel()->plotIdxs(pageIdx);
     int nPlots = model()->rowCount(plotsIdx);
     QHash<QLayout*,QRectF> plotlayout2mathrect;
+
+    // Set font size based on number of plots - more plots, smaller font
+    QFont f = painter->font();
+    if ( nPlots > 0 && nPlots <= 4 ) {
+        // Do nothing, just keep standard font
+    } else if ( nPlots > 4 && nPlots <= 9 ) {
+        f.setPointSizeF(9);
+    } else if ( nPlots > 9 && nPlots <= 16 ) {
+        f.setPointSizeF(8);
+    } else {
+        f.setPointSizeF(6);
+    }
+    painter->setFont(f);
+
     QFontMetrics fm = painter->fontMetrics();
     QFont font8 = painter->font();
     font8.setPointSizeF(8);

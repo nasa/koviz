@@ -114,63 +114,23 @@ void PageTitleLayoutItem::paint(QPainter *painter,
     QString title4 = _pageTitles(_pageIdx).at(3);
 
     //
-    // Draw main title
+    // Calc main title y position
     //
     font.setPointSize(14);
     painter->setFont(font);
     QFontMetrics fm1(font,painter->device());
-    w = fm1.boundingRect(title1).width();
-    x = (R.width()-w)/2;
-    y = fm1.xHeight() + fm1.ascent();
-    if ( !title1.isEmpty() && !title1.trimmed().isEmpty() ) {
-        painter->drawText(x,y,title1);
-    }
-    int yTitle1 = y;
+    int yTitle1 = fm1.xHeight() + fm1.ascent();
 
     //
-    // Draw subtitle with RUNs
+    // Calc subtitle with RUNs y position
     //
     font.setPointSize(11);
     painter->setFont(font);
     QFontMetrics fm2(painter->fontMetrics());
-    if ( !title2.isEmpty() && !title2.trimmed().isEmpty() ) {
-        #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-            const auto SkipEmptyParts = Qt::SkipEmptyParts ;
-        #else
-            const auto SkipEmptyParts = QString::SkipEmptyParts;
-        #endif
-        QStringList lines = title2.split('\n', SkipEmptyParts);
-        y += fm1.descent() + fm1.leading() + fm2.ascent();
-        if ( lines.size() == 1 ) {
-            // single RUN
-            w = fm2.boundingRect(title2).width();
-            x = (R.width()-w)/2;
-            painter->drawText(x,y,title2);
-        } else if ( lines.size() > 1 ) {
-            // multiple RUNs (show two RUNs and elide rest with elipsis)
-            QStringList runs;
-            runs << lines.at(0) << lines.at(1);
-            runs = Runs::abbreviateRunNames(runs);
-            QString s1 = runs.at(0);
-            QString s2 = runs.at(1);
-            if ( lines.size() > 2 ) {
-                if ( !s2.endsWith(',') ) {
-                    s2 += ",";
-                }
-                s2 += "...)";
-            }
-            QString s;
-            if ( s1.endsWith(',') ) {
-                s = s1 + s2;
-            } else {
-                s = s1 + "," + s2 ;
-            }
-            w = fm2.boundingRect(s).width();
-            x = (R.width()-w)/2;
-            painter->drawText(x,y,s);
-        }
+    int yTitle2 = yTitle1 + fm1.descent() + fm1.leading() + fm2.ascent();
+    if ( title2.isEmpty() || title2.trimmed().isEmpty() ) {
+        yTitle2 = yTitle1;
     }
-    int yTitle2 = y;
 
     //
     // Draw title3 and title4 (align on colon if possible)
@@ -238,6 +198,62 @@ void PageTitleLayoutItem::paint(QPainter *painter,
         painter->drawText(x,y,title4);
         if ( x < leftTitle34 ) {
             leftTitle34 = x;
+        }
+    }
+
+    //
+    // Draw main title
+    //
+    font.setPointSize(14);
+    painter->setFont(font);
+    w = fm1.boundingRect(title1).width();
+    x = (leftTitle34-w)/2;
+    y = fm1.xHeight() + fm1.ascent();
+    if ( !title1.isEmpty() && !title1.trimmed().isEmpty() ) {
+        painter->drawText(x,y,title1);
+    }
+
+    //
+    // Draw subtitle with RUNs
+    //
+    font.setPointSize(11);
+    painter->setFont(font);
+    //QFontMetrics fm2(painter->fontMetrics());
+    if ( !title2.isEmpty() && !title2.trimmed().isEmpty() ) {
+        #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            const auto SkipEmptyParts = Qt::SkipEmptyParts ;
+        #else
+            const auto SkipEmptyParts = QString::SkipEmptyParts;
+        #endif
+        QStringList lines = title2.split('\n', SkipEmptyParts);
+        y += fm1.descent() + fm1.leading() + fm2.ascent();
+        if ( lines.size() == 1 ) {
+            // single RUN
+            w = fm2.boundingRect(title2).width();
+            x = (leftTitle34-w)/2;
+            painter->drawText(x,y,title2);
+        } else if ( lines.size() > 1 ) {
+            // multiple RUNs (show two RUNs and elide rest with elipsis)
+            QStringList runs;
+            runs << lines.at(0) << lines.at(1);
+            runs = Runs::abbreviateRunNames(runs);
+            QString s1 = runs.at(0);
+            QString s2 = runs.at(1);
+            if ( lines.size() > 2 ) {
+                if ( !s2.endsWith(',') ) {
+                    s2 += ",";
+                }
+                s2 += "...)";
+            }
+            QString s;
+            if ( s1.endsWith(',') ) {
+                s = s1 + s2;
+            } else {
+                s = s1 + "," + s2 ;
+            }
+            w = fm2.boundingRect(s).width();
+            x = (leftTitle34-w)/2;
+            painter->drawText(x,y,s);
         }
     }
 

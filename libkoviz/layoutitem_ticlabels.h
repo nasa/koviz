@@ -3,6 +3,7 @@
 
 #include <QFontMetrics>
 #include <QList>
+#include <QTextDocument>
 #include <cmath>
 #include "layoutitem_paintable.h"
 #include "bookmodel.h"
@@ -75,7 +76,7 @@ private:
     QString _format(double tic) const;
     QRect _boundingRect(const QString &strVal) const;
     void _paint10Exponent(QPainter* painter,
-                          const RulerLabelBox& box) const;
+                          const RulerLabelBox& box, int alignment) const;
     QSize _sizeHintLeft() const;
     QSize _sizeHintBottom() const;
 };
