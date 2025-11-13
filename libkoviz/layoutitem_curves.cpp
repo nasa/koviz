@@ -766,7 +766,6 @@ void CurvesLayoutItem::_printErrorplot(const QTransform& T,
     // Set pen color
     QPen origPen = painter->pen();
     QPen ePen(painter->pen());
-    ePen.setWidthF(16.0);
     QRectF curveBBox = path.boundingRect();
     if (curveBBox.height() == 0.0 && path.elementCount() > 0
             && mpath->elementAt(0).y == 0.0) {
