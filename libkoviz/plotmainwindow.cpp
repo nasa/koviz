@@ -935,6 +935,13 @@ void PlotMainWindow::savePdf(const QString& fname)
     }
 }
 
+void PlotMainWindow::saveJpgs(const QString& fname, const QSize& jpgSize)
+{
+    if ( ! fname.isEmpty() ) {
+        _bookView->saveJpgs(fname,jpgSize);
+    }
+}
+
 void PlotMainWindow::selectFirstCurve()
 {
     if ( _bookModel->isChildIndex(QModelIndex(),"","Pages") ) {

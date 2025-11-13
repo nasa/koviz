@@ -73,6 +73,7 @@ public:
                              QWidget *parent = 0);
 
      void savePdf(const QString& fname);
+     void saveJpgs(const QString& fname, const QSize &jpgSize);
      void selectFirstCurve();
 
     ~PlotMainWindow();

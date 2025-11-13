@@ -204,6 +204,42 @@ void BookView::savePdf(const QString &fname)
     painter.end();
 }
 
+
+void BookView::saveJpgs(const QString &fname, const QSize& jpgSize)
+{
+    if ( _nb->count() == 0 ) {
+        // Nothing to do because no pages
+    } else if ( _nb->count() == 1 ) {
+        QModelIndex pageIdx = _tabIdToModelIdx(0);
+        saveJpgOffScreen(fname,jpgSize,pageIdx);
+    } else {
+        int pad = QString::number(_nb->count()-1).length(); // 000,001,002...
+        for (int i = 0; i < _nb->count(); ++i) {
+            QModelIndex pageIdx = _tabIdToModelIdx(i);
+            QFileInfo fi(fname);
+            QString name = QString("%1.%2.jpg")
+                                  .arg(fi.baseName())
+                                  .arg(i, pad, 10, QLatin1Char('0'));
+            fprintf(stdout, "Generating jpg=%s\n",name.toLatin1().constData());
+            saveJpgOffScreen(name,jpgSize,pageIdx);
+        }
+    }
+}
+
+void BookView::saveJpgOffScreen(const QString &fname,
+                                const QSize& jpgSize,
+                                const QModelIndex& pageIdx)
+{
+    QPixmap pixmap(jpgSize);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.save();
+    _printPage(&painter,pageIdx); // Print page onto pixmap
+    pixmap.save(fname,"JPG");
+    painter.restore();
+    painter.end();
+}
+
 void BookView::saveJpg(const QString &fname)
 {
     QWidget* page = _nb->currentWidget();

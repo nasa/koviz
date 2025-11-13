@@ -7,6 +7,7 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QDir>
+#include <QSize>
 
 #include <string>
 using namespace std;
@@ -66,6 +67,7 @@ QHash<QString,QVariant> getShiftHash(const QString& shiftString,
 QHash<QString,QStringList> getVarMap(const QString& mapString);
 QHash<QString,QStringList> getVarMapFromFile(const QString& mapFileName);
 QStringList getTimeNames(const QString& timeName);
+QSize str2size(const QString& str);
 
 Option::FPresetQString presetExistsFile;
 Option::FPresetDouble preset_start;
@@ -92,6 +94,8 @@ class SnapOptions : public Options
     unsigned int beginRun;
     unsigned int endRun;
     QString pdfOutFile;
+    QString jpgOutFile;
+    QString jpgSize;
     QString dp2trkOutFile;
     QString dp2csvOutFile;
     QString vars2csvFile;
@@ -223,6 +227,10 @@ int main(int argc, char *argv[])
              "Time variable (e.g. -timeName sys.exec.out.time=mySimTime)");
     opts.add("-pdf", &opts.pdfOutFile, QString(""),
              "Name of pdf output file");
+    opts.add("-jpg", &opts.jpgOutFile, QString(""),
+             "Name of jpg output file");
+    opts.add("-jpgSize", &opts.jpgSize, QString("2560x1440"),
+             "Size of jpg e.g. -jpgSize 2560x1440");
     opts.add("-dp2trk", &opts.dp2trkOutFile, QString(""),
              "Create trk from DP_ vars, "
              "e.g. koviz DP_foo RUN_a -dp2trk foo.trk");
@@ -708,6 +716,13 @@ int main(int argc, char *argv[])
             }
         }
 
+        QString jpgOutFile;
+        bool isJpg = false;
+        if ( !opts.jpgOutFile.isEmpty() ) {
+            jpgOutFile = opts.jpgOutFile;
+            isJpg = true;
+        }
+
         bool isDP2Csv = false;
         if ( !opts.dp2csvOutFile.isEmpty() ) {
             isDP2Csv = true;
@@ -723,12 +738,15 @@ int main(int argc, char *argv[])
             isVars2Vals = true;
         }
 
-        if ( (isPdf && isDP2Trk) || (isPdf && isDP2Csv) ||
-             (isDP2Trk && isDP2Csv) ||
-             (isPdf && isVars2Csv) || (isPdf && isVars2Vals) ) {
+        if ( ((isPdf || isJpg) && isDP2Trk) ||
+             ((isPdf || isJpg) && isDP2Csv) ||
+             ((isPdf || isJpg) && isVars2Csv) ||
+             ((isPdf || isJpg) && isVars2Vals) ||
+             (isPdf && isJpg) ||
+             (isDP2Trk && isDP2Csv) ) {
             fprintf(stderr,
-                    "koviz [error] : you may not use the -pdf, -trk, -csv and "
-                    "-vars options together.");
+                    "koviz [error] : you may not use the -pdf, -jpg, -trk, "
+                    "-csv and -vars options together.");
             exit(-1);
         }
 
@@ -740,6 +758,14 @@ int main(int argc, char *argv[])
                     "koviz [error] : when using the -pdf option you must "
                     "specify a RUN directory and DP product file "
                     "(or -a or -vars option) \n");
+            exit(-1);
+        }
+
+        // If outputting to jpg, you must have a DP file and RUN dir
+        if ( isJpg && (dps.size() == 0 || runPaths.size() == 0) ) {
+            fprintf(stderr,
+                    "koviz [error] : when using the -jpg option you must "
+                    "specify a RUN directory and DP product file \n");
             exit(-1);
         }
 
@@ -786,7 +812,7 @@ int main(int argc, char *argv[])
         }
 
         bool isShowProgress = true;
-        if ( isPdf ) {
+        if ( isPdf || isJpg ) {
             isShowProgress = false;
         }
 
@@ -1589,6 +1615,17 @@ int main(int argc, char *argv[])
 
             if ( isPdf ) {
                 w.savePdf(pdfOutFile);
+                ret = 0;
+            } else if ( isJpg ) {
+                QSize sz = str2size(opts.jpgSize);
+                if ( !sz.isValid() ) {
+                    fprintf(stderr, "koviz [error]: Invalid jpg size=%s. "
+                                    "Size should be in the form widthxheight "
+                                    "e.g. 2560x1440\n",
+                                    opts.jpgSize.toLatin1().constData());
+                    exit(-1);
+                }
+                w.saveJpgs(jpgOutFile,sz);
                 ret = 0;
             } else {
                 w.show();
@@ -2670,4 +2707,25 @@ QStringList getTimeNames(const QString& timeName)
         timeNames << s.trimmed();
     }
     return timeNames;
+}
+
+// Returns invalid size if str isn't in the form widthxheight
+QSize str2size(const QString& str)
+{
+    QStringList fields = str.toLower().split('x');
+    if (fields.size() != 2) {
+        return QSize(-1,-1);
+    }
+
+    bool okw = false;
+    bool okh = false;
+
+    int w = fields[0].trimmed().toUInt(&okw);
+    int h = fields[1].trimmed().toUInt(&okh);
+
+    if ( !okw || !okh ) {
+        return QSize(-1,-1);
+    }
+
+    return QSize(w, h);
 }

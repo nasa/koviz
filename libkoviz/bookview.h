@@ -62,6 +62,10 @@ private:
 public slots:
     void savePdf(const QString& fname);
     void saveJpg(const QString& fname);
+    void saveJpgs(const QString& fname, const QSize& jpgSize);
+    void saveJpgOffScreen(const QString &fname,
+                          const QSize &jpgSize,
+                          const QModelIndex& pageIdx);
 
 protected slots:
     void _nbCloseRequested(int tabId);
