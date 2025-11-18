@@ -64,23 +64,28 @@ void CurvesLayoutItem::paint(QPainter *painter,
     int nCurves = _bookModel->rowCount(curvesIdx);
 
     // Print!
-    if ( nCurves == 2 ) {
-        QString plotPresentation = _bookModel->getDataString(_plotIdx,
+    QString plotPresentation = _bookModel->getDataString(_plotIdx,
                                                      "PlotPresentation","Plot");
-        if ( plotPresentation == "compare" ) {
-            _printCoplot(T,painter,_plotIdx);
-        } else if (plotPresentation == "error" || plotPresentation.isEmpty()) {
+    if ( nCurves == 2 && plotPresentation != "compare" ) {
+        if ( plotPresentation == "error" ||  plotPresentation.isEmpty() ) {
             _printErrorplot(T,painter,_plotIdx);
         } else if ( plotPresentation == "error+compare" ) {
             _printErrorplot(T,painter,_plotIdx);
             _printCoplot(T,painter,_plotIdx);
         } else {
-            fprintf(stderr,"koviz [bad scoobs]: printCurves() : pres=\"%s\" "
-                           "not recognized.\n",
-                           plotPresentation.toLatin1().constData());
+            fprintf(stderr, "koviz [bad scoobs]: Bad presentation=%s given.",
+                    plotPresentation.toLatin1().constData());
             exit(-1);
         }
     } else {
+
+        if ( plotPresentation != "compare" ) {
+            fprintf(stderr, "koviz [bad scoobs]: Plot with %d curves has "
+                    "unsupported/wrong presentation=%s\n",
+                    nCurves,
+                    plotPresentation.toLatin1().constData());
+            exit(-1);
+        }
 
         int nElements = 0;
         for ( int i = 0; i < nCurves; ++i ) {
@@ -89,7 +94,7 @@ void CurvesLayoutItem::paint(QPainter *painter,
             nElements += path->elementCount();
         }
 
-        if ( nElements > 100000 || nCurves > 64 ) {
+        if ( nElements > 1000 || nCurves > 10 ) {
 
             // Use pixmaps to reduce file size
             double rw = R.width()/(double)painter->device()->logicalDpiX();
@@ -197,7 +202,26 @@ void CurvesLayoutItem::paint(QPainter *painter,
                         pixmapPainter.setBrush(origBrush);
                         pixmapPainter.setTransform(Tscaled);
                     } else {
-                        pixmapPainter.drawPath(*path);
+                        // Plain line
+                        // Don't use transform for better rendering of lines
+                        QTransform I;
+                        pixmapPainter.setTransform(I);
+                        double w = pen.widthF();
+                        pen.setWidth(1.0);
+                        pixmapPainter.setPen(pen);
+                        QPointF pLast;
+                        for ( int i = 0; i < path->elementCount(); ++i ) {
+                            QPainterPath::Element el = path->elementAt(i);
+                            QPointF p(el.x,el.y);
+                            p = Tscaled.map(p);
+                            if  ( i > 0 ) {
+                                pixmapPainter.drawLine(pLast,p);
+                            }
+                            pLast = p;
+                        }
+                        pen.setWidthF(w);
+                        pixmapPainter.setPen(pen);
+                        pixmapPainter.setTransform(Tscaled);
                     }
                 }
             }
