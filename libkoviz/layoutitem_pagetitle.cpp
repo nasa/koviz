@@ -206,8 +206,13 @@ void PageTitleLayoutItem::paint(QPainter *painter,
     //
     font.setPointSize(14);
     painter->setFont(font);
-    w = fm1.boundingRect(title1).width();
-    x = (leftTitle34-w)/2;
+    w = fm1.horizontalAdvance(title1);
+    x = R.width()/2-w/2;
+    double margin = 2*fm1.averageCharWidth();
+    if ( x+w >= leftTitle34-margin ) {
+        // Centered main title overlaps right titles, so scoot left
+        x -= (x+w)-leftTitle34+margin;
+    }
     y = fm1.xHeight() + fm1.ascent();
     if ( !title1.isEmpty() && !title1.trimmed().isEmpty() ) {
         painter->drawText(x,y,title1);
@@ -229,8 +234,13 @@ void PageTitleLayoutItem::paint(QPainter *painter,
         y += fm1.descent() + fm1.leading() + fm2.ascent();
         if ( lines.size() == 1 ) {
             // single RUN
-            w = fm2.boundingRect(title2).width();
-            x = (leftTitle34-w)/2;
+            w = fm2.horizontalAdvance(title2);
+            x = R.width()/2-w/2;
+            double margin = 2*fm2.averageCharWidth();
+            if ( x+w >= leftTitle34-margin ) {
+                // Centered title overlaps right titles, so scoot left
+                x -= (x+w)-leftTitle34+margin;
+            }
             painter->drawText(x,y,title2);
         } else if ( lines.size() > 1 ) {
             // multiple RUNs (show two RUNs and elide rest with elipsis)
@@ -251,8 +261,13 @@ void PageTitleLayoutItem::paint(QPainter *painter,
             } else {
                 s = s1 + "," + s2 ;
             }
-            w = fm2.boundingRect(s).width();
-            x = (leftTitle34-w)/2;
+            w = fm2.horizontalAdvance(s);
+            x = R.width()/2-w/2;
+            double margin = 2*fm2.averageCharWidth();
+            if ( x+w >= leftTitle34-margin ) {
+                // Centered title overlaps right titles, so scoot left
+                x -= (x+w)-leftTitle34+margin;
+            }
             painter->drawText(x,y,s);
         }
     }
