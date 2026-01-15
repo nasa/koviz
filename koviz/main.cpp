@@ -2185,13 +2185,19 @@ QList<DataModel*> runDataModels(const QString& runPath,
                 continue;
             }
             QString fullName = dir.absoluteFilePath(fileName);
+            QFileInfo fi(fullName);
+            if ( !fi.exists() || fi.size() == 0 ) {
+                // Skip empty files
+                continue;
+            }
             DataModel* dataModel = DataModel::createDataModel(timeNames,runPath,
                                                               fullName);
             dataModels.append(dataModel);
         }
         if ( dataModels.empty() ) {
-            fprintf(stderr,"koviz [error]: no trk,csv,mot logfiles found in "
-                           "runPath=%s\n", runPath.toLatin1().constData());
+            fprintf(stderr,"koviz [error]: no non-empty trk,csv,mot logfiles "\
+                           "found in runPath=%s\n",
+                           runPath.toLatin1().constData());
             exit(-1);
         }
     }
