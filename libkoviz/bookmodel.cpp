@@ -1207,6 +1207,11 @@ QRectF PlotBookModel::calcCurvesBBox(const QModelIndex &curvesIdx) const
         int rc = rowCount(curvesIdx);
         for (int i = 0; i < rc; ++i) {
             QModelIndex curveIdx = index(i,0,curvesIdx);
+            CurveModel* curveModel = getCurveModel(curveIdx);
+            if ( curveModel == nullptr ) {
+                // Curve has no model yet (happens when initializing)
+                return bbox;
+            }
             QPainterPath* path = getPainterPath(curveIdx);
             double xb = 0.0;
             double yb = 0.0;
