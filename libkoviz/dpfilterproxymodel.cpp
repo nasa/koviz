@@ -30,6 +30,10 @@ bool DPFilterProxyModel::filterAcceptsRow(int row,
         return false;
     }
 
+    // For Zack to test
+    // Short circuit and accept all
+    return true;
+
     bool isAccept = false;
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
     QRegularExpression rx(filterRegularExpression());
@@ -52,6 +56,10 @@ bool DPFilterProxyModel::filterAcceptsColumn(int col,
     if ( col > 0 ) {
         return false;
     }
+
+    // For Zack to test
+    // Short circuit and accept all
+    return true;
 
     bool isAccept = false;
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
