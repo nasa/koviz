@@ -684,6 +684,11 @@ void CurvesView::_paintErrorplot(const QTransform &T,
 
     QModelIndex curvesIdx = _bookModel()->getIndex(plotIdx,"Curves","Plot");
     QPainterPath* errorPath = _bookModel()->getCurvesErrorPath(curvesIdx);
+    if ( errorPath == 0 ) {
+        // Error path not present (yet), so cannot paint
+        painter.restore();
+        return;
+    }
 
     QRectF ebox = errorPath->boundingRect();
     QPen ePen(pen);

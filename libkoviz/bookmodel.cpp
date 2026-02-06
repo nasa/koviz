@@ -1778,10 +1778,9 @@ QPainterPath* PlotBookModel::_createCurvesErrorPath(
     CurveModel* c1 = getCurveModel(curvesIdx,1);
 
     if ( c0 == 0 || c1 == 0 ) {
-        fprintf(stderr,"koviz [bad scoobs]:3: "
-                       "PlotBookModel::_createErrorPath(). "
-                       "Null curveModel!\n ");
-        exit(-1);
+        // Models not yet present, so cannot generate error path
+        delete path;
+        return 0;
     }
 
     QModelIndex idx0 = index(0,0,curvesIdx);
