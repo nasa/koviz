@@ -37,15 +37,8 @@ bool DPFilterProxyModel::filterAcceptsRow(int row,
     QRegExp rx(filterRegExp());
 #endif
     QFileSystemModel* m = (QFileSystemModel*) sourceModel();
-    int ncols = m->columnCount(pidx);
-    for ( int col = 0; col < ncols ; ++col) {
-        QModelIndex idx = m->index(row,col,pidx);
-        if ( _isAccept(idx,m,rx) ) {
-            isAccept = true;
-            break;
-        }
-    }
-
+    QModelIndex idx = m->index(row, 0, pidx); // Column 0 holds filename
+    isAccept = _isAccept(idx, m, rx);
     return isAccept;
 }
 
@@ -107,7 +100,7 @@ bool DPFilterProxyModel::_isAccept(const QModelIndex &idx,
 {
     bool isAccept = false ;
 
-    QString dpFilePath = m->fileInfo(idx).absoluteFilePath();
+    QString dpFilePath = m->fileInfo(idx).canonicalFilePath();
     bool isCached = _acceptedDPFileCache.contains(dpFilePath);
     if ( isCached ) {
         return _acceptedDPFileCache.value(dpFilePath);
