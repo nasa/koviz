@@ -77,6 +77,8 @@ private:
 
 private slots:
      void _runsSearchBoxReturnPressed();
+     void _runsLayoutChanged(const QList<QPersistentModelIndex> &parents,
+                             QAbstractItemModel::LayoutChangeHint hint);
 };
 
 

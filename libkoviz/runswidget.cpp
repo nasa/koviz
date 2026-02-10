@@ -19,10 +19,6 @@ RunsWidget::RunsWidget(Runs *runs,
     // Dir/File model
     _fileModel = new QFileSystemModel;
 
-    // Set initial runs home
-    _runsHome = _calcRunsHome(runs);
-    _fileModel->setRootPath(_runsHome);
-
     // Filter
     _filterModel = new RunsWidgetFilterProxyModel(_runs);
     _filterModel->setSourceModel(_fileModel);
@@ -42,10 +38,16 @@ RunsWidget::RunsWidget(Runs *runs,
     _fileTreeView->hideColumn(3); // Hide "Date Modified" column
     _gridLayout->addWidget(_fileTreeView,1,0);
 
-    // Set browser root path
-    QModelIndex sourceIndex = _fileModel->index(_runsHome);
-    QModelIndex proxyIndex = _filterModel->mapFromSource(sourceIndex);
-    _fileTreeView->setRootIndex(proxyIndex);
+    // Model is loaded asynchronously, so need to fire off an event
+    // when model finishes loading - important on Mac, else empty DP tree
+    connect(_filterModel, SIGNAL(layoutChanged(QList<QPersistentModelIndex>,
+                                 QAbstractItemModel::LayoutChangeHint)),
+            this, SLOT(_runsLayoutChanged(QList<QPersistentModelIndex>,
+                                  QAbstractItemModel::LayoutChangeHint)));
+
+    // Set initial runs home and fire off async model load
+    _runsHome = _calcRunsHome(runs);
+    _fileModel->setRootPath(_runsHome);
 }
 
 RunsWidget::~RunsWidget()
@@ -125,6 +127,27 @@ void RunsWidget::_runsSearchBoxReturnPressed()
     QModelIndex sourceIndex = _fileModel->index(_runsHome);
     QModelIndex proxyIndex = _filterModel->mapFromSource(sourceIndex);
     _fileTreeView->setRootIndex(proxyIndex);
+}
+
+void RunsWidget::_runsLayoutChanged(const QList<QPersistentModelIndex> &parents,
+                                    QAbstractItemModel::LayoutChangeHint hint)
+{
+    Q_UNUSED(parents);
+    Q_UNUSED(hint);
+
+    QString rootPath = _fileModel->rootPath();
+    QModelIndex srcIdx = _fileModel->index(rootPath);
+    if ( !srcIdx.isValid() ) {
+        // Model not valid yet (not sure if this ever happens)
+        return;
+    }
+    QModelIndex proxyIdx = _filterModel->mapFromSource(srcIdx);
+    if (!proxyIdx.isValid()) {
+        // Model not valid yet (not sure if this ever happens)
+        return;
+    }
+
+    _fileTreeView->setRootIndex(proxyIdx);
 }
 
 bool RunsWidgetFilterProxyModel::filterAcceptsRow(
