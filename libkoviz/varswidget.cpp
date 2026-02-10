@@ -70,6 +70,13 @@ void VarsWidget::_varsSelectModelSelectionChanged(
 {
     Q_UNUSED(prevVarSelection); // TODO: handle deselection (prevSelection)
 
+    // If model signals blocked, it most likely means vars clicked on var tree
+    // while curves are being loaded with signals off.  When this happens,
+    // just ignore the selection change until model ready
+    if ( _plotModel->signalsBlocked() ) {
+        return;
+    }
+
     if ( _listView->dragEnabled() ) {
         return;
     }

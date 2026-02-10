@@ -249,6 +249,13 @@ void DPTreeWidget::_dpTreeViewCurrentChanged(const QModelIndex &currIdx,
 {
     Q_UNUSED(prevIdx);
 
+    // If model signals blocked, it most likely means dp clicked on dp tree
+    // view while curves are being loaded with signals off.  When this happens,
+    // just ignore the dp click until model ready
+    if ( _bookModel->signalsBlocked() ) {
+        return;
+    }
+
     QModelIndex srcIdx = _dpFilterModel->mapToSource(currIdx);
     QString fp = _dpModel->filePath(srcIdx);
     if ( _isDP(fp) ) {
