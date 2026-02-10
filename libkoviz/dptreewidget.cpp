@@ -74,8 +74,6 @@ DPTreeWidget::DPTreeWidget(const QString& timeName,
 
     _dpTreeView = new DPTreeView(parent);
     _dpTreeView->setModel(_dpFilterModel);
-    QModelIndex proxyRootIdx = _dpFilterModel->mapFromSource(_dpModelRootIdx);
-    _dpTreeView->setRootIndex(proxyRootIdx);
     _dpTreeView->setFocusPolicy(Qt::ClickFocus);
     _gridLayout->addWidget(_dpTreeView,2,0);
     connect(_dpTreeView->selectionModel(),
@@ -205,7 +203,7 @@ void DPTreeWidget::_setupModel(const QString& dpSearchDir)
 {
     QString dpDir = _findDPDir(dpSearchDir);
     _dpModel = new QFileSystemModel;
-    _dpModelRootIdx = _dpModel->setRootPath(dpDir);
+
     QStringList filters;
     //filters  << "DP_*" << "SET_*"; // _dpFilterModel does additional filtering
     _dpModel->setNameFilters(filters);
@@ -224,6 +222,18 @@ void DPTreeWidget::_setupModel(const QString& dpSearchDir)
     _dpFilterModel->setFilterRegExp(dprx);
 #endif
     _dpFilterModel->setFilterKeyColumn(0);
+
+    // Model is loaded asynchronously, so need to fire off an event
+    // when model finishes - important on Mac, else empty DP tree
+    connect(_dpFilterModel,
+            SIGNAL(layoutChanged(QList<QPersistentModelIndex>,
+                                  QAbstractItemModel::LayoutChangeHint)),
+            this,
+            SLOT(_dpLayoutChanged(QList<QPersistentModelIndex>,
+                                  QAbstractItemModel::LayoutChangeHint)));
+
+    // setRootPath which will fire off the async loading of the filesystem model
+    _dpModel->setRootPath(dpDir);
 }
 
 void DPTreeWidget::_createDP(const QString &dpfile)
@@ -318,6 +328,29 @@ void DPTreeWidget::_loadDPFiles()
     //disconnect(_sieModel, SIGNAL(modelLoaded()), this, SLOT(_loadDPFiles()));
 }
 
+// This slot wraps a call to setRootIndex() which must be called after the dp
+// file model is ready. The layoutChangeed signal fires when the model is ready.
+void DPTreeWidget::_dpLayoutChanged(const QList<QPersistentModelIndex> &parents,
+                                    QAbstractItemModel::LayoutChangeHint hint)
+{
+   Q_UNUSED(parents);
+   Q_UNUSED(hint);
+
+   QString rootPath = _dpModel->rootPath();
+   QModelIndex srcIdx = _dpModel->index(rootPath);
+   if ( !srcIdx.isValid() ) {
+       // Model not valid yet (not sure if this ever happens)
+       return;
+   }
+   QModelIndex proxyIdx = _dpFilterModel->mapFromSource(srcIdx);
+   if (!proxyIdx.isValid()) {
+       // Model not valid yet (not sure if this ever happens)
+       return;
+   }
+
+   _dpTreeView->setRootIndex(proxyIdx);
+}
+
 void DPTreeWidget::_setMsgLabel(const QString &msg)
 {
     _msgLabel->setText(msg);
@@ -348,10 +381,7 @@ void DPTreeWidget::_runsRefreshed()
         return;
     }
     QString dpDir = _findDPDir(_runs->runPaths().at(0));
-    _dpModelRootIdx = _dpModel->setRootPath(dpDir);
-    QModelIndex sourceIndex = _dpModel->index(dpDir);
-    QModelIndex proxyIndex = _dpFilterModel->mapFromSource(sourceIndex);
-    _dpTreeView->setRootIndex(proxyIndex);
+    _dpModel->setRootPath(dpDir);
 }
 
 //

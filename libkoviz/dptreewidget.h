@@ -80,7 +80,6 @@ private:
     DPTreeView* _dpTreeView ;
     DPFilterProxyModel* _dpFilterModel;
     QFileSystemModel* _dpModel ;
-    QModelIndex _dpModelRootIdx;
     QList<ProgramModel*> _programModels;
     QList<CurveModel*> _tvCurveModels;  // list for tv model reset
 
@@ -111,6 +110,8 @@ private slots:
      void _dpTreeViewCurrentChanged(const QModelIndex &currIdx,
                                     const QModelIndex &prevIdx);
      void _loadDPFiles();
+     void _dpLayoutChanged(const QList<QPersistentModelIndex> &parents,
+                           QAbstractItemModel::LayoutChangeHint hint);
      void _setMsgLabel(const QString& msg);
      void _tvModelRowAppended(const QModelIndex &parent,int start,int end);
      void _tvModelAboutToBeReset();

@@ -181,7 +181,6 @@ private:
                     const QModelIndex& tgtParentIdx);
 
 private slots:
-     void _nbCurrentChanged(int i);
      void _bookModelRowsAboutToBeRemoved(const QModelIndex& pidx,
                                          int start, int end);
      void _saveDP();

@@ -164,28 +164,20 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
     }
 
     // DP Tab
-    // Due to what I think is a Qt bug, the DPTreeWidget which is placed
-    // in this tab is created when the DP tab is clicked.
-    // See PlotMainWindow::_nbCurrentChanged()
     _dpFrame = new QFrame(lsplit);
     _nbDPVars->addTab(_dpFrame,"DP");
-    if ( ! _dpFiles.isEmpty() ) {
-        // DP files specified on commandline
-        _dpTreeWidget = new  DPTreeWidget(_timeNames.at(0), _dpDir,
-                                          _dpFiles,
-                                          _runs,
-                                          _bookModel,
-                                          _bookView->selectionModel(),
-                                          _monteInputsView,
-                                          _sieModel,
-                                          _tvModel,
-                                          _isShowTables,
-                                          _unitOverrides,
-                                          _dpFrame);
-        _nbDPVars->setCurrentIndex(1);
-    }
-    connect(_nbDPVars,SIGNAL(currentChanged(int)),
-            this,SLOT(_nbCurrentChanged(int)));
+    _dpTreeWidget = new  DPTreeWidget(_timeNames.at(0), _dpDir,
+                                      _dpFiles,
+                                      _runs,
+                                      _bookModel,
+                                      _bookView->selectionModel(),
+                                      _monteInputsView,
+                                      _sieModel,
+                                      _tvModel,
+                                      _isShowTables,
+                                      _unitOverrides,
+                                      _dpFrame);
+    _nbDPVars->setCurrentIndex(1);
 
     // Runs Tab
     QFrame* runsFrame = new QFrame(lsplit);
@@ -412,32 +404,6 @@ void PlotMainWindow::createMenu()
     connect(_selectRunsHomeAction, SIGNAL(triggered()),
             this, SLOT(_selectRunsHome()));
     setMenuWidget(_menuBar);
-}
-
-void PlotMainWindow::_nbCurrentChanged(int i)
-{
-    if ( i == 1 && _dpTreeWidget == 0 ) {
-        //
-        // The reason this is here is to work around what I think
-        // is a bug within Qt. If the DPTreeWidget is created
-        // earlier, for some reason, this warning message is issued:
-        // QSortFilterProxyModel: index from wrong model passed to mapFromSource
-        // I believe that, in a rare case, this causes a core dump.
-        //
-        // So instead of creating the DPTreeWidget alongside the VarsWidget,
-        // the DPTreeWidget is created when the DP tab is clicked.
-        //
-        _dpTreeWidget = new  DPTreeWidget(_timeNames.at(0), _dpDir, _dpFiles,
-                                          _runs,
-                                          _bookModel,
-                                          _bookView->selectionModel(),
-                                          _monteInputsView,
-                                          _sieModel,
-                                          _tvModel,
-                                          _isShowTables,
-                                          _unitOverrides,
-                                          _dpFrame);
-    }
 }
 
 void PlotMainWindow::_bookViewCurrentChanged(const QModelIndex &currIdx,
