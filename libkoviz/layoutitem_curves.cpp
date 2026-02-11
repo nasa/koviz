@@ -87,14 +87,47 @@ void CurvesLayoutItem::paint(QPainter *painter,
             exit(-1);
         }
 
+        // Use pixmap to reduce size for this set of curves if no empties,
+        // linestyle scatter or plain, no symbols, nElements high or num
+        // curves high
+        bool isEmpty = false;
+        bool isPoint = false;
+        bool isLineStyleOK = true;
+        bool isSymbol = false;
         int nElements = 0;
         for ( int i = 0; i < nCurves; ++i ) {
             QModelIndex curveIdx = _bookModel->index(i,0,curvesIdx);
+            QString symbol = _bookModel->getDataString(curveIdx,
+                                                    "CurveSymbolStyle","Curve");
+            QString symbolEnd = _bookModel->getDataString(curveIdx,
+                                                    "CurveSymbolEnd","Curve");
+            if ( symbol.toLower() != "none" || symbolEnd.toLower() != "none") {
+                isSymbol = true;
+            }
+            QString lineStyle = _bookModel->getDataString(curveIdx,
+                                                    "CurveLineStyle","Curve");
+            if ( lineStyle.toLower() != "plain" &&
+                 lineStyle.toLower() != "scatter" &&
+                 lineStyle.toLower() != "thick_line" &&
+                 lineStyle.toLower() != "x_thick_line"  ) {
+                isLineStyleOK = false;
+            }
             QPainterPath* path = _bookModel->getPainterPath(curveIdx);
             nElements += path->elementCount();
+            if ( path->elementCount() == 0 ) {
+                isEmpty = true;
+            }
+            if ( path->elementCount() == 1 ) {
+                isPoint = true;
+            }
+        }
+        bool isPixMap = false;
+        if ( (nElements > 1000 || nCurves > 10) &&
+                          !isSymbol && isLineStyleOK && !isEmpty && !isPoint ) {
+            isPixMap = true;
         }
 
-        if ( nElements > 1000 || nCurves > 10 ) {
+        if ( isPixMap ) {
 
             // Use pixmaps to reduce file size
             double rw = R.width()/(double)painter->device()->logicalDpiX();
@@ -132,14 +165,27 @@ void CurvesLayoutItem::paint(QPainter *painter,
                     pixmapPainter.setPen(pen);
 
                     // Scale transform
-                    double xs = _bookModel->getDataDouble(curveIdx,
-                                                         "CurveXScale","Curve");
-                    double ys = _bookModel->getDataDouble(curveIdx,
-                                                         "CurveYScale","Curve");
-                    double xb = _bookModel->getDataDouble(curveIdx,
-                                                          "CurveXBias","Curve");
-                    double yb = _bookModel->getDataDouble(curveIdx,
-                                                          "CurveYBias","Curve");
+                    QModelIndex plotIdx = _bookModel->parent(curveIdx).parent();
+                    QString plotXScale = _bookModel->getDataString(plotIdx,
+                                                           "PlotXScale","Plot");
+                    QString plotYScale = _bookModel->getDataString(plotIdx,
+                                                           "PlotYScale","Plot");
+                    double xs = 1.0;
+                    double xb = 0.0;
+                    if ( plotXScale == "linear" ) {
+                        xs = _bookModel->getDataDouble(curveIdx,
+                                                       "CurveXScale","Curve");
+                        xb = _bookModel->getDataDouble(curveIdx,
+                                                       "CurveXBias","Curve");
+                    }
+                    double ys = 1.0;
+                    double yb = 0.0;
+                    if ( plotYScale == "linear" ) {
+                        ys = _bookModel->getDataDouble(curveIdx,
+                                                       "CurveYScale","Curve");
+                        yb = _bookModel->getDataDouble(curveIdx,
+                                                       "CurveYBias","Curve");
+                    }
                     QTransform Tscaled(T);
                     Tscaled = Tscaled.scale(xs,ys);
                     Tscaled = Tscaled.translate(xb/xs,yb/ys);
@@ -151,36 +197,7 @@ void CurvesLayoutItem::paint(QPainter *painter,
                     lineStyle = lineStyle.toLower();
 
                     // Draw curve!
-                    if ( lineStyle == "thick_line" ||
-                         lineStyle == "x_thick_line" ) {
-                        // The transform cannot be used when drawing thick lines
-                        QTransform I;
-                        pixmapPainter.setTransform(I);
-                        double w = pen.widthF();
-                        if ( lineStyle == "thick_line" ) {
-                            pen.setWidth(5.0);
-                        } else if ( lineStyle == "x_thick_line" ) {
-                            pen.setWidthF(9.0);
-                        } else {
-                            fprintf(stderr, "koviz [bad scoobs]: "
-                                    "BookView::_paintCurve: bad linestyle\n");
-                            exit(-1);
-                        }
-                        pixmapPainter.setPen(pen);
-                        QPointF pLast;
-                        for ( int i = 0; i < path->elementCount(); ++i ) {
-                            QPainterPath::Element el = path->elementAt(i);
-                            QPointF p(el.x,el.y);
-                            p = Tscaled.map(p);
-                            if  ( i > 0 ) {
-                                pixmapPainter.drawLine(pLast,p);
-                            }
-                            pLast = p;
-                        }
-                        pen.setWidthF(w);
-                        pixmapPainter.setPen(pen);
-                        pixmapPainter.setTransform(Tscaled);
-                    } else if ( lineStyle == "scatter" ) {
+                    if ( lineStyle == "scatter" ) {
                         QTransform I;
                         pixmapPainter.setTransform(I);
                         double w = pen.widthF();
@@ -202,25 +219,62 @@ void CurvesLayoutItem::paint(QPainter *painter,
                         pixmapPainter.setBrush(origBrush);
                         pixmapPainter.setTransform(Tscaled);
                     } else {
-                        // Plain line
+                        // Plain, thick or extra thick line
                         // Don't use transform for better rendering of lines
                         QTransform I;
                         pixmapPainter.setTransform(I);
-                        double w = pen.widthF();
-                        pen.setWidth(1.0);
-                        pixmapPainter.setPen(pen);
-                        QPointF pLast;
-                        for ( int i = 0; i < path->elementCount(); ++i ) {
-                            QPainterPath::Element el = path->elementAt(i);
+                        if ( path->elementCount() > 1 ) {
+                            // Draw connected lines (normal case)
+                            double w = pen.widthF();
+                            if ( lineStyle == "plain" ) {
+                                pen.setWidth(1.0);
+                            } else if ( lineStyle == "thick_line" ) {
+                                pen.setWidth(5.0);
+                            } else if ( lineStyle == "x_thick_line" ) {
+                                pen.setWidthF(9.0);
+                            } else {
+                                fprintf(stderr, "koviz [bad scoobs]: "
+                                    "layoutitem_curves.cpp: Unsupported pixmap "
+                                    "linestyle.  Should be plain, scatter,"
+                                    "thick_line or x_thick_line\n");
+                                exit(-1);
+                            }
+                            pixmapPainter.setPen(pen);
+                            QPointF pLast;
+                            for ( int i = 0; i < path->elementCount(); ++i ) {
+                                QPainterPath::Element el = path->elementAt(i);
+                                QPointF p(el.x,el.y);
+                                p = Tscaled.map(p);
+                                if  ( i > 0 ) {
+                                    pixmapPainter.drawLine(pLast,p);
+                                }
+                                pLast = p;
+                            }
+                            pen.setWidthF(w);
+                            pixmapPainter.setPen(pen);
+                        } else {
+                            // Draw point
+                            fprintf(stderr,
+                                   "koviz [bad scoobs]: layoutitem_curves.cpp: "
+                                   "points should not be rendered on pixmap "
+                                   "since they should be culled above in "
+                                   "isPixMap check.\n");
+                            exit(-1);
+                            // Keep code below since it works but no labels
+                            /*
+                            QPainterPath::Element el = path->elementAt(0);
                             QPointF p(el.x,el.y);
                             p = Tscaled.map(p);
-                            if  ( i > 0 ) {
-                                pixmapPainter.drawLine(pLast,p);
-                            }
-                            pLast = p;
+                            QBrush origBrush = pixmapPainter.brush();
+                            QBrush brush(Qt::SolidPattern);
+                            brush.setColor(color);
+                            pixmapPainter.setBrush(brush);
+                            pen.setWidth(7.0);
+                            pixmapPainter.setPen(pen);
+                            pixmapPainter.drawEllipse(p,5,5);
+                            pixmapPainter.setBrush(origBrush);
+                            */
                         }
-                        pen.setWidthF(w);
-                        pixmapPainter.setPen(pen);
                         pixmapPainter.setTransform(Tscaled);
                     }
                 }
