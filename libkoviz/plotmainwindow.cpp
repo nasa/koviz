@@ -177,7 +177,15 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
                                       _isShowTables,
                                       _unitOverrides,
                                       _dpFrame);
-    _nbDPVars->setCurrentIndex(1);
+
+    // Set current DP Tab
+    if ( _dpFiles.isEmpty() ) {
+        // If no dp files on command line, goto Vars tab
+        _nbDPVars->setCurrentIndex(0);
+    } else {
+        // If dp files on command line, goto DP tab
+        _nbDPVars->setCurrentIndex(1);
+    }
 
     // Runs Tab
     QFrame* runsFrame = new QFrame(lsplit);
