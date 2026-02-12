@@ -87,6 +87,15 @@ void YAxisLabelView::rowsInserted(const QModelIndex &pidx, int start, int end)
 // Change curve units based on current unit
 void YAxisLabelView::wheelEvent(QWheelEvent *e)
 {
+    if ( model()->signalsBlocked() ) {
+        // If the model is in a blocked state, it most likely means the
+        // last wheel event has blocked model signals while changing
+        // the units.  Do not process this event while the model is in a
+        // incompleted state of change, else the units may not be the same
+        // forall curves.
+        return;
+    }
+
     QModelIndex curvesIdx;
     if ( _bookModel()->isChildIndex(rootIndex(),"Plot","Curves") ) {
         curvesIdx = _bookModel()->getIndex(rootIndex(),"Curves","Plot");
