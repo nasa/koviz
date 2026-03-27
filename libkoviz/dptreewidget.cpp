@@ -231,6 +231,10 @@ void DPTreeWidget::_setupModel(const QString& dpSearchDir)
             this,
             SLOT(_dpLayoutChanged(QList<QPersistentModelIndex>,
                                   QAbstractItemModel::LayoutChangeHint)));
+    connect(_dpModel,
+            SIGNAL(directoryLoaded(QString)),
+            this,
+            SLOT(_dpDirectoryLoaded(QString)));
 
     // setRootPath which will fire off the async loading of the filesystem model
     _dpModel->setRootPath(dpDir);
@@ -349,6 +353,13 @@ void DPTreeWidget::_dpLayoutChanged(const QList<QPersistentModelIndex> &parents,
    }
 
    _dpTreeView->setRootIndex(proxyIdx);
+}
+
+void DPTreeWidget::_dpDirectoryLoaded(const QString &path)
+{
+    QModelIndex srcIdx = _dpModel->index(path);
+    QModelIndex proxyIdx = _dpFilterModel->mapFromSource(srcIdx);
+    _dpTreeView->setRootIndex(proxyIdx);
 }
 
 void DPTreeWidget::_setMsgLabel(const QString &msg)
