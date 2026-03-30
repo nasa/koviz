@@ -27,7 +27,7 @@ bool DPFilterProxyModel::filterAcceptsRow(int row,
                                           const QModelIndex &pidx) const
 {
     if ( ! pidx.isValid() ) {
-        return false;
+        return true;
     }
 
     bool isAccept = false;
