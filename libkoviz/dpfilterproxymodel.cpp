@@ -46,30 +46,9 @@ bool DPFilterProxyModel::filterAcceptsColumn(int col,
                                              const QModelIndex &pidx) const
 {
     if ( !pidx.isValid() ) {
-        return false;
+        return true;
     }
-
-    if ( col > 0 ) {
-        return false;
-    }
-
-    bool isAccept = false;
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
-    QRegularExpression rx(filterRegularExpression());
-#else
-    QRegExp rx(filterRegExp());
-#endif
-    QFileSystemModel* m = (QFileSystemModel*) sourceModel();
-    int nrows = m->rowCount(pidx);
-    for ( int row = 0; row < nrows ; ++row) {
-        QModelIndex idx = m->index(row,col,pidx);
-        if ( _isAccept(idx,m,rx) ) {
-            isAccept = true;
-            break;
-        }
-    }
-
-    return isAccept;
+    return col == 0 ;
 }
 
 void DPFilterProxyModel::_runsRefreshed()
