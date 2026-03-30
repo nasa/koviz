@@ -225,12 +225,6 @@ void DPTreeWidget::_setupModel(const QString& dpSearchDir)
 
     // Model is loaded asynchronously, so need to fire off an event
     // when model finishes - important on Mac, else empty DP tree
-    connect(_dpFilterModel,
-            SIGNAL(layoutChanged(QList<QPersistentModelIndex>,
-                                  QAbstractItemModel::LayoutChangeHint)),
-            this,
-            SLOT(_dpLayoutChanged(QList<QPersistentModelIndex>,
-                                  QAbstractItemModel::LayoutChangeHint)));
     connect(_dpModel,
             SIGNAL(directoryLoaded(QString)),
             this,
@@ -333,32 +327,23 @@ void DPTreeWidget::_loadDPFiles()
 }
 
 // This slot wraps a call to setRootIndex() which must be called after the dp
-// file model is ready. The layoutChangeed signal fires when the model is ready.
-void DPTreeWidget::_dpLayoutChanged(const QList<QPersistentModelIndex> &parents,
-                                    QAbstractItemModel::LayoutChangeHint hint)
-{
-   Q_UNUSED(parents);
-   Q_UNUSED(hint);
-
-   QString rootPath = _dpModel->rootPath();
-   QModelIndex srcIdx = _dpModel->index(rootPath);
-   if ( !srcIdx.isValid() ) {
-       // Model not valid yet (not sure if this ever happens)
-       return;
-   }
-   QModelIndex proxyIdx = _dpFilterModel->mapFromSource(srcIdx);
-   if (!proxyIdx.isValid()) {
-       // Model not valid yet (not sure if this ever happens)
-       return;
-   }
-
-   _dpTreeView->setRootIndex(proxyIdx);
-}
-
+// file model is ready.
 void DPTreeWidget::_dpDirectoryLoaded(const QString &path)
 {
+    if (path != _dpModel->rootPath()) {
+        return;
+    }
+
     QModelIndex srcIdx = _dpModel->index(path);
+    if (!srcIdx.isValid()) {
+        return;
+    }
+
     QModelIndex proxyIdx = _dpFilterModel->mapFromSource(srcIdx);
+    if (!proxyIdx.isValid()) {
+        return;
+    }
+
     _dpTreeView->setRootIndex(proxyIdx);
 }
 
