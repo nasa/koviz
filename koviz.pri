@@ -27,4 +27,8 @@ exists( /usr/include/mpv/client.h ) {
     LIBS += -lmpv
 }
 
+macx {
+    QMAKE_CXXFLAGS += -Wno-implicit-function-declaration
+}
+
 #CONFIG += debug
