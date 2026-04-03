@@ -662,12 +662,15 @@ int main(int argc, char *argv[])
         if ( opts.isReportRT ) {
             foreach ( QString run, runPaths ) {
                 if ( opts.start != -DBL_MAX || opts.stop != DBL_MAX ) {
-                    fprintf(stderr, "snap [warning]: when using the -rt option "
+                    fprintf(stderr, "koviz [warning]: when using the -rt option "
                                     "the -start/stop options are ignored\n");
                 }
                 VersionNumber version = TrickVersion(run).versionNumber();
                 if ( version == VersionNumber("0.0.0-0") ) {
-                    fprintf(stderr, "koviz [error]: Invalid RUN specified.\n");
+                    fprintf(stderr,"koviz [error]: The -rt option was used but "
+                                   "the specified RUN is either empty or koviz "
+				   "cannot determine the Trick version that "
+				   "generated the RUN. Abort!\n");
                     exit (-1);
                 }
                 if ( version < VersionNumber("17.0.0-0") ) {
