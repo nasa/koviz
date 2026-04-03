@@ -666,6 +666,10 @@ int main(int argc, char *argv[])
                                     "the -start/stop options are ignored\n");
                 }
                 VersionNumber version = TrickVersion(run).versionNumber();
+                if ( version == VersionNumber("0.0.0-0") ) {
+                    fprintf(stderr, "koviz [error]: Invalid RUN specified.\n");
+                    exit (-1);
+                }
                 if ( version < VersionNumber("17.0.0-0") ) {
                     fprintf(stderr, "koviz [error]: The -rt realtime option "
                             "requires Trick version 17.0.0+.\n");
