@@ -160,6 +160,7 @@ class SnapOptions : public Options
     double  timeMatchTolerance;
     QString trickhost;
     uint trickport;
+    uint virgoport;
     double trickoffset;
     QString videoFileName;
     double videoOffset;
@@ -369,6 +370,8 @@ int main(int argc, char *argv[])
     opts.add("-z:{0,1}",
              &opts.isFilterOutFlatlineZeros,false,
              "Filter out flat line zero and empty plots");
+    opts.add("-virgoport", &opts.virgoport, 64053,
+             "port for VIRGO connection");
 
     opts.parse(argc,argv, QString("koviz"), &ok);
 
@@ -1530,6 +1533,7 @@ int main(int argc, char *argv[])
             PlotMainWindow w(bookModel,
                              opts.trickhost,
                              opts.trickport,
+                             opts.virgoport,
                              opts.trickoffset,
                              videos,
                              excludePattern,
