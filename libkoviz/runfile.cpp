@@ -13,31 +13,49 @@ RunFile::RunFile(const QString &run,
                          "It does not exist, is a non-Trick formatted csv, "
                          "is an unsupported format or could not find time.\n",
                 run.toLatin1().constData());
+        if ( fi.suffix() == "h5" || fi.suffix() == "hdf5" ) {
+#ifdef HAS_HDF5
+            fprintf(stderr, "koviz [error]: Run file=%s\n"
+                    "has an hdf5 extension.  It could be that the hdf5 file "
+                    "is not Trick hdf5, has no time history or -timeName ",
+                    "unspecified.\n",
+                run.toLatin1().constData());
+#else
+            fprintf(stderr, "koviz [error]: Run file=%s,\n"
+                    "but koviz was not built with hdf5 support.  "
+                    "See user's guide section HDF5 and/or try installing "
+                    "the hdf5 devel package and then rebuild koviz.\n",
+                    run.toLatin1().constData());
+#endif
+        }
         exit(-1);
     }
 
     QString ffile = fi.absoluteFilePath();
-    _model = DataModel::createDataModel(timeNames,run,ffile);
-    _model->unmap();
-    int ncols = _model->columnCount();
-    for ( int col = 0; col < ncols; ++col ) {
-        QString param = _model->param(col)->name();
-        foreach (QString key, varMap.keys() ) {
-            if ( param == key ) {
-                break;
+    _models = DataModel::createDataModels(timeNames,run,ffile);
+    foreach ( DataModel* model, _models ) {
+        model->unmap();
+        int ncols = model->columnCount();
+        for ( int col = 0; col < ncols; ++col ) {
+            QString param = model->param(col)->name();
+            foreach (QString key, varMap.keys() ) {
+                if ( param == key ) {
+                    break;
+                }
+                QStringList vals = varMap.value(key);
+                QStringList names;
+                foreach ( QString val, vals ) {
+                    MapValue mapval(val);
+                    names.append(mapval.name());
+                }
+                if ( names.contains(param) ) {
+                    param = key;
+                    break;
+                }
             }
-            QStringList vals = varMap.value(key);
-            QStringList names;
-            foreach ( QString val, vals ) {
-                MapValue mapval(val);
-                names.append(mapval.name());
-            }
-            if ( names.contains(param) ) {
-                param = key;
-                break;
-            }
+            _param2model.insert(param,model);
+            _params.append(param);
         }
-        _params.append(param);
     }
 }
 
@@ -46,15 +64,15 @@ QStringList RunFile::params()
     return _params;
 }
 
-// Note: Since there is only a single data model with a file, all params
-//       have the same DataModel (unlike a RunDir)
+// Note: Since hdf5 files can have multiple models, different params
+//       can have different models (like a RunDir)
 DataModel *RunFile::dataModel(const QString &param)
 {
     DataModel* model = 0;
 
     if ( _params.contains(param) ) {
         // Normal case
-        model = _model;
+        model = _param2model.value(param);
     }
 
     if ( !model ) {
@@ -62,7 +80,7 @@ DataModel *RunFile::dataModel(const QString &param)
         if ( _timeNames.contains(param) ) {
             foreach ( QString timeName, _timeNames ) {
                 if ( _params.contains(timeName) ) {
-                    model = _model;
+                    model = _param2model.value(timeName);
                     break;
                 }
             }
@@ -78,8 +96,15 @@ DataModel *RunFile::dataModel(const QString &param)
                 names.append(mapval.name());
             }
             if ( names.contains(param) ) {
-                model = _model;
-                break;
+                bool isFound = false;
+                foreach (const QString& name, names ) {
+                    if ( _param2model.keys().contains(name) ) {
+                        model = _param2model.value(name);
+                        isFound = true;
+                        break;
+                    }
+                }
+                if ( isFound ) break;
             }
         }
     }
@@ -94,7 +119,7 @@ bool RunFile::isValid(const QString &run, const QStringList& timeNames)
         return false;
     }
 
-    QStringList suffixes = {"trk","csv","mot"};
+    QStringList suffixes = {"trk","csv","mot","h5","hdf5"};
     if ( !suffixes.contains(fi.suffix()) ) {
         return false;
     }
@@ -108,6 +133,14 @@ bool RunFile::isValid(const QString &run, const QStringList& timeNames)
         if ( !MotModel::isValid(run) ) {
             return false;
         }
+    } else if ( fi.suffix() == "h5" || fi.suffix() == "hdf5" ) {
+        #ifdef HAS_HDF5
+            if ( !Hdf5Model::isValid(run,timeNames) ) {
+                return false;
+            }
+        #else
+            return false;
+        #endif
     }
 
     return true;

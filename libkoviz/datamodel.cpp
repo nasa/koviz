@@ -4,28 +4,45 @@
 #include "datamodel_csv.h"
 #include "datamodel_optitrack_csv.h"
 #include "datamodel_mot.h"
+#include "datamodel_hdf5.h"
 
-DataModel *DataModel::createDataModel(const QStringList &timeNames,
-                                      const QString &runPath,
-                                      const QString &fileName)
+QList<DataModel*> DataModel::createDataModels(const QStringList &timeNames,
+                                              const QString &runPath,
+                                              const QString &fileName)
 {
-    DataModel* dataModel = 0;
+    QList<DataModel*> models;
+
     QFileInfo fi(fileName);
     if ( fi.suffix() == "trk") {
-        dataModel = new TrickModel(timeNames,runPath,fileName);
+        DataModel* m = new TrickModel(timeNames,runPath,fileName);
+        models.append(m);
     } else if ( fi.suffix() == "csv" ) {
         if ( OptiTrackCsvModel::isValid(fileName) ) {
-            dataModel = new OptiTrackCsvModel(timeNames,runPath,fileName);
+            DataModel* m = new OptiTrackCsvModel(timeNames,runPath,fileName);
+            models.append(m);
         } else {
-            dataModel = new CsvModel(timeNames,runPath,fileName);
+            DataModel* m = new CsvModel(timeNames,runPath,fileName);
+            models.append(m);
         }
     } else if ( fi.suffix() == "mot" ) {
-        dataModel = new MotModel(timeNames,runPath,fileName);
+        DataModel* m = new MotModel(timeNames,runPath,fileName);
+        models.append(m);
+    } else if ( fi.suffix() == "h5" || fi.suffix() == "hdf5" ) {
+        #ifdef HAS_HDF5
+            models = Hdf5Model::dataModels(timeNames, runPath,fileName);
+        #else
+            fprintf(stderr,"koviz [error]: DataModel::createDataModels() cannot"
+                    " handle file=\"%s\" because system does not have the "
+                    "hdf5 develoment library or cannot find "
+                    "/usr/include/H5Cpp.h\n",
+                    fileName.toLatin1().constData());
+            exit(-1);
+        #endif
     } else {
         fprintf(stderr,"koviz [error]: DataModel::createDataModel() cannot "
                        "handle file=\"%s\"\n",fileName.toLatin1().constData());
         exit(-1);
     }
 
-    return dataModel;
+    return models;
 }

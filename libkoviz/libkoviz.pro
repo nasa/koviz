@@ -114,7 +114,8 @@ SOURCES += bookmodel.cpp \
            curvemodel_integ.cpp \
            curvemodel_painterpath.cpp \
            trickview.cpp \
-           datamodel_tv.cpp
+           datamodel_tv.cpp \
+           datamodel_hdf5.cpp
 
 HEADERS  += bookmodel.h \
             bookidxview.h \
@@ -204,7 +205,8 @@ HEADERS  += bookmodel.h \
             curvemodel_integ.h \
             curvemodel_painterpath.h \
             trickview.h \
-            datamodel_tv.h
+            datamodel_tv.h \
+            datamodel_hdf5.h
 
 unix {
     FLEX  = flex

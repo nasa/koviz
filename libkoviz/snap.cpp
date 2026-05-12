@@ -413,7 +413,17 @@ DataModel *Snap::_createModel( const QString &trk)
     }
 
     try {
-        model = DataModel::createDataModel(_timeNames,trk,trk);
+        QList<DataModel*> models = DataModel::createDataModels(_timeNames,
+                                                               trk,trk);
+        if ( models.size() == 1 ) {
+            model = models.at(0);
+        } else {
+            fprintf(stderr, "koviz [todo]: Snap::_createModel(): "
+                            "Issue with file=%s. Need to support files, "
+                            "like hdf5, with more than one model.\n",
+                    trk.toLatin1().constData());
+            exit(-1);
+        }
     }
     catch (std::range_error &e) {
         _err_stream << e.what() << "\n\n";

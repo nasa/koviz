@@ -2176,9 +2176,9 @@ QList<DataModel*> runDataModels(const QString& runPath,
     QList<DataModel*> dataModels;
     QFileInfo fi(runPath);
     if ( fi.isFile() ) {
-        DataModel* dataModel = DataModel::createDataModel(timeNames,
-                                                          runPath, runPath);
-        dataModels.append(dataModel);
+        QList<DataModel*> models = DataModel::createDataModels(timeNames,
+                                                              runPath, runPath);
+        dataModels.append(models);
     } else if ( fi.isDir() ) {
 
         QDir dir(runPath);
@@ -2197,9 +2197,9 @@ QList<DataModel*> runDataModels(const QString& runPath,
                 // Skip empty files
                 continue;
             }
-            DataModel* dataModel = DataModel::createDataModel(timeNames,runPath,
-                                                              fullName);
-            dataModels.append(dataModel);
+            QList<DataModel*> models = DataModel::createDataModels(timeNames,
+                                                             runPath,fullName);
+            dataModels.append(models);
         }
         if ( dataModels.empty() ) {
             fprintf(stderr,"koviz [error]: no non-empty trk,csv,mot logfiles "\
@@ -2232,9 +2232,9 @@ bool printVarValuesAtTime(double time, double tmt, const QStringList& timeNames,
     QList<DataModel*> dataModels;
     QFileInfo fi(runPath);
     if ( fi.isFile() ) {
-        DataModel* dataModel = DataModel::createDataModel(timeNames,
-                                                          runPath, runPath);
-        dataModels.append(dataModel);
+        QList<DataModel*> models = DataModel::createDataModels(timeNames,
+                                                              runPath, runPath);
+        dataModels.append(models);
     } else if ( fi.isDir() ) {
 
         QDir dir(runPath);
@@ -2248,9 +2248,9 @@ bool printVarValuesAtTime(double time, double tmt, const QStringList& timeNames,
                 continue;
             }
             QString fullName = dir.absoluteFilePath(fileName);
-            DataModel* dataModel = DataModel::createDataModel(timeNames,runPath,
-                                                              fullName);
-            dataModels.append(dataModel);
+            QList<DataModel*> models = DataModel::createDataModels(timeNames,
+                                                              runPath,fullName);
+            dataModels.append(models);
         }
         if ( dataModels.empty() ) {
             fprintf(stderr,"koviz [error]: no trk,csv,mot logfiles found in "

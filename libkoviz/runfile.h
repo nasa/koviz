@@ -6,6 +6,7 @@
 #include "datamodel_csv.h"
 #include "datamodel_optitrack_csv.h"
 #include "datamodel_mot.h"
+#include "datamodel_hdf5.h"
 
 #include <QDir>
 #include <QString>
@@ -27,7 +28,8 @@ public:
 private:
     QStringList _timeNames;
     const QHash<QString, QStringList> _varMap;
-    DataModel* _model;
+    QList<DataModel*> _models;
+    QHash<QString, DataModel*> _param2model;
     QStringList _params;
 };
 

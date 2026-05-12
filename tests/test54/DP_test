@@ -1,0 +1,12 @@
+Koviz
+
+PLOTS:
+  Page 1: "HDF5-Trk Comparison"
+
+    Plot 1: "Altitude"
+      x_variable: "sys.exec.out.time"
+      y_variable: "ball.altimeter.output.altitude"
+
+    Plot 2: "X Position"
+      x_variable: "sys.exec.out.time"
+      y_variable: "ball.state.out.position[0]"

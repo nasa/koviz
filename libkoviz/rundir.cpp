@@ -28,27 +28,30 @@ RunDir::RunDir(const QString &run,
 
     foreach (QString file, files) {
         QString ffile = run + "/" + file;
-        DataModel* model = DataModel::createDataModel(timeNames,run,ffile);
-        model->unmap();
-        int ncols = model->columnCount();
-        for ( int col = 0; col < ncols; ++col ) {
-            QString param = model->param(col)->name();
-            foreach (QString key, varMap.keys() ) {
-                if ( param == key ) {
-                    break;
+        QList<DataModel*> models = DataModel::createDataModels(timeNames,
+                                                               run,ffile);
+        foreach ( DataModel* model, models ) {
+            model->unmap();
+            int ncols = model->columnCount();
+            for ( int col = 0; col < ncols; ++col ) {
+                QString param = model->param(col)->name();
+                foreach (QString key, varMap.keys() ) {
+                    if ( param == key ) {
+                        break;
+                    }
+                    QStringList vals = varMap.value(key);
+                    QStringList names;
+                    foreach ( QString val, vals ) {
+                        MapValue mapval(val);
+                        names.append(mapval.name());
+                    }
+                    if ( names.contains(param) ) {
+                        param = key;
+                        break;
+                    }
                 }
-                QStringList vals = varMap.value(key);
-                QStringList names;
-                foreach ( QString val, vals ) {
-                    MapValue mapval(val);
-                    names.append(mapval.name());
-                }
-                if ( names.contains(param) ) {
-                    param = key;
-                    break;
-                }
+                _param2model.insert(param,model);
             }
-            _param2model.insert(param,model);
         }
     }
 }
@@ -121,7 +124,7 @@ QStringList RunDir::_fileList(const QString& run,
     }
 
     QStringList filter;
-    filter << "*.trk" << "*.csv" << "*.mot";
+    filter << "*.trk" << "*.csv" << "*.mot" << "*.h5" << "*.hdf5" ;
 
     QRegularExpression filterRgx(filterPattern);
     QRegularExpression excludeRgx(excludePattern);

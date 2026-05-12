@@ -31,9 +31,9 @@ class DataModel : public QAbstractTableModel
 
     ~DataModel() {}
 
-    static DataModel* createDataModel(const QStringList& timeNames,
-                                      const QString& runPath,
-                                      const QString& fileName);
+    static QList<DataModel*> createDataModels(const QStringList& timeNames,
+                                              const QString& runPath,
+                                              const QString& fileName);
 
     QString runPath() const { return _runPath; }
     QString fileName() const { return _fileName; }

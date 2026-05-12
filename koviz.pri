@@ -27,6 +27,11 @@ exists( /usr/include/mpv/client.h ) {
     LIBS += -lmpv
 }
 
+exists (/usr/include/H5Cpp.h) {
+    DEFINES += HAS_HDF5
+    LIBS += -lhdf5_cpp -lhdf5
+}
+
 macx {
     QMAKE_CXXFLAGS += -Wno-implicit-function-declaration
 }

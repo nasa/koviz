@@ -301,7 +301,17 @@ void Thread::_frameModelSet()
     }
     try {
         QString trk(fileNameLogFrame);
-        _frameModel = DataModel::createDataModel(_timeNames,trk,trk);
+        QList<DataModel*> models = DataModel::createDataModels(_timeNames,
+                                                               trk,trk);
+        if ( models.size() == 1 ) {
+            _frameModel = models.at(0);
+        } else {
+            fprintf(stderr, "koviz [todo]: Thread::_frameModelSet(): "
+                            "Issue with file=%s. Need to support files, "
+                            "like hdf5, with more than one model.\n",
+                    trk.toLatin1().constData());
+            exit(-1);
+        }
     }
     catch (std::range_error &e) {
         _err_stream << e.what() << "\n\n";
