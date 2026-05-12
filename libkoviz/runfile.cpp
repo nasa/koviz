@@ -17,7 +17,7 @@ RunFile::RunFile(const QString &run,
 #ifdef HAS_HDF5
             fprintf(stderr, "koviz [error]: Run file=%s\n"
                     "has an hdf5 extension.  It could be that the hdf5 file "
-                    "is not Trick hdf5, has no time history or -timeName ",
+                    "is not Trick hdf5, has no time history or -timeName "
                     "unspecified.\n",
                 run.toLatin1().constData());
 #else
