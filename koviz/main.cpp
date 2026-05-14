@@ -26,8 +26,12 @@ using namespace std;
 #include "libkoviz/plotmainwindow.h"
 #include "libkoviz/dp.h"
 #include "libkoviz/snap.h"
-#include "libkoviz/datamodel_trick.h"
+#include "libkoviz/datamodel_acssl_xls.h"
 #include "libkoviz/datamodel_csv.h"
+#include "libkoviz/datamodel_hdf5.h"
+#include "libkoviz/datamodel_mot.h"
+#include "libkoviz/datamodel_optitrack_csv.h"
+#include "libkoviz/datamodel_trick.h"
 #include "libkoviz/trick_types.h"
 #include "libkoviz/session.h"
 #include "libkoviz/versionnumber.h"
@@ -467,11 +471,20 @@ int main(int argc, char *argv[])
     if ( timeName.isEmpty() && session ) {
         timeName = session->timeName();
     }
+    QStringList timeNames;
     if ( timeName.isEmpty() ) {
-        timeName = "sys.exec.out.time";
+        // Make default timeNames list if timeNames not set by user
+        timeNames.append(TrickModel::TimeName);
+        timeNames.append(AcsslXlsModel::TimeName);
+        timeNames.append(CsvModel::TimeName);
+        timeNames.append(OptiTrackCsvModel::TimeName);
+        timeNames.append(Hdf5Model::TimeName);
+        timeNames.append(MotModel::TimeName);
+        timeNames.removeDuplicates();
+    } else {
+        timeNames = getTimeNames(timeName);
     }
-    QStringList timeNames = getTimeNames(timeName);
-    timeName = timeNames.at(0);
+    timeName = timeNames.at(0); // Note that sys.exec.out.time is default
 
     // Start time
     double startTime = opts.start;

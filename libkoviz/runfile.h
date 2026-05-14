@@ -7,6 +7,7 @@
 #include "datamodel_optitrack_csv.h"
 #include "datamodel_mot.h"
 #include "datamodel_hdf5.h"
+#include "datamodel_acssl_xls.h"
 
 #include <QDir>
 #include <QString>

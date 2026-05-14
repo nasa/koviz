@@ -33,6 +33,7 @@ class OptiTrackCsvModel : public DataModel
                       QObject *parent = 0);
     ~OptiTrackCsvModel();
 
+    static const QString TimeName;
     const Parameter* param(int col) const override ;
     void map() override;
     void unmap() override;

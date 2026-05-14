@@ -124,7 +124,7 @@ QStringList RunDir::_fileList(const QString& run,
     }
 
     QStringList filter;
-    filter << "*.trk" << "*.csv" << "*.mot" << "*.h5" << "*.hdf5" ;
+    filter << "*.trk" << "*.csv" << "*.mot" << "*.h5" << "*.hdf5" << "*.xls" ;
 
     QRegularExpression filterRgx(filterPattern);
     QRegularExpression excludeRgx(excludePattern);
@@ -156,17 +156,23 @@ QStringList RunDir::_fileList(const QString& run,
         }
     }
 
-    QStringList invalidCsvFiles;
+    QStringList invalidFiles;
     foreach (const QString& file, files ) {
         QFileInfo fi(file);
         if ( fi.suffix() == "csv" ) {
             QString fullPath = runDir.absoluteFilePath(file);
             if ( !CsvModel::isValid(fullPath,timeNames) ) {
-                invalidCsvFiles.append(file);
+                invalidFiles.append(file);
+            }
+        }
+        if ( fi.suffix() == "xls" ) {
+            QString fullPath = runDir.absoluteFilePath(file);
+            if ( !AcsslXlsModel::isValid(fullPath,timeNames) ) {
+                invalidFiles.append(file);
             }
         }
     }
-    foreach (const QString& file, invalidCsvFiles ) {
+    foreach (const QString& file, invalidFiles ) {
         files.removeAll(file);
     }
 

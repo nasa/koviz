@@ -3,6 +3,9 @@
 QString OptiTrackCsvModel::_err_string;
 QTextStream OptiTrackCsvModel::_err_stream(&OptiTrackCsvModel::_err_string);
 
+// Optitrack time is a calculation.  Just made time the same as Trick.
+const QString OptiTrackCsvModel::TimeName = QString("sys.exec.out.time");
+
 OptiTrackCsvModel::OptiTrackCsvModel(const QStringList& timeNames,
                    const QString &runPath,
                    const QString& csvFile,
@@ -57,7 +60,7 @@ void OptiTrackCsvModel::_init()
             // Create sys.exec.out.time (DeviceFrame/CaptureFrameRate)
             int col = _timeCol; // time column is 0
             Parameter* param = new Parameter;
-            param->setName("sys.exec.out.time");
+            param->setName(OptiTrackCsvModel::TimeName);
             param->setUnit("s");
             _col2param.insert(col,param);
             _paramName2col.insert(param->name(),col);

@@ -6,6 +6,7 @@
 
 QString TrickModel::_err_string;
 QTextStream TrickModel::_err_stream(&TrickModel::_err_string);
+const QString TrickModel::TimeName = QString("sys.exec.out.time");
 
 TrickModel::TrickModel(const QStringList& timeNames,
                        const QString &runPath,

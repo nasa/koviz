@@ -75,6 +75,8 @@ class TrickModel : public DataModel
                        QObject *parent = 0);
     ~TrickModel();
 
+    static const QString TimeName;
+
     const Parameter* param(int col) const override ;
 
     void map() override;

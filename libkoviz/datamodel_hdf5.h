@@ -54,6 +54,7 @@ class Hdf5Model : public DataModel
                        QObject *parent = 0);
     ~Hdf5Model();
 
+    static const QString TimeName;
     const Parameter* param(int col) const override ;
     void map() override;
     void unmap() override;

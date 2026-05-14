@@ -2,6 +2,7 @@
 
 QString Hdf5Model::_err_string;
 QTextStream Hdf5Model::_err_stream(&Hdf5Model::_err_string);
+const QString Hdf5Model::TimeName = QString("time");
 
 Hdf5Model::Hdf5Model(const QStringList &timeNames,
                      const QString &runPath,

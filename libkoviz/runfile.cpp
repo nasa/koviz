@@ -11,6 +11,7 @@ RunFile::RunFile(const QString &run,
     if ( ! RunFile::isValid(run,timeNames) ) {
         fprintf(stderr, "koviz [error]: Invalid run file=%s\n"
                          "It does not exist, is a non-Trick formatted csv, "
+                         "a non-Tab delimited non-Acssl formatted xls, "
                          "is an unsupported format or could not find time.\n",
                 run.toLatin1().constData());
         if ( fi.suffix() == "h5" || fi.suffix() == "hdf5" ) {
@@ -119,7 +120,7 @@ bool RunFile::isValid(const QString &run, const QStringList& timeNames)
         return false;
     }
 
-    QStringList suffixes = {"trk","csv","mot","h5","hdf5"};
+    QStringList suffixes = {"trk","csv","mot","h5","hdf5","xls"};
     if ( !suffixes.contains(fi.suffix()) ) {
         return false;
     }
@@ -141,6 +142,10 @@ bool RunFile::isValid(const QString &run, const QStringList& timeNames)
         #else
             return false;
         #endif
+    } else if ( fi.suffix() == "xls" ) {
+        if ( !AcsslXlsModel::isValid(run,timeNames) ) {
+            return false;
+        }
     }
 
     return true;

@@ -3,6 +3,8 @@
 QString MotModel::_err_string;
 QTextStream MotModel::_err_stream(&MotModel::_err_string);
 
+const QString MotModel::TimeName = QString("time");
+
 MotModel::MotModel(const QStringList& timeNames,
                    const QString &runPath,
                    const QString& motfile,
@@ -69,9 +71,7 @@ void MotModel::_init()
     foreach ( QString item, items ) {
         QString name = item.trimmed();
         QString unit = "--";
-        if ( name == "time" ) {
-            // Map "time" to "sys.exec.out.time"
-            name = "sys.exec.out.time";
+        if ( name == MotModel::TimeName ) {
             unit = "s";
         }
 
@@ -93,7 +93,7 @@ void MotModel::_init()
     }
 
     // Time param should be column 0
-    if ( _col2param.value(0)->name() == "sys.exec.out.time" ) {
+    if ( _col2param.value(0)->name() == MotModel::TimeName ) {
         _timeCol = 0;
     } else {
         fprintf(stderr, "koviz [error]: \"time\" param not found in "
@@ -158,7 +158,7 @@ void MotModel::unmap()
 int MotModel::paramColumn(const QString &paramName) const
 {
     int col = _paramName2col.value(paramName,-1);
-    if ( paramName == "sys.exec.out.time" ) {
+    if ( paramName == MotModel::TimeName ) {
         col = _timeCol;
     }
     return col;

@@ -34,6 +34,7 @@ class CsvModel : public DataModel
                       QObject *parent = 0);
     ~CsvModel();
 
+    static const QString TimeName;
     const Parameter* param(int col) const override ;
     void map() override;
     void unmap() override;

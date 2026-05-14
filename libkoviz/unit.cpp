@@ -492,6 +492,7 @@ QHash<QPair<QString, QString>, double> Unit::_initScales()
 
     // Time
     map.insert(QPair<QString,QString>("s","s"),       1.0);
+    map.insert(QPair<QString,QString>("s","Seconds"), 1.0);
     map.insert(QPair<QString,QString>("s","min"),    60.0);
     map.insert(QPair<QString,QString>("s","hr"),   3600.0);
     map.insert(QPair<QString,QString>("s","day"), 86400.0);

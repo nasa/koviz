@@ -1,5 +1,5 @@
-#ifndef MOT_MODEL_H
-#define MOT_MODEL_H
+#ifndef ACSSL_XLS_MODEL_H
+#define ACSSL_XLS_MODEL_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,30 +9,33 @@
 #include <QTextStream>
 #include <QProgressDialog>
 #include <QFileInfo>
+#include <QElapsedTimer>
+#include <QApplication>
 #include <stdexcept>
 
 #include "datamodel.h"
 #include "parameter.h"
 #include "unit.h"
 
-class MotModel;
-class MotModelIterator;
+class AcsslXlsModel;
+class AcsslXlsModelIterator;
 
-class MotModel : public DataModel
+class AcsslXlsModel : public DataModel
 {
   Q_OBJECT
 
-  friend class MotModelIterator;
+  friend class AcsslXlsModelIterator;
 
   public:
 
-    explicit MotModel(const QStringList &timeNames,
+    explicit AcsslXlsModel(const QStringList &timeNames,
                       const QString &runPath,
-                      const QString &motfile,
+                      const QString &xlsfile,
                       QObject *parent = 0);
-    ~MotModel();
+    ~AcsslXlsModel();
 
     static const QString TimeName;
+
     const Parameter* param(int col) const override ;
     void map() override;
     void unmap() override;
@@ -45,12 +48,13 @@ class MotModel : public DataModel
     QVariant data (const QModelIndex & index,
                    int role = Qt::DisplayRole ) const override;
 
-    static bool isValid( const QString& motFile ) ;
+    static bool isValid( const QString& xlsFile,
+                         const QStringList& timeNames);
 
   private:
 
     QStringList _timeNames;
-    QString _motfile;
+    QString _xlsfile;
 
     int _nrows;
     int _ncols;
@@ -58,7 +62,7 @@ class MotModel : public DataModel
 
     QHash<int,Parameter*> _col2param;
     QHash<QString,int> _paramName2col;
-    MotModelIterator* _iteratorTimeIndex;
+    AcsslXlsModelIterator* _iteratorTimeIndex;
 
     double* _data;
 
@@ -66,20 +70,21 @@ class MotModel : public DataModel
     static QTextStream _err_stream;
 
     void _init();
-    int _idxAtTimeBinarySearch (MotModelIterator *it,
+    int _idxAtTimeBinarySearch (AcsslXlsModelIterator *it,
                                int low, int high, double time);
 
-    inline double _convert(const QString& s);
+    inline double _strtod(const char* ptr, const char *eof, char **endptr);
+    QHash<QString,int> _str2id;
 };
 
-class MotModelIterator : public ModelIterator
+class AcsslXlsModelIterator : public ModelIterator
 {
   public:
 
-    inline MotModelIterator(): i(0) {}
+    inline AcsslXlsModelIterator(): i(0) {}
 
-    inline MotModelIterator(int row, // iterator pos
-                            const MotModel* model,
+    inline AcsslXlsModelIterator(int row, // iterator pos
+                            const AcsslXlsModel* model,
                             int tcol, int xcol, int ycol):
         i(row),
         _model(model),
@@ -87,7 +92,7 @@ class MotModelIterator : public ModelIterator
     {
     }
 
-    virtual ~MotModelIterator() {}
+    virtual ~AcsslXlsModelIterator() {}
 
     void start() override
     {
@@ -104,7 +109,7 @@ class MotModelIterator : public ModelIterator
         return ( i >= _model->rowCount() ) ;
     }
 
-    MotModelIterator* at(int n) override
+    AcsslXlsModelIterator* at(int n) override
     {
         i = n;
         return this;
@@ -128,11 +133,11 @@ class MotModelIterator : public ModelIterator
   private:
 
     int i;
-    const MotModel* _model;
+    const AcsslXlsModel* _model;
     int _tcol;
     int _xcol;
     int _ycol;
 };
 
 
-#endif // MOTMODEL_H
+#endif // ACSSL_XLSMODEL_H

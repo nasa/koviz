@@ -1,30 +1,27 @@
-#include "datamodel_csv.h"
+#include "datamodel_acssl_xls.h"
 
-QString CsvModel::_err_string;
-QTextStream CsvModel::_err_stream(&CsvModel::_err_string);
+QString AcsslXlsModel::_err_string;
+QTextStream AcsslXlsModel::_err_stream(&AcsslXlsModel::_err_string);
+const QString AcsslXlsModel::TimeName = QString("ELAPSED_SIM_TIME");
 
-// Csv is normally Trick, but can be any csv, so this is a guess
-const QString CsvModel::TimeName = QString("sys.exec.out.time");
-
-CsvModel::CsvModel(const QStringList& timeNames,
+AcsslXlsModel::AcsslXlsModel(const QStringList& timeNames,
                    const QString &runPath,
-                   const QString& csvfile,
+                   const QString& xlsfile,
                    QObject *parent) :
-    DataModel(timeNames, runPath, csvfile, parent),
-    _timeNames(timeNames),_csvfile(csvfile),
-    _nrows(0), _ncols(0),_iteratorTimeIndex(0),
-    _data(0)
+    DataModel(timeNames, runPath, xlsfile, parent),
+    _timeNames(timeNames), _xlsfile(xlsfile),
+    _nrows(0), _ncols(0), _iteratorTimeIndex(0), _data(0)
 {
     _init();
 }
 
-void CsvModel::_init()
+void AcsslXlsModel::_init()
 {
-    QFile file(_csvfile);
+    QFile file(_xlsfile);
 
     if (!file.open(QIODevice::ReadOnly)) {
         _err_stream << "koviz [error]: could not open "
-                    << _csvfile << "\n";
+                    << _xlsfile << "\n";
         throw std::runtime_error(_err_string.toLatin1().constData());
     }
     QTextStream in(&file);
@@ -35,39 +32,23 @@ void CsvModel::_init()
     #endif
 
     #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-        const auto SkipEmptyParts = Qt::SkipEmptyParts ;
+        const auto KeepEmptyParts = Qt::KeepEmptyParts ;
     #else
-        const auto SkipEmptyParts = QString::SkipEmptyParts;
+        const auto KeepEmptyParts = QString::KeepEmptyParts;
     #endif
 
     QString line0 = in.readLine();
-    QStringList items = line0.split(',',SkipEmptyParts);
-    int col = 0;
-    foreach ( QString item, items ) {
-        QString name;
-        QString unit;
-        if ( item.contains('{') && item.contains('}') ) {
-            // Unit is between curlies
-            int i = item.indexOf('{');
-            int j = item.indexOf('}');
-            if ( i < j ) {
-                unit = item.mid(i+1,j-i-1);
-                if ( !Unit::isUnit(unit) ) {
-                    fprintf(stderr,"koviz [warning]: Unsupported "
-                                   "unit=\"%s\" in file=\"%s\"\n",
-                                   unit.toLatin1().constData(),
-                                   _csvfile.toLatin1().constData());
-                    unit = "--";
-                }
-            }
-            // Assume parameter name precedes unit
-            if ( i > 0 ) {
-                name = item.left(i-1).trimmed();
-            }
-        } else {
-            name = item.trimmed();
-            unit = "--";
-        }
+    QString line1 = in.readLine();
+    QStringList names = line0.split('\t',KeepEmptyParts);
+    QStringList units = line1.split('\t',KeepEmptyParts);
+    if ( names.size() != units.size() ) {
+        fprintf(stderr, "koviz [error]: Acssl xls file=%s top two lines should "
+                "be names and units, but tab delimited name and units have "
+                "different number of items\n", _xlsfile.toLatin1().constData());
+    }
+    for ( int col = 0 ; col < names.size(); ++col ) {
+        QString name = names.at(col);
+        QString unit = units.at(col);
 
         Parameter* param = new Parameter;
         param->setName(name);
@@ -75,10 +56,8 @@ void CsvModel::_init()
 
         _col2param.insert(col,param);
         _paramName2col.insert(name,col);
-
-        ++col;
     }
-    _ncols = col;
+    _ncols = names.size();
 
     // Make sure time param exists in model and set time column
     bool isFoundTime = false;
@@ -91,13 +70,13 @@ void CsvModel::_init()
     }
     if ( ! isFoundTime ) {
         _err_stream << "koviz [error]: couldn't find time param \""
-                    << _timeNames.join("=") << "\" in file=" << _csvfile
+                    << _timeNames.join("=") << "\" in file=" << _xlsfile
                     << ".  Try setting -timeName on commandline option.";
         throw std::runtime_error(_err_string.toLatin1().constData());
     }
 
-    _iteratorTimeIndex = new CsvModelIterator(0,this,
-                                              _timeCol,_timeCol,_timeCol);
+    _iteratorTimeIndex = new AcsslXlsModelIterator(0,this,
+                                                   _timeCol,_timeCol,_timeCol);
 
     qint64 fileSize = file.size();
     if (fileSize == 0) {
@@ -120,9 +99,8 @@ void CsvModel::_init()
     bool isEndNewLine = false;
     if (fileSize > 0) {
         qint64 i = fileSize - 1;
-        // Skip trailing spaces/tabs/CR
-        while (i >= 0 && (data[i] == ' ' ||
-                          data[i] == '\t' || data[i] == '\r')) {
+        // Skip trailing spaces/CR
+        while (i >= 0 && (data[i] == ' ' || data[i] == '\r')) {
             --i;
         }
         if (i >= 0 && data[i] == '\n') {
@@ -133,7 +111,8 @@ void CsvModel::_init()
         ++_nrows;  // count last row without newline
     }
     if ( _nrows > 0 ) {
-        --_nrows; // take off header
+        --_nrows; // take off header names
+        --_nrows; // take off header units
     }
 
     // Return if no data
@@ -159,25 +138,29 @@ void CsvModel::_init()
         progressLoad->setWindowModality(Qt::WindowModal);
     }
 
-    // Skip over header
+    // Skip over header name and units lines
     qint64 pos = 0;
-    while (pos < fileSize && data[pos] != '\n') {
+    while (pos < fileSize && data[pos] != '\n') {  // Skip over names
+        ++pos;
+    }
+    ++pos; // Skip over '\n'
+    while (pos < fileSize && data[pos] != '\n') {  // Skip over units
         ++pos;
     }
     ++pos; // Skip over '\n'
 
     int row = 0;
-    col = 0;
+    int col = 0;
     const char* ptr = &data[pos];
     while (ptr < eof) {
         char* endptr;
         double val = _strtod(ptr,eof,&endptr);
         _data[row*_ncols+col] = val;
         ptr = endptr;
-        while (ptr < eof && *ptr != ',' && *ptr != '\n') {
+        while (ptr < eof && *ptr != '\t' && *ptr != '\n') {
             ++ptr; // Advance pointer to delimeter (e.g. past trailing spaces)
         }
-        if ( *ptr == ',') {
+        if ( *ptr == '\t') {
             ++col;
             ++ptr;
         } else if ( *ptr == '\n' ) {
@@ -221,9 +204,9 @@ void CsvModel::_init()
 
 // This behaves like strtod().  It parses out the value pointed at by ptr,
 // and then sets the endptr to character after last char of numeric
-double CsvModel::_strtod(const char *ptr, const char* eof, char **endptr)
+double AcsslXlsModel::_strtod(const char *ptr, const char* eof, char **endptr)
 {
-    if ( ptr >= eof || ptr[0] == ',' || ptr[0] == '\n' || ptr[0] == '\r' ) {
+    if ( ptr >= eof || ptr[0] == '\t' || ptr[0] == '\n' || ptr[0] == '\r' ) {
         // Empty field, return NaN
         *endptr = const_cast<char*>(ptr);
         return (std::numeric_limits<double>::quiet_NaN());
@@ -244,7 +227,7 @@ double CsvModel::_strtod(const char *ptr, const char* eof, char **endptr)
         // strtod skipped value since non-numeric,
         // so try to parse string into a value
         const char* eptr = ptr;
-        while (*eptr != ',' && *eptr != '\n' && eptr != eof ) {
+        while (*eptr != '\t' && *eptr != '\n' && eptr != eof ) {
             ++eptr;
         }
         *endptr = const_cast<char*>(eptr);
@@ -269,25 +252,25 @@ double CsvModel::_strtod(const char *ptr, const char* eof, char **endptr)
     return val;
 }
 
-void CsvModel::map()
+void AcsslXlsModel::map()
 {
 }
 
-void CsvModel::unmap()
+void AcsslXlsModel::unmap()
 {
 }
 
-int CsvModel::paramColumn(const QString &paramName) const
+int AcsslXlsModel::paramColumn(const QString &paramName) const
 {
     return _paramName2col.value(paramName,-1);
 }
 
-ModelIterator *CsvModel::begin(int tcol, int xcol, int ycol) const
+ModelIterator *AcsslXlsModel::begin(int tcol, int xcol, int ycol) const
 {
-    return new CsvModelIterator(0,this,tcol,xcol,ycol);
+    return new AcsslXlsModelIterator(0,this,tcol,xcol,ycol);
 }
 
-CsvModel::~CsvModel()
+AcsslXlsModel::~AcsslXlsModel()
 {
     foreach ( Parameter* param, _col2param.values() ) {
         delete param;
@@ -303,17 +286,17 @@ CsvModel::~CsvModel()
     }
 }
 
-const Parameter* CsvModel::param(int col) const
+const Parameter* AcsslXlsModel::param(int col) const
 {
     return _col2param.value(col);
 }
 
-int CsvModel::indexAtTime(double time)
+int AcsslXlsModel::indexAtTime(double time)
 {
     return _idxAtTimeBinarySearch(_iteratorTimeIndex,0,rowCount()-1,time);
 }
 
-int CsvModel::_idxAtTimeBinarySearch (CsvModelIterator* it,
+int AcsslXlsModel::_idxAtTimeBinarySearch (AcsslXlsModelIterator* it,
                                        int low, int high, double time)
 {
         if (high <= 0 ) {
@@ -366,7 +349,7 @@ int CsvModel::_idxAtTimeBinarySearch (CsvModelIterator* it,
         }
 }
 
-int CsvModel::rowCount(const QModelIndex &pidx) const
+int AcsslXlsModel::rowCount(const QModelIndex &pidx) const
 {
     if ( ! pidx.isValid() ) {
         return _nrows;
@@ -375,7 +358,7 @@ int CsvModel::rowCount(const QModelIndex &pidx) const
     }
 }
 
-int CsvModel::columnCount(const QModelIndex &pidx) const
+int AcsslXlsModel::columnCount(const QModelIndex &pidx) const
 {
     if ( ! pidx.isValid() ) {
         return _ncols;
@@ -385,7 +368,7 @@ int CsvModel::columnCount(const QModelIndex &pidx) const
 }
 
 
-QVariant CsvModel::data(const QModelIndex &idx, int role) const
+QVariant AcsslXlsModel::data(const QModelIndex &idx, int role) const
 {
     Q_UNUSED(role);
     QVariant val;
@@ -399,13 +382,28 @@ QVariant CsvModel::data(const QModelIndex &idx, int role) const
     return val;
 }
 
-bool CsvModel::isValid(const QString &csvFile, const QStringList &timeNames)
+bool AcsslXlsModel::isValid(const QString &xlsFile,const QStringList &timeNames)
 {
-    QFile file(csvFile);
+    QFile file(xlsFile);
 
     if (!file.open(QIODevice::ReadOnly)) {
         return false;
     }
+
+    // Reject binary xls files (Acssl is tab delimited ascii)
+    const QByteArray oleSig = QByteArray::fromHex("D0CF11E0A1B11AE1");
+    const QByteArray zipSig = QByteArray::fromHex("504B0304");
+    QByteArray head = file.read(256);
+    if (head.startsWith(oleSig)) {
+        file.close();
+        return false;
+    }
+    if (head.startsWith(zipSig)) {
+        file.close();
+        return false;
+    }
+    file.seek(0); // Rewind before text parsing
+
     QTextStream in(&file);
     #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         in.setEncoding(QStringConverter::Utf8);
@@ -420,25 +418,27 @@ bool CsvModel::isValid(const QString &csvFile, const QStringList &timeNames)
     #endif
 
     // Get list of variable names
-    QStringList names;
     QString line0 = in.readLine();
-    QStringList items = line0.split(',',KeepEmptyParts);
-    foreach ( QString item, items ) {
-        QString name;
-        if ( item.contains('{') ) {
-            // Name left of unit between curlies
-            int i = item.indexOf('{');
-            if ( i > 0 ) {
-                name = item.left(i-1).trimmed();
-            }
-        } else {
-            name = item.trimmed();
+    QString line1 = in.readLine();
+    QStringList names = line0.split('\t',KeepEmptyParts);
+    QStringList units = line1.split('\t',KeepEmptyParts);
+    if ( names.size() != units.size() ) {
+        return false;
+    }
+
+    // If any unit is a numeric value other than {1}!, this is not Acssl
+    // since second row in xls file should be units, not values
+    foreach ( QString unit, units ) {
+        bool ok;
+        QString u = unit.trimmed();
+        if ( u.isEmpty() || u == "1" ) {
+            continue;
         }
-        if ( name.isEmpty() ) {
-            file.close();
+        double x = u.toDouble(&ok);
+        Q_UNUSED(x);
+        if ( ok ) {
             return false;
         }
-        names.append(name);
     }
 
     // Ensure time param exists
@@ -454,10 +454,21 @@ bool CsvModel::isValid(const QString &csvFile, const QStringList &timeNames)
         return false;
     }
 
-    // Sanity check second line to ensure num cols is same as num header cols
-    QString line1 = in.readLine();
-    if ( !line1.isEmpty() ) {  // A single line header with no data is valid
-        items = line1.split(',',KeepEmptyParts);
+    // Ensure "Seconds" is time unit
+    for ( int i = 0; i < names.size(); ++i ) {
+        QString name = names.at(i);
+        if ( timeNames.contains(name) ) {
+            QString timeUnit = units.at(i);
+            if ( timeUnit != "Seconds" && timeUnit != "s" ) {
+                return false;
+            }
+        }
+    }
+
+    // Sanity check 3rd line to ensure num cols is same as num header cols
+    QString line2 = in.readLine();
+    if ( !line2.isEmpty() ) {  // A two line header with no data is valid
+        QStringList items = line2.split('\t',KeepEmptyParts);
         if ( items.size() != names.size() ) {
             file.close();
             return false;
