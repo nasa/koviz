@@ -49,6 +49,10 @@ void AcsslXlsModel::_init()
     for ( int col = 0 ; col < names.size(); ++col ) {
         QString name = names.at(col);
         QString unit = units.at(col);
+        if ( unit == "Seconds" ) {
+            // Normalize time unit
+            unit = "s";
+        }
 
         Parameter* param = new Parameter;
         param->setName(name);
