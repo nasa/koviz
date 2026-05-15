@@ -32,6 +32,13 @@ exists (/usr/include/H5Cpp.h) {
     LIBS += -lhdf5_cpp -lhdf5
 }
 
+exists (/usr/include/hdf5/serial/H5Cpp.h) {
+    DEFINES += HAS_HDF5
+    INCLUDEPATH += /usr/include/hdf5/serial
+    # LIBS in koviz.pro
+}
+
+
 macx {
     QMAKE_CXXFLAGS += -Wno-implicit-function-declaration
 }

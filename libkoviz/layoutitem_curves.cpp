@@ -1080,7 +1080,11 @@ void CurvesLayoutItem::paintHLines(QPainter *painter,
         double placement = _bookModel->getDataDouble(hlineIdx,
                                                      "HLineLabelPlacement");
         QFontMetrics fm = painter->fontMetrics();
-        int txtWidth = fm.horizontalAdvance(label);
+        #if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
+            int txtWidth = fm.horizontalAdvance(label);
+        #else
+            int txtWidth = fm.width(label);
+        #endif
         int chw = fm.averageCharWidth();
         if ( placement == 0 ) {
             // drawPt is on left, add a character width margin

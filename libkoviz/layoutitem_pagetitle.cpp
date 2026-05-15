@@ -206,7 +206,11 @@ void PageTitleLayoutItem::paint(QPainter *painter,
     //
     font.setPointSize(14);
     painter->setFont(font);
-    w = fm1.horizontalAdvance(title1);
+    #if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
+        w = fm1.horizontalAdvance(title1);
+    #else
+        w = fm1.width(title1);
+    #endif
     x = R.width()/2-w/2;
     double margin = 2*fm1.averageCharWidth();
     if ( x+w >= leftTitle34-margin ) {
@@ -234,7 +238,11 @@ void PageTitleLayoutItem::paint(QPainter *painter,
         y += fm1.descent() + fm1.leading() + fm2.ascent();
         if ( lines.size() == 1 ) {
             // single RUN
-            w = fm2.horizontalAdvance(title2);
+            #if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
+                w = fm2.horizontalAdvance(title2);
+            #else
+                w = fm2.width(title2);
+            #endif
             x = R.width()/2-w/2;
             double margin = 2*fm2.averageCharWidth();
             if ( x+w >= leftTitle34-margin ) {
@@ -261,7 +269,11 @@ void PageTitleLayoutItem::paint(QPainter *painter,
             } else {
                 s = s1 + "," + s2 ;
             }
-            w = fm2.horizontalAdvance(s);
+            #if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
+                w = fm2.horizontalAdvance(s);
+            #else
+                w = fm2.width(s);
+            #endif
             x = R.width()/2-w/2;
             double margin = 2*fm2.averageCharWidth();
             if ( x+w >= leftTitle34-margin ) {

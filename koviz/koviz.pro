@@ -39,6 +39,10 @@ LIBS += -L$$PWD/../lib -lkoviz
 exists( /usr/include/mpv/client.h ) {
     LIBS += -lmpv
 }
+exists (/usr/include/hdf5/serial/H5Cpp.h) {
+    LIBS += -L/usr/lib/x86_64-linux-gnu/hdf5/serial
+    LIBS += -lhdf5_cpp -lhdf5
+}
 
 
 PRE_TARGETDEPS += $$PWD/../lib/libkoviz.a
