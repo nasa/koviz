@@ -124,7 +124,8 @@ QStringList RunDir::_fileList(const QString& run,
     }
 
     QStringList filter;
-    filter << "*.trk" << "*.csv" << "*.mot" << "*.h5" << "*.hdf5" << "*.xls" ;
+    filter << "*.trk" << "*.csv" << "*.mot" << "*.h5"
+           << "*.hdf5" << "*.xls" << "*.parquet" ;
 
     QRegularExpression filterRgx(filterPattern);
     QRegularExpression excludeRgx(excludePattern);
@@ -168,6 +169,12 @@ QStringList RunDir::_fileList(const QString& run,
         if ( fi.suffix() == "xls" ) {
             QString fullPath = runDir.absoluteFilePath(file);
             if ( !AcsslXlsModel::isValid(fullPath,timeNames) ) {
+                invalidFiles.append(file);
+            }
+        }
+        if ( fi.suffix() == "parquet" ) {
+            QString fullPath = runDir.absoluteFilePath(file);
+            if ( !ParquetModel::isValid(fullPath,timeNames) ) {
                 invalidFiles.append(file);
             }
         }

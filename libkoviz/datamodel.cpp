@@ -6,6 +6,7 @@
 #include "datamodel_mot.h"
 #include "datamodel_hdf5.h"
 #include "datamodel_acssl_xls.h"
+#include "datamodel_parquet.h"
 
 QList<DataModel*> DataModel::createDataModels(const QStringList &timeNames,
                                               const QString &runPath,
@@ -41,6 +42,9 @@ QList<DataModel*> DataModel::createDataModels(const QStringList &timeNames,
         #endif
     } else if ( fi.suffix() == "xls" ) {
         DataModel* m = new AcsslXlsModel(timeNames,runPath,fileName);
+        models.append(m);
+    } else if ( fi.suffix() == "parquet" ) {
+        DataModel* m = new ParquetModel(timeNames,runPath,fileName);
         models.append(m);
     } else {
         fprintf(stderr,"koviz [error]: DataModel::createDataModel() cannot "

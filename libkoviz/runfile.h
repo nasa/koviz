@@ -8,6 +8,7 @@
 #include "datamodel_mot.h"
 #include "datamodel_hdf5.h"
 #include "datamodel_acssl_xls.h"
+#include "datamodel_parquet.h"
 
 #include <QDir>
 #include <QString>

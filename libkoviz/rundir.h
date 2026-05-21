@@ -5,6 +5,7 @@
 #include "mapvalue.h"
 #include "datamodel_csv.h"
 #include "datamodel_acssl_xls.h"
+#include "datamodel_parquet.h"
 
 #include <QDir>
 #include <QString>

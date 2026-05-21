@@ -120,7 +120,7 @@ bool RunFile::isValid(const QString &run, const QStringList& timeNames)
         return false;
     }
 
-    QStringList suffixes = {"trk","csv","mot","h5","hdf5","xls"};
+    QStringList suffixes = {"trk","csv","mot","h5","hdf5","xls","parquet"};
     if ( !suffixes.contains(fi.suffix()) ) {
         return false;
     }
@@ -144,6 +144,10 @@ bool RunFile::isValid(const QString &run, const QStringList& timeNames)
         #endif
     } else if ( fi.suffix() == "xls" ) {
         if ( !AcsslXlsModel::isValid(run,timeNames) ) {
+            return false;
+        }
+    } else if ( fi.suffix() == "parquet" ) {
+        if ( !ParquetModel::isValid(run,timeNames) ) {
             return false;
         }
     }
