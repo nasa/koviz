@@ -274,10 +274,24 @@ std::shared_ptr<arrow::DoubleArray> ParquetModel::_loadColumn(int col) const
         break;
     }
     default:
-        fprintf(stderr, "koviz: unsupported parquet type=%s col=%d\n",
-                        combined->type()->ToString().c_str(),
-                        col);
-        exit(-1);
+        arrow::DoubleBuilder builder;
+        for (int64_t i = 0; i < combined->length(); i++) {
+            auto st = builder.Append(std::numeric_limits<double>::quiet_NaN());
+            if ( !st.ok() ) {
+                fprintf(stderr, "koviz [error]: ParquetModel::_loadColumn()!"
+                        "  Unsupported type and trouble with loading NaNs\n");
+                exit(-1);
+            }
+        }
+
+        auto st = builder.Finish(&arr);
+
+        if (!st.ok()) {
+            fprintf(stderr,
+                "koviz [error]: ParquetModel::_loadColumn() failed to build "\
+                "NaN fallback column col=%d\n", col);
+            exit(-1);
+        }
     }
 
     _col2array[col] = arr;
