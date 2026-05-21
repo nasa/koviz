@@ -1,4 +1,4 @@
-#include "datamodel_parquet.h"
+﻿#include "datamodel_parquet.h"
 
 // TODO: Remove after dev
 #include <stdio.h>
@@ -219,7 +219,7 @@ std::shared_ptr<arrow::DoubleArray> ParquetModel::_loadColumn(int col) const
 
     if (!status.ok()) {
         fprintf(stderr, "koviz [error]: ParquetModel::_loadColumn failed "
-                "to read column=%d\n",col);
+                "to read column=%d msg=%s\n",col,status.ToString().c_str());
         return nullptr;
     }
 
@@ -229,8 +229,8 @@ std::shared_ptr<arrow::DoubleArray> ParquetModel::_loadColumn(int col) const
     auto result = arrow::Concatenate(chunked->chunks(),
                                      arrow::default_memory_pool());
     if (!result.ok()) {
-        fprintf(stderr, "koviz [error]: ParquetModel::_loadColumn failed "
-                "to concat chunks!\n");
+        fprintf(stderr, "koviz [error]: ParquetModel::_loadColumn concat "\
+                        "failed. msg=%s\n",result.status().ToString().c_str());
         return nullptr;
     }
     auto combined = std::move(result).ValueOrDie();
