@@ -234,7 +234,51 @@ std::shared_ptr<arrow::DoubleArray> ParquetModel::_loadColumn(int col) const
         return nullptr;
     }
     auto combined = std::move(result).ValueOrDie();
-    auto arr = std::static_pointer_cast<arrow::DoubleArray>(combined);
+    if (combined->type_id() == arrow::Type::DOUBLE) {
+        auto arr = std::static_pointer_cast<arrow::DoubleArray>(combined);
+        _col2array[col] = arr;
+    } else {
+
+    }
+
+    std::shared_ptr<arrow::DoubleArray> arr;
+
+    switch (combined->type_id()) {
+    case arrow::Type::DOUBLE: {
+        arr = std::static_pointer_cast<arrow::DoubleArray>(combined);
+        break;
+    }
+    case arrow::Type::FLOAT:
+    {
+        arr = _convertNumericArray<arrow::FloatArray>(combined);
+        break;
+    }
+    case arrow::Type::INT32:
+    {
+        arr = _convertNumericArray<arrow::Int32Array>(combined);
+        break;
+    }
+    case arrow::Type::INT64:
+    {
+        arr = _convertNumericArray<arrow::Int64Array>(combined);
+        break;
+    }
+    case arrow::Type::UINT32:
+    {
+        arr = _convertNumericArray<arrow::UInt32Array>(combined);
+        break;
+    }
+    case arrow::Type::BOOL:
+    {
+        arr = _convertNumericArray<arrow::BooleanArray>(combined);
+        break;
+    }
+    default:
+        fprintf(stderr, "koviz: unsupported parquet type=%s col=%d\n",
+                        combined->type()->ToString().c_str(),
+                        col);
+        exit(-1);
+    }
 
     _col2array[col] = arr;
 

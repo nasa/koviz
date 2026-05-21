@@ -79,6 +79,10 @@ class ParquetModel : public DataModel
     int _idxAtTimeBinarySearch(ParquetModelIterator *it,
                                int low, int high, double time);
     void _init();
+
+    template <typename ArrowArrayType>
+    std::shared_ptr<arrow::DoubleArray>
+    _convertNumericArray(const std::shared_ptr<arrow::Array>& combined) const;
 };
 
 //
@@ -148,5 +152,37 @@ class ParquetModelIterator : public ModelIterator
     std::shared_ptr<arrow::DoubleArray> _y;
 };
 
+
+template <typename ArrowArrayType>
+std::shared_ptr<arrow::DoubleArray>
+ParquetModel::_convertNumericArray(
+    const std::shared_ptr<arrow::Array>& combined) const
+{
+    auto src = std::static_pointer_cast<ArrowArrayType>(combined);
+
+    arrow::DoubleBuilder builder;
+
+    for (int64_t i = 0; i < src->length(); i++) {
+        arrow::Status st;
+        if (src->IsNull(i)) {
+            st = builder.AppendNull();
+        } else {
+            st = builder.Append(static_cast<double>(src->Value(i)));
+        }
+        if ( !st.ok() ) {
+            return nullptr;
+        }
+    }
+
+    std::shared_ptr<arrow::DoubleArray> out;
+
+    auto st = builder.Finish(&out);
+
+    if (!st.ok()) {
+        return nullptr;
+    }
+
+    return out;
+}
 
 #endif
