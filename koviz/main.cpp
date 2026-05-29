@@ -109,6 +109,7 @@ class SnapOptions : public Options
     QString title3;
     QString title4;
     QString timeName;
+    QString runColumnName;
     QString trk2csvFile;
     QString csv2trkFile;
     QString outputFileName;
@@ -229,6 +230,8 @@ int main(int argc, char *argv[])
     opts.add("-t4",&opts.title4,"", "Date title");
     opts.add("-timeName", &opts.timeName, "",
              "Time variable (e.g. -timeName sys.exec.out.time=mySimTime)");
+    opts.add("-runColumnName", &opts.runColumnName, "",
+             "Monte carlo run column name (e.g. \"run=Run=RunID\")");
     opts.add("-pdf", &opts.pdfOutFile, QString(""),
              "Name of pdf output file");
     opts.add("-jpg", &opts.jpgOutFile, QString(""),
@@ -485,6 +488,14 @@ int main(int argc, char *argv[])
         timeNames = getTimeNames(timeName);
     }
     timeName = timeNames.at(0); // Note that sys.exec.out.time is default
+
+    // Run column name(s)
+    QString runColumnName = opts.runColumnName;
+    QStringList names = runColumnName.split('=',skipEmptyParts);
+    QStringList runColumnNames;
+    foreach ( QString s, names ) {
+         runColumnNames << s.trimmed();
+    }
 
     // Start time
     double startTime = opts.start;
@@ -836,7 +847,7 @@ int main(int argc, char *argv[])
             isShowProgress = false;
         }
 
-        runs = new Runs(timeNames,tmt,runPaths,varMap,
+        runs = new Runs(timeNames,runColumnNames,tmt,runPaths,varMap,
                         filterPattern,
                         excludePattern,
                         opts.beginRun,opts.endRun,

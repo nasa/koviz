@@ -191,7 +191,9 @@ void CoordArrow::paintMe(QPainter &painter, const QTransform &T,
     // Draw coord text i.e. (x,y)
     painter.setPen(fg);
     painter.setBrush(bg);
-    painter.drawText(txtBox,Qt::TextDontClip|Qt::AlignCenter,txt);
+    Qt::Alignment flags = Qt::Alignment(Qt::TextDontClip) |
+                          Qt::Alignment(Qt::AlignCenter);
+    painter.drawText(txtBox,flags,txt);
 
     // Restore painter
     painter.setPen(origPen);
@@ -265,7 +267,9 @@ void CoordArrow::paintMeCenter(QPainter &painter,
     // Draw coord text i.e. (x,y)
     painter.setPen(fg);
     painter.setBrush(bg);
-    painter.drawText(txtbox,Qt::TextDontClip|Qt::AlignCenter,txt);
+    Qt::Alignment flags = Qt::Alignment(Qt::TextDontClip) |
+                          Qt::Alignment(Qt::AlignCenter);
+    painter.drawText(txtbox,flags,txt);
 
     // Draw arrow tail
     painter.setPen(fg);

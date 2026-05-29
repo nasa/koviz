@@ -1,5 +1,5 @@
-#ifndef CSV_MODEL_H
-#define CSV_MODEL_H
+#ifndef CSV_RUN_MODEL_H
+#define CSV_RUN_MODEL_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,25 +14,29 @@
 #include <stdexcept>
 
 #include "datamodel.h"
+#include "datamodel_csv.h"
 #include "parameter.h"
 #include "unit.h"
 
-class CsvModel;
-class CsvModelIterator;
+class CsvRunModel;
+class CsvRunModelIterator;
 
-class CsvModel : public DataModel
+class CsvRunModel : public DataModel
 {
   Q_OBJECT
 
-  friend class CsvModelIterator;
+  friend class CsvRunModelIterator;
 
   public:
 
-    explicit CsvModel(const QStringList &timeNames,
-                      const QString &runPath,
-                      const QString &csvfile,
-                      QObject *parent = 0);
-    ~CsvModel();
+    explicit CsvRunModel(const CsvModel* csvModel,
+                         const QStringList &timeNames,
+                         const QString &runPath,
+                         const QString &csvfile,
+                         const QStringList &runColumnNames,
+                         int runID,
+                         QObject *parent = 0);
+    ~CsvRunModel();
 
     static const QString TimeName;
     const Parameter* param(int col) const override ;
@@ -48,22 +52,24 @@ class CsvModel : public DataModel
                    int role = Qt::DisplayRole ) const override;
 
     static bool isValid( const QString& csvFile,
-                         const QStringList& timeNames);
-
-    const double* dataPtr() const { return _data; }
+                         const QStringList& timeNames,
+                         const QStringList& runColumnNames);
 
   private:
 
+    const CsvModel* _csvModel;
     QStringList _timeNames;
     QString _csvfile;
+    QStringList _runColumnNames;
+    int _runID;
 
     int _nrows;
     int _ncols;
     int _timeCol;
 
-    QHash<int,Parameter*> _col2param;
-    QHash<QString,int> _paramName2col;
-    CsvModelIterator* _iteratorTimeIndex;
+    QList<int> _runRows;  // Say it like Jetson's Astro, Run Row!
+
+    CsvRunModelIterator* _iteratorTimeIndex;
 
     double* _data;
 
@@ -71,29 +77,30 @@ class CsvModel : public DataModel
     static QTextStream _err_stream;
 
     void _init();
-    int _idxAtTimeBinarySearch (CsvModelIterator *it,
+    int _idxAtTimeBinarySearch (CsvRunModelIterator *it,
                                int low, int high, double time);
 
-    inline double _strtod(const char* ptr, const char *eof, char **endptr);
     QHash<QString,int> _str2id;
 };
 
-class CsvModelIterator : public ModelIterator
+class CsvRunModelIterator : public ModelIterator
 {
   public:
 
-    inline CsvModelIterator(): i(0) {}
+    inline CsvRunModelIterator(): i(0) {}
 
-    inline CsvModelIterator(int row, // iterator pos
-                            const CsvModel* model,
-                            int tcol, int xcol, int ycol):
+    inline CsvRunModelIterator(int row, // iterator pos
+                               const CsvRunModel* model,
+                               int tcol, int xcol, int ycol):
         i(row),
         _model(model),
         _tcol(tcol), _xcol(xcol), _ycol(ycol)
     {
+        _data = _model->_csvModel->dataPtr();
+        _ncols = model->_csvModel->columnCount();
     }
 
-    virtual ~CsvModelIterator() {}
+    virtual ~CsvRunModelIterator() {}
 
     void start() override
     {
@@ -110,7 +117,7 @@ class CsvModelIterator : public ModelIterator
         return ( i >= _model->rowCount() ) ;
     }
 
-    CsvModelIterator* at(int n) override
+    CsvRunModelIterator* at(int n) override
     {
         i = n;
         return this;
@@ -118,27 +125,32 @@ class CsvModelIterator : public ModelIterator
 
     inline double t() const override
     {
-        return _model->_data[i*_model->_ncols+_tcol];
+        int row = _model->_runRows[i];
+        return _data[row*_ncols+_tcol];
     }
 
     inline double x() const override
     {
-        return _model->_data[i*_model->_ncols+_xcol];
+        int row = _model->_runRows[i];
+        return _data[row*_ncols+_xcol];
     }
 
     inline double y() const override
     {
-        return _model->_data[i*_model->_ncols+_ycol];
+        int row = _model->_runRows[i];
+        return _data[row*_ncols+_ycol];
     }
 
   private:
 
     int i;
-    const CsvModel* _model;
+    const CsvRunModel* _model;
     int _tcol;
     int _xcol;
     int _ycol;
+    int _ncols;
+    const double* _data;
 };
 
 
-#endif // CSVMODEL_H
+#endif // CSV_RUN_MODEL_H

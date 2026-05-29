@@ -24,7 +24,10 @@
 #include "rundir.h"
 #include "runfile.h"
 #include "runtv.h"
+#include "run_monte_csv.h"
 #include "datamodel_xy.h"
+#include "datamodel_csv_run.h"
+#include "datamodel_csv.h"
 
 class Runs : public QObject
 {
@@ -33,6 +36,7 @@ class Runs : public QObject
   public:
     Runs();
     Runs(const QStringList& timeNames,
+         const QStringList& runColumnNames,
          double timeMatchTolerance,
          const QStringList &runPaths,
          const QHash<QString,QStringList> &varMap,
@@ -68,6 +72,7 @@ class Runs : public QObject
 
   private:
     QStringList _timeNames;
+    QStringList _runColumnNames;
     double _timeMatchTolerance;
     QStringList _runPaths;
     QString _montePath;

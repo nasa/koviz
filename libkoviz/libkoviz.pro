@@ -117,7 +117,9 @@ SOURCES += bookmodel.cpp \
            trickview.cpp \
            datamodel_tv.cpp \
            datamodel_hdf5.cpp \
-           datamodel_acssl_xls.cpp
+           datamodel_acssl_xls.cpp \
+           datamodel_csv_run.cpp \
+           run_monte_csv.cpp
 
 HEADERS  += bookmodel.h \
             bookidxview.h \
@@ -210,7 +212,9 @@ HEADERS  += bookmodel.h \
             trickview.h \
             datamodel_tv.h \
             datamodel_hdf5.h \
-            datamodel_acssl_xls.h
+            datamodel_acssl_xls.h \
+            datamodel_csv_run.h \
+            run_monte_csv.h
 
 unix {
     FLEX  = flex

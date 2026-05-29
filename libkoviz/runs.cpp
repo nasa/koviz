@@ -11,6 +11,7 @@ Runs::Runs() :
 }
 
 Runs::Runs(const QStringList &timeNames,
+           const QStringList& runColumnNames,
            double timeMatchTolerance,
            const QStringList &runPaths,
            const QHash<QString,QStringList>& varMap,
@@ -19,6 +20,7 @@ Runs::Runs(const QStringList &timeNames,
            uint begRun, uint endRun,
            bool isShowProgress) :
     _timeNames(timeNames),
+    _runColumnNames(runColumnNames),
     _timeMatchTolerance(timeMatchTolerance),
     _runPaths(runPaths),
     _varMap(varMap),
@@ -118,15 +120,67 @@ void Runs::deleteRun(const QString &runPath)
 
 void Runs::_init()
 {
+    bool isMonteCsv = false;
+    bool isMonteDir = false;
     _montePath.clear();
     if ( _runPaths.size() == 1 ) {
         QFileInfo fileInfo(_runPaths.at(0));
-        if ( fileInfo.fileName().startsWith("MONTE_") ) {
+        if ( fileInfo.isDir() && fileInfo.fileName().startsWith("MONTE_") ) {
+            isMonteDir = true;
             _montePath = _runPaths.at(0);
+        } else if ( CsvRunModel::isValid(_runPaths.at(0),
+                                         _timeNames,_runColumnNames) ) {
+            isMonteCsv = true;
         }
     }
 
-    if ( !_montePath.isEmpty() ) {
+    CsvModel* csvMonteModel = nullptr;
+    if ( isMonteCsv ) {
+        csvMonteModel = new CsvModel(_timeNames,_runPaths.at(0),
+                                     _runPaths.at(0));
+        // A Monte csv "run path" is an integer run ID in csvModel
+        int runColumn = -1;
+        for ( int col = 0; col < csvMonteModel->columnCount(); ++col ) {
+            const Parameter* param = csvMonteModel->param(col);
+            if ( _runColumnNames.contains(param->name() )) {
+                runColumn = col;
+                break;
+            }
+        }
+        if ( runColumn == -1 ) {
+            QString s = _runColumnNames.join(",");
+            fprintf(stderr, "koviz [bad scoobs]: Runs::_init: couldn't find "
+                    "run column with names=%s\n",s.toLatin1().constData());
+        }
+        int timeColumn = -1;
+        for ( int col = 0; col < csvMonteModel->columnCount(); ++col ) {
+            const Parameter* param = csvMonteModel->param(col);
+            if ( _timeNames.contains(param->name() )) {
+                timeColumn = col;
+                break;
+            }
+        }
+        if ( timeColumn == -1 ) {
+            QString s = _timeNames.join(",");
+            fprintf(stderr, "koviz [bad scoobs]: Runs::_init: couldn't find "
+                    "time column with names=%s\n",s.toLatin1().constData());
+        }
+        ModelIterator* it = csvMonteModel->begin(timeColumn,timeColumn,
+                                                 runColumn);
+        QSet<uint> runIDs;
+        _runPaths.clear();
+        while ( !it->isDone() ) {
+            uint runID = (uint) it->y();
+            if ( runID >= _begRun && runID <= _endRun ) {
+                if ( !runIDs.contains(runID) ) {
+                    runIDs.insert(runID);
+                    _runPaths.append(QString::number(runID));
+                }
+            }
+            it->next();
+        }
+        delete it;
+    } else if ( isMonteDir ) {
 
         QDir monteDir(_montePath);
         if ( ! monteDir.exists() ) {
@@ -180,7 +234,11 @@ void Runs::_init()
     foreach ( QString runPath, _runPaths ) {
         QFileInfo fi(runPath);
         Run* run = 0;
-        if ( fi.isDir() ) {
+        if ( isMonteCsv ) {
+            uint runID = runPath.toUInt();
+            run = new RunMonteCsv(csvMonteModel,runID,
+                                  _timeNames,_runColumnNames,_varMap);
+        } else if ( fi.isDir() ) {
             run = new RunDir(runPath,_timeNames,_varMap,
                              _filterPattern,_excludePattern);
         } else if ( fi.isFile() ) {
