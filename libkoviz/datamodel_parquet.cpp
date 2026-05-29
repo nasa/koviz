@@ -17,6 +17,7 @@ ParquetModel::ParquetModel(const QStringList& timeNames,
 
 void ParquetModel::_init()
 {
+#ifdef HAS_PARQUET
     std::shared_ptr<parquet::ParquetFileReader> reader;
 
     reader = parquet::ParquetFileReader::OpenFile(
@@ -41,10 +42,12 @@ void ParquetModel::_init()
         _col2param[col] = p;
         _param2column[qname] = col;
     }
+#endif
 }
 
 void ParquetModel::map()
 {
+#ifdef HAS_PARQUET
     if (_reader) return;
 
     auto infile_result = arrow::io::ReadableFile::Open(
@@ -75,16 +78,19 @@ void ParquetModel::map()
     }
     _iteratorTimeIndex = new ParquetModelIterator(0,this,
                                                  _timeCol,_timeCol,_timeCol);
+#endif
 }
 
 void ParquetModel::unmap()
 {
+#ifdef HAS_PARQUET
     _reader.reset();
     _infile.reset();
     if ( _iteratorTimeIndex ) {
         delete _iteratorTimeIndex;
         _iteratorTimeIndex = 0;
     }
+#endif
 }
 
 int ParquetModel::paramColumn(const QString &param) const
@@ -207,6 +213,7 @@ QVariant ParquetModel::data(const QModelIndex &idx, int role) const
     return val;
 }
 
+#ifdef HAS_PARQUET
 std::shared_ptr<arrow::DoubleArray> ParquetModel::_loadColumn(int col) const
 {
     if (_col2array.contains(col)) {
@@ -298,3 +305,4 @@ std::shared_ptr<arrow::DoubleArray> ParquetModel::_loadColumn(int col) const
 
     return arr;
 }
+#endif

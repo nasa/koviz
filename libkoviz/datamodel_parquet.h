@@ -6,6 +6,8 @@
 #include <QString>
 #include <QStringList>
 
+#include <limits>
+
 #include "datamodel.h"
 #include "parameter.h"
 
@@ -13,11 +15,13 @@
 #undef signals
 #undef slots
 
+#ifdef HAS_PARQUET
 #include <memory>
 #include <arrow/api.h>
 #include <arrow/io/api.h>
 #include <parquet/arrow/reader.h>
 #include <parquet/file_reader.h>
+#endif
 
 // Redefine signals/slots after including Parquet
 #define signals Q_SIGNALS
@@ -69,20 +73,23 @@ class ParquetModel : public DataModel
     qint32 _ncols;
     qint32 _timeCol;
 
-    std::unique_ptr<parquet::arrow::FileReader> _reader;
-    std::shared_ptr<arrow::io::ReadableFile> _infile;
-    mutable QHash<int,std::shared_ptr<arrow::DoubleArray>> _col2array;
-    std::shared_ptr<arrow::DoubleArray> _loadColumn(int col) const;
-
     ParquetModelIterator* _iteratorTimeIndex;
 
     int _idxAtTimeBinarySearch(ParquetModelIterator *it,
                                int low, int high, double time);
     void _init();
 
+#if HAS_PARQUET
     template <typename ArrowArrayType>
     std::shared_ptr<arrow::DoubleArray>
     _convertNumericArray(const std::shared_ptr<arrow::Array>& combined) const;
+
+    std::unique_ptr<parquet::arrow::FileReader> _reader;
+    std::shared_ptr<arrow::io::ReadableFile> _infile;
+    mutable QHash<int,std::shared_ptr<arrow::DoubleArray>> _col2array;
+    std::shared_ptr<arrow::DoubleArray> _loadColumn(int col) const;
+#endif
+
 };
 
 //
@@ -100,9 +107,15 @@ class ParquetModelIterator : public ModelIterator
         i(row),
         _row_count(model->rowCount())
     {
+#ifdef HAS_PARQUET
         _t = model->_loadColumn(tcol);
         _x = model->_loadColumn(xcol);
         _y = model->_loadColumn(ycol);
+#else
+        Q_UNUSED(tcol);
+        Q_UNUSED(xcol);
+        Q_UNUSED(ycol);
+#endif
     }
 
     virtual ~ParquetModelIterator() {}
@@ -130,29 +143,44 @@ class ParquetModelIterator : public ModelIterator
 
     inline double t() const override
     {
+#ifdef HAS_PARQUET
         return _t->Value(i);
+#else
+        return std::numeric_limits<double>::quiet_NaN();
+#endif
     }
 
     inline double x() const override
     {
+#ifdef HAS_PARQUET
         return _x->Value(i);
+#else
+        return std::numeric_limits<double>::quiet_NaN();
+#endif
     }
 
     inline double y() const override
     {
+#ifdef HAS_PARQUET
         return _y->Value(i);
+#else
+        return std::numeric_limits<double>::quiet_NaN();
+#endif
     }
 
   private:
 
     qint64 i;
     int _row_count;
+#ifdef HAS_PARQUET
     std::shared_ptr<arrow::DoubleArray> _t;
     std::shared_ptr<arrow::DoubleArray> _x;
     std::shared_ptr<arrow::DoubleArray> _y;
+#endif
 };
 
 
+#if HAS_PARQUET
 template <typename ArrowArrayType>
 std::shared_ptr<arrow::DoubleArray>
 ParquetModel::_convertNumericArray(
@@ -184,5 +212,6 @@ ParquetModel::_convertNumericArray(
 
     return out;
 }
+#endif
 
 #endif
