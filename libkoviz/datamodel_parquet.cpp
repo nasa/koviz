@@ -170,17 +170,51 @@ const QVector<int>& ParquetModel::runRows(int runID) const
     return it.value();
 }
 
-bool ParquetModel::isValid(const QString &parquetFile,
-                           const QStringList &timeNames)
+bool ParquetModel::isValid(const QString& parquetFile,
+                          const QStringList& timeNames)
 {
-    // TODO: Fix hard-coded dev hook
-    return true;
+#ifdef HAS_PARQUET
+    try {
+        auto reader = parquet::ParquetFileReader::OpenFile(
+            parquetFile.toStdString(),
+            false // no mmap needed
+        );
+
+        auto metadata = reader->metadata();
+        auto schema = metadata->schema();
+
+        int ncols = metadata->num_columns();
+
+        for (int col = 0; col < ncols; ++col) {
+
+            QString colName =
+                            QString::fromStdString(schema->Column(col)->name());
+
+            if (timeNames.contains(colName)) {
+                return true;
+            }
+        }
+
+        return false;
+
+    } catch (const std::exception& e) {
+        return false;
+    }
+
+#else
+
+    Q_UNUSED(parquetFile);
+    Q_UNUSED(timeNames);
+
+    return false;
+#endif
 }
 
 bool ParquetModel::isMonte(const QString &parquetFile,
                            const QStringList &timeNames,
                            const QStringList &runColumnNames)
 {
+#ifdef HAS_PARQUET
     if ( runColumnNames.isEmpty() ) {
         return false;
     }
@@ -188,9 +222,33 @@ bool ParquetModel::isMonte(const QString &parquetFile,
         return false;
     }
 
-    // TODO: Finish this e.g. check that parquet file has run column
-    //       Fix hardcoded return of true!
-    return true;
+    try {
+        auto reader = parquet::ParquetFileReader::OpenFile(
+                                                      parquetFile.toStdString(),
+                                                      false);
+        auto metadata = reader->metadata();
+        auto schema   = metadata->schema();
+
+        int ncols = metadata->num_columns();
+
+        for (int col = 0; col < ncols; ++col) {
+            QString colName = QString::fromStdString(
+                                                   schema->Column(col)->name());
+            if (runColumnNames.contains(colName)) {
+                return true;
+            }
+        }
+    } catch (...) {
+        return false;
+    }
+
+#else
+    Q_UNUSED(parquetFile);
+    Q_UNUSED(timeNames);
+    Q_UNUSED(runColumnNames);
+#endif
+
+    return false;
 }
 
 const Parameter* ParquetModel::param(int col) const
