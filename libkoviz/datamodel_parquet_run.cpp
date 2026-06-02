@@ -1,8 +1,4 @@
 ﻿#include "datamodel_parquet_run.h"
-#include <chrono>
-
-// TODO: Remove after dev
-#include <stdio.h>
 
 const QString ParquetRunModel::TimeName = QString(""); // No standard time name
 
@@ -64,7 +60,11 @@ ModelIterator *ParquetRunModel::begin(int tcol, int xcol, int ycol) const
 
 ParquetRunModel::~ParquetRunModel()
 {
-    unmap();
+    _parquetModel->unmap();
+    if ( _iteratorTimeIndex ) {
+        delete _iteratorTimeIndex;
+        _iteratorTimeIndex = 0;
+    }
     foreach ( Parameter* param, _col2param.values() ) {
         delete param;
     }
