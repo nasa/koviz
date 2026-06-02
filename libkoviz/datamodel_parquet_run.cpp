@@ -70,13 +70,6 @@ ParquetRunModel::~ParquetRunModel()
     }
 }
 
-bool ParquetRunModel::isValid(const QString &parquetFile,
-                           const QStringList &timeNames)
-{
-    // TODO: Fix hard-coded dev hook
-    return true;
-}
-
 const Parameter* ParquetRunModel::param(int col) const
 {
     return _parquetModel->param(col);

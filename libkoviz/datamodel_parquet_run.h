@@ -56,9 +56,6 @@ class ParquetRunModel : public DataModel
 
     static const QString TimeName;
 
-    static bool isValid( const QString& parquetFile,
-                         const QStringList& timeNames);
-
     const Parameter* param(int col) const override ;
 
     void map() override;
