@@ -336,14 +336,13 @@ QVariant ParquetModel::data(const QModelIndex &idx, int role) const
 {
     QVariant val;
 
-    if ( idx.isValid() ) {
-        int row = idx.row();
-        int col = idx.column();
+    Q_UNUSED(role);
+    Q_UNUSED(idx);
 
-        val = 666;
-    }
+    fprintf(stderr, "koviz [error]: Using unimplemnted ParquetModel::data()."
+            "Data should be retrieved via ParquetModelIterators\n");
 
-    return val;
+    return std::numeric_limits<double>::quiet_NaN();
 }
 
 #ifdef HAS_PARQUET
