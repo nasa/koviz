@@ -41,8 +41,22 @@ void ParquetModel::_init()
     _ncols = metadata->num_columns();
     _nrows = metadata->num_rows();
 
-    auto schema = metadata->schema();
+    // Get units in metadata
+    QHash<QString,QString> colName2Unit;
+    auto unitMetaData = parquet::ParquetFileReader::OpenFile(
+                        _parquetFile.toStdString(),
+                        false)->metadata();
+    auto kv = unitMetaData->key_value_metadata();
+    if (kv) {
+        for ( int i = 0; i < kv->size(); ++i ) {
+            QString key(kv->key(i).c_str());
+            if ( key == "ARROW:schema" ) continue;
+            QString unit(kv->value(i).c_str());
+            colName2Unit.insert(key,unit);
+        }
+    }
 
+    auto schema = metadata->schema();
     for (int col = 0; col < _ncols; ++col) {
         std::string colName = schema->Column(col)->name();
         QString qname = QString::fromStdString(colName);
@@ -52,7 +66,7 @@ void ParquetModel::_init()
         if ( _runColumnNames.contains(qname) ) {
             _runCol = col;
         }
-        Parameter* p = new Parameter(qname,"--");
+        Parameter* p = new Parameter(qname,colName2Unit.value(qname,"--"));
         _col2param[col] = p;
         _param2column[qname] = col;
     }
