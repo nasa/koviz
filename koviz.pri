@@ -38,13 +38,18 @@ exists (/usr/include/hdf5/serial/H5Cpp.h) {
     # LIBS in koviz.pro
 }
 
-exists (/home/kvetter/.local/arrow/include) {
-    DEFINES += HAS_PARQUET
-    QMAKE_CXXFLAGS += -std=c++20
-    QMAKE_CXXFLAGS += -isystem /home/kvetter/.local/arrow/include
-    LIBS += -L/home/kvetter/.local/arrow/lib64
-    LIBS += -larrow -lparquet
-    QMAKE_LFLAGS += -Wl,-rpath,/home/kvetter/.local/arrow/lib64
+# To build: qmake-qt5 ARROW_HOME=/home/kvetter/.local/arrow
+!isEmpty(ARROW_HOME) {
+    exists ($${ARROW_HOME}/include) {
+        DEFINES += HAS_PARQUET
+        QMAKE_CXXFLAGS += -std=c++20
+        QMAKE_CXXFLAGS += -isystem $${ARROW_HOME}/include
+        LIBS += -L$${ARROW_HOME}/lib64
+        LIBS += -larrow -lparquet
+        QMAKE_LFLAGS += -Wl,-rpath,$${ARROW_HOME}/lib64
+    } else {
+        error(ARROW_HOME=$${ARROW_HOME} does not contain an include directory)
+    }
 }
 
 QMAKE_CXXFLAGS += -Wno-deprecated-enum-enum-conversion
