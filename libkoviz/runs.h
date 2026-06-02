@@ -25,6 +25,7 @@
 #include "runfile.h"
 #include "runtv.h"
 #include "run_monte_csv.h"
+#include "run_parquet.h"
 #include "datamodel_xy.h"
 #include "datamodel_csv_run.h"
 #include "datamodel_csv.h"
@@ -87,6 +88,8 @@ class Runs : public QObject
     mutable QList<DataModel*> _xyModels;
     QHash<QString,int> _rundir2row;
     QStandardItemModel* _runsModel;
+    CsvModel* _csvMonteModel;
+    ParquetModel* _parquetModel;
 
     void _init();
     void _delete();

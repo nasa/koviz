@@ -18,7 +18,7 @@ public:
                  const QStringList& timeNames,
                  const QStringList& runColumnNames,
                  const QHash<QString,QStringList> &varMap);
-    ~RunMonteCsv() {}
+    ~RunMonteCsv();
 
     QStringList params() override;
     DataModel *dataModel(const QString& param) override;

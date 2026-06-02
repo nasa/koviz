@@ -41,12 +41,13 @@ exists (/usr/include/hdf5/serial/H5Cpp.h) {
 exists (/home/kvetter/.local/arrow/include) {
     DEFINES += HAS_PARQUET
     QMAKE_CXXFLAGS += -std=c++20
-    INCLUDEPATH += /home/kvetter/.local/arrow/include
+    QMAKE_CXXFLAGS += -isystem /home/kvetter/.local/arrow/include
     LIBS += -L/home/kvetter/.local/arrow/lib64
     LIBS += -larrow -lparquet
     QMAKE_LFLAGS += -Wl,-rpath,/home/kvetter/.local/arrow/lib64
 }
 
+QMAKE_CXXFLAGS += -Wno-deprecated-enum-enum-conversion
 
 macx {
     QMAKE_CXXFLAGS += -Wno-implicit-function-declaration

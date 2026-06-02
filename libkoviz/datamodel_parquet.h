@@ -1,7 +1,13 @@
 #ifndef PARQUET_MODEL_H
 #define PARQUET_MODEL_H
 
+// A Parquet model can contain a single time history or can house
+// a monte carlo run set of time histories.  In the monte carlo case:
+//    1. The commandline option -runColumnName is used
+//    2. The constructor with runID is used by Runs class
+
 #include <QHash>
+#include <QVector>
 #include <QFile>
 #include <QString>
 #include <QStringList>
@@ -42,12 +48,25 @@ class ParquetModel : public DataModel
                           const QString &runPath,
                           const QString &parquetFile,
                           QObject *parent = 0);
+
+    // Monte carlo data model subset for runID
+    explicit ParquetModel(const QStringList &timeNames,
+                          const QStringList& runColumnNames,
+                          const QString &runPath,
+                          const QString &parquetFile,
+                          QObject *parent = 0);
     ~ParquetModel();
+
+
+    const QVector<int> &runRows(int runID) const;
 
     static const QString TimeName;
 
     static bool isValid( const QString& parquetFile,
                          const QStringList& timeNames);
+    static bool isMonte( const QString& parquetFile,
+                         const QStringList& timeNames,
+                         const QStringList& runColumnNames);
 
     const Parameter* param(int col) const override ;
 
@@ -61,9 +80,14 @@ class ParquetModel : public DataModel
     QVariant data (const QModelIndex & index,
                    int role = Qt::DisplayRole ) const override;
 
+#if HAS_PARQUET
+    std::shared_ptr<arrow::DoubleArray> loadColumn(int col) const;
+#endif
+
   private:
 
     QStringList _timeNames;
+    QStringList _runColumnNames;
     QString _parquetFile;
 
     QHash<int,Parameter*> _col2param;   // ordered by column
@@ -72,12 +96,20 @@ class ParquetModel : public DataModel
     qint64 _nrows;
     qint32 _ncols;
     qint32 _timeCol;
+    qint32 _runCol;
 
     ParquetModelIterator* _iteratorTimeIndex;
+
+    QHash<int, QVector<int>> _runID2rows;
+
+    bool _isMonte;
 
     int _idxAtTimeBinarySearch(ParquetModelIterator *it,
                                int low, int high, double time);
     void _init();
+
+    void _open_parquet_reader();
+    void _close_parquet_reader();
 
 #if HAS_PARQUET
     template <typename ArrowArrayType>
@@ -87,7 +119,6 @@ class ParquetModel : public DataModel
     std::unique_ptr<parquet::arrow::FileReader> _reader;
     std::shared_ptr<arrow::io::ReadableFile> _infile;
     mutable QHash<int,std::shared_ptr<arrow::DoubleArray>> _col2array;
-    std::shared_ptr<arrow::DoubleArray> _loadColumn(int col) const;
 #endif
 
 };
@@ -108,9 +139,9 @@ class ParquetModelIterator : public ModelIterator
         _row_count(model->rowCount())
     {
 #ifdef HAS_PARQUET
-        _t = model->_loadColumn(tcol);
-        _x = model->_loadColumn(xcol);
-        _y = model->_loadColumn(ycol);
+        _t = model->loadColumn(tcol);
+        _x = model->loadColumn(xcol);
+        _y = model->loadColumn(ycol);
 #else
         Q_UNUSED(tcol);
         Q_UNUSED(xcol);

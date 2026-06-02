@@ -29,7 +29,8 @@ Runs::Runs(const QStringList &timeNames,
     _begRun(begRun),
     _endRun(endRun),
     _isShowProgress(isShowProgress),
-    _runsModel(new QStandardItemModel(this))
+    _runsModel(new QStandardItemModel(this)),
+    _csvMonteModel(nullptr)
 {
     if ( runPaths.isEmpty() ) {
         return;
@@ -61,6 +62,14 @@ void Runs::_delete()
     _runs.clear();
 
     _params.clear();
+
+    if ( _csvMonteModel ) {
+        delete _csvMonteModel;
+    }
+
+    if ( _parquetModel ) {
+        delete _parquetModel;
+    }
 }
 
 
@@ -122,6 +131,7 @@ void Runs::_init()
 {
     bool isMonteCsv = false;
     bool isMonteDir = false;
+    bool isMonteParquet = false;
     _montePath.clear();
     if ( _runPaths.size() == 1 ) {
         QFileInfo fileInfo(_runPaths.at(0));
@@ -131,17 +141,22 @@ void Runs::_init()
         } else if ( CsvRunModel::isValid(_runPaths.at(0),
                                          _timeNames,_runColumnNames) ) {
             isMonteCsv = true;
+        } else if ( ParquetModel::isMonte(_runPaths.at(0),
+                                          _timeNames,_runColumnNames) ) {
+            isMonteParquet = true;
         }
     }
 
-    CsvModel* csvMonteModel = nullptr;
+    QString parquetFile;
+    _csvMonteModel = nullptr;
+    _parquetModel = nullptr;
     if ( isMonteCsv ) {
-        csvMonteModel = new CsvModel(_timeNames,_runPaths.at(0),
+        _csvMonteModel = new CsvModel(_timeNames,_runPaths.at(0),
                                      _runPaths.at(0));
         // A Monte csv "run path" is an integer run ID in csvModel
         int runColumn = -1;
-        for ( int col = 0; col < csvMonteModel->columnCount(); ++col ) {
-            const Parameter* param = csvMonteModel->param(col);
+        for ( int col = 0; col < _csvMonteModel->columnCount(); ++col ) {
+            const Parameter* param = _csvMonteModel->param(col);
             if ( _runColumnNames.contains(param->name() )) {
                 runColumn = col;
                 break;
@@ -153,8 +168,8 @@ void Runs::_init()
                     "run column with names=%s\n",s.toLatin1().constData());
         }
         int timeColumn = -1;
-        for ( int col = 0; col < csvMonteModel->columnCount(); ++col ) {
-            const Parameter* param = csvMonteModel->param(col);
+        for ( int col = 0; col < _csvMonteModel->columnCount(); ++col ) {
+            const Parameter* param = _csvMonteModel->param(col);
             if ( _timeNames.contains(param->name() )) {
                 timeColumn = col;
                 break;
@@ -165,8 +180,8 @@ void Runs::_init()
             fprintf(stderr, "koviz [bad scoobs]: Runs::_init: couldn't find "
                     "time column with names=%s\n",s.toLatin1().constData());
         }
-        ModelIterator* it = csvMonteModel->begin(timeColumn,timeColumn,
-                                                 runColumn);
+        ModelIterator* it = _csvMonteModel->begin(timeColumn,timeColumn,
+                                                  runColumn);
         QSet<uint> runIDs;
         _runPaths.clear();
         while ( !it->isDone() ) {
@@ -209,6 +224,58 @@ void Runs::_init()
         foreach ( QString run, runsList ) {
             _runPaths << _montePath + "/" + run;
         }
+    } else if ( isMonteParquet ) {
+        parquetFile = _runPaths.at(0);
+        _parquetModel = new ParquetModel(_timeNames, _runColumnNames,
+                                         _runPaths.at(0), _runPaths.at(0));
+        // A Parquet Monte "run path" is an integer run ID
+        int runColumn = -1;
+        for ( int col = 0; col < _parquetModel->columnCount(); ++col ) {
+            const Parameter* param = _parquetModel->param(col);
+            if ( _runColumnNames.contains(param->name() )) {
+                runColumn = col;
+                break;
+            }
+        }
+        if ( runColumn == -1 ) {
+            QString s = _runColumnNames.join(",");
+            fprintf(stderr, "koviz [bad scoobs]: Runs::_init: couldn't find "
+                    "run column with names=%s in file=%s\n",
+                    s.toLatin1().constData(),
+                    _runPaths.at(0).toLatin1().constData());
+        }
+        int timeColumn = -1;
+        for ( int col = 0; col < _parquetModel->columnCount(); ++col ) {
+            const Parameter* param = _parquetModel->param(col);
+            if ( _timeNames.contains(param->name() )) {
+                timeColumn = col;
+                break;
+            }
+        }
+        if ( timeColumn == -1 ) {
+            QString s = _timeNames.join(",");
+            fprintf(stderr, "koviz [bad scoobs]: Runs::_init: couldn't find "
+                    "time column with names=%s in file=%s\n",
+                    s.toLatin1().constData(),
+                    _runPaths.at(0).toLatin1().constData());
+        }
+        _parquetModel->map();
+        ModelIterator* it = _parquetModel->begin(timeColumn,timeColumn,
+                                                runColumn);
+        QSet<uint> runIDs;
+        _runPaths.clear();
+        while ( !it->isDone() ) {
+            uint runID = (uint) it->y();
+            if ( runID >= _begRun && runID <= _endRun ) {
+                if ( !runIDs.contains(runID) ) {
+                    runIDs.insert(runID);
+                    _runPaths.append(QString::number(runID));
+                }
+            }
+            it->next();
+        }
+        _parquetModel->unmap();
+        delete it;
     } else {
         if ( _runPaths.size() > 0 ) {
             _runPaths = _runsSubset(_runPaths,
@@ -236,8 +303,12 @@ void Runs::_init()
         Run* run = 0;
         if ( isMonteCsv ) {
             uint runID = runPath.toUInt();
-            run = new RunMonteCsv(csvMonteModel,runID,
+            run = new RunMonteCsv(_csvMonteModel,runID,
                                   _timeNames,_runColumnNames,_varMap);
+        } else if ( isMonteParquet ) {
+            uint runID = runPath.toUInt();
+            run = new RunParquet(_parquetModel,parquetFile,runID,
+                                 _timeNames,_runColumnNames,_varMap);
         } else if ( fi.isDir() ) {
             run = new RunDir(runPath,_timeNames,_varMap,
                              _filterPattern,_excludePattern);

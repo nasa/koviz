@@ -1,15 +1,26 @@
 ﻿#include "datamodel_parquet.h"
 
-// TODO: Remove after dev
-#include <stdio.h>
-
 const QString ParquetModel::TimeName = QString(""); // No standard time name
 
 ParquetModel::ParquetModel(const QStringList& timeNames,
                            const QString &runPath,
                            const QString& parquetFile, QObject *parent) :
     DataModel(timeNames, runPath, parquetFile, parent),
-    _timeNames(timeNames),_parquetFile(parquetFile),
+    _timeNames(timeNames),
+    _parquetFile(parquetFile),
+    _nrows(0), _ncols(0), _timeCol(0),_runCol(-1),_iteratorTimeIndex(0),
+    _isMonte(false)
+{
+    _init();
+}
+
+ParquetModel::ParquetModel(const QStringList& timeNames,
+                           const QStringList& runColumnNames,
+                           const QString &runPath,
+                           const QString& parquetFile, QObject *parent) :
+    DataModel(timeNames, runPath, parquetFile, parent),
+    _timeNames(timeNames),_runColumnNames(runColumnNames),
+    _parquetFile(parquetFile),
     _nrows(0), _ncols(0), _timeCol(0), _iteratorTimeIndex(0)
 {
     _init();
@@ -27,27 +38,48 @@ void ParquetModel::_init()
 
     auto metadata = reader->metadata();
 
-    _nrows = metadata->num_rows();
     _ncols = metadata->num_columns();
+    _nrows = metadata->num_rows();
 
     auto schema = metadata->schema();
 
-    for (int col = 0; col < _ncols; col++) {
+    for (int col = 0; col < _ncols; ++col) {
         std::string colName = schema->Column(col)->name();
         QString qname = QString::fromStdString(colName);
         if ( _timeNames.contains(qname) ) {
             _timeCol = col;
         }
+        if ( _runColumnNames.contains(qname) ) {
+            _runCol = col;
+        }
         Parameter* p = new Parameter(qname,"--");
         _col2param[col] = p;
         _param2column[qname] = col;
     }
+
+
+    // If this is a monte carlo in a single file, the parquet file will have a
+    // column for runs. This block makes a hash of runIDs -> list of rows.
+    // For example, runID == 77 might be on rows 238-301
+    // Do this on one pass and give to clients so they don't have to repeat
+    if ( _runCol >= 0 ) {
+        _isMonte = true;
+        _open_parquet_reader();  // For speed, leave parquet reader open for MC
+        auto arr = loadColumn(_runCol);
+        int row = 0;
+        for (int64_t i = 0; i < arr->length(); ++i) {
+            if (!arr->IsNull(i)) {
+                int64_t runID = arr->Value(i);
+                _runID2rows[runID].append(row);
+            }
+            ++row;
+        }
+    }
 #endif
 }
 
-void ParquetModel::map()
+void ParquetModel::_open_parquet_reader()
 {
-#ifdef HAS_PARQUET
     if (_reader) return;
 
     auto infile_result = arrow::io::ReadableFile::Open(
@@ -72,7 +104,22 @@ void ParquetModel::map()
     }
 
     _reader = std::move(reader_result).ValueOrDie();
+}
 
+void ParquetModel::_close_parquet_reader()
+{
+    _reader.reset();
+    _infile.reset();
+}
+
+void ParquetModel::map()
+{
+#ifdef HAS_PARQUET
+    if ( !_isMonte ) {
+        // If MC not all in one file, there could be many runs so need to
+        // map/unmap to keep Parquet from having too many file descriptors open
+        _open_parquet_reader();
+    }
     if ( _iteratorTimeIndex ) {
         delete _iteratorTimeIndex;
     }
@@ -84,8 +131,9 @@ void ParquetModel::map()
 void ParquetModel::unmap()
 {
 #ifdef HAS_PARQUET
-    _reader.reset();
-    _infile.reset();
+    if ( !_isMonte ) {
+        _close_parquet_reader();
+    }
     if ( _iteratorTimeIndex ) {
         delete _iteratorTimeIndex;
         _iteratorTimeIndex = 0;
@@ -111,10 +159,37 @@ ParquetModel::~ParquetModel()
     }
 }
 
+// This returns a reference to vector instead of a copy
+const QVector<int>& ParquetModel::runRows(int runID) const
+{
+    auto it = _runID2rows.find(runID);
+    if (it == _runID2rows.end()) {
+        static const QVector<int> empty;
+        return empty;
+    }
+    return it.value();
+}
+
 bool ParquetModel::isValid(const QString &parquetFile,
                            const QStringList &timeNames)
 {
     // TODO: Fix hard-coded dev hook
+    return true;
+}
+
+bool ParquetModel::isMonte(const QString &parquetFile,
+                           const QStringList &timeNames,
+                           const QStringList &runColumnNames)
+{
+    if ( runColumnNames.isEmpty() ) {
+        return false;
+    }
+    if ( !ParquetModel::isValid(parquetFile,timeNames) ) {
+        return false;
+    }
+
+    // TODO: Finish this e.g. check that parquet file has run column
+    //       Fix hardcoded return of true!
     return true;
 }
 
@@ -214,7 +289,7 @@ QVariant ParquetModel::data(const QModelIndex &idx, int role) const
 }
 
 #ifdef HAS_PARQUET
-std::shared_ptr<arrow::DoubleArray> ParquetModel::_loadColumn(int col) const
+std::shared_ptr<arrow::DoubleArray> ParquetModel::loadColumn(int col) const
 {
     if (_col2array.contains(col)) {
         return _col2array[col];
@@ -225,7 +300,7 @@ std::shared_ptr<arrow::DoubleArray> ParquetModel::_loadColumn(int col) const
     auto status = _reader->ReadColumn(col, &chunked);
 
     if (!status.ok()) {
-        fprintf(stderr, "koviz [error]: ParquetModel::_loadColumn failed "
+        fprintf(stderr, "koviz [error]: ParquetModel::loadColumn failed "
                 "to read column=%d msg=%s\n",col,status.ToString().c_str());
         return nullptr;
     }
@@ -236,7 +311,7 @@ std::shared_ptr<arrow::DoubleArray> ParquetModel::_loadColumn(int col) const
     auto result = arrow::Concatenate(chunked->chunks(),
                                      arrow::default_memory_pool());
     if (!result.ok()) {
-        fprintf(stderr, "koviz [error]: ParquetModel::_loadColumn concat "\
+        fprintf(stderr, "koviz [error]: ParquetModel::loadColumn concat "\
                         "failed. msg=%s\n",result.status().ToString().c_str());
         return nullptr;
     }
@@ -285,7 +360,7 @@ std::shared_ptr<arrow::DoubleArray> ParquetModel::_loadColumn(int col) const
         for (int64_t i = 0; i < combined->length(); i++) {
             auto st = builder.Append(std::numeric_limits<double>::quiet_NaN());
             if ( !st.ok() ) {
-                fprintf(stderr, "koviz [error]: ParquetModel::_loadColumn()!"
+                fprintf(stderr, "koviz [error]: ParquetModel::loadColumn()!"
                         "  Unsupported type and trouble with loading NaNs\n");
                 exit(-1);
             }
@@ -295,7 +370,7 @@ std::shared_ptr<arrow::DoubleArray> ParquetModel::_loadColumn(int col) const
 
         if (!st.ok()) {
             fprintf(stderr,
-                "koviz [error]: ParquetModel::_loadColumn() failed to build "\
+                "koviz [error]: ParquetModel::loadColumn() failed to build "\
                 "NaN fallback column col=%d\n", col);
             exit(-1);
         }

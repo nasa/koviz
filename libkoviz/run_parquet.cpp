@@ -1,17 +1,23 @@
-#include "run_monte_csv.h"
+#include "run_parquet.h"
 
 
-RunMonteCsv::RunMonteCsv(CsvModel *csvModel, uint runID,
-                         const QStringList &timeNames,
-                         const QStringList &runColumnNames,
-                         const QHash<QString, QStringList> &varMap) :
+RunParquet::RunParquet(ParquetModel *parquetModel,
+                       const QString& parquetFile,
+                       uint runID,
+                       const QStringList &timeNames,
+                       const QStringList &runColumnNames,
+                       const QHash<QString, QStringList> &varMap) :
+    _parquetFile(parquetFile),
     _timeNames(timeNames),
     _runColumnNames(runColumnNames),
     _varMap(varMap)
 {
-    int ncols = csvModel->columnCount();
+    _model = new ParquetRunModel(parquetModel,timeNames,runColumnNames,
+                                 runID,parquetFile,parquetFile);
+
+    int ncols = _model->columnCount();
     for (int col = 0; col < ncols; ++col) {
-        const Parameter* param = csvModel->param(col);
+        const Parameter* param = _model->param(col);
         QString paramName = param->name();
         foreach (QString key, varMap.keys() ) {
             // If paramName is in map, use var map key as paramName
@@ -31,22 +37,19 @@ RunMonteCsv::RunMonteCsv(CsvModel *csvModel, uint runID,
         }
         _params.append(paramName);
     }
-
-    _model = new CsvRunModel(csvModel, timeNames, QString::number(runID),
-                             csvModel->fileName(), _runColumnNames, runID);
 }
 
-RunMonteCsv::~RunMonteCsv()
+RunParquet::~RunParquet()
 {
     delete _model;
 }
 
-QStringList RunMonteCsv::params()
+QStringList RunParquet::params()
 {
     return _params;
 }
 
-DataModel *RunMonteCsv::dataModel(const QString &param)
+DataModel *RunParquet::dataModel(const QString &param)
 {
     if ( !_params.contains(param) ) {
         return nullptr;

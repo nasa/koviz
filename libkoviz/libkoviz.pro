@@ -119,7 +119,9 @@ SOURCES += bookmodel.cpp \
            datamodel_hdf5.cpp \
            datamodel_acssl_xls.cpp \
            datamodel_csv_run.cpp \
-           run_monte_csv.cpp
+           run_monte_csv.cpp \
+           run_parquet.cpp \
+           datamodel_parquet_run.cpp
 
 HEADERS  += bookmodel.h \
             bookidxview.h \
@@ -214,7 +216,9 @@ HEADERS  += bookmodel.h \
             datamodel_hdf5.h \
             datamodel_acssl_xls.h \
             datamodel_csv_run.h \
-            run_monte_csv.h
+            run_monte_csv.h \
+            run_parquet.h \
+            datamodel_parquet_run.h
 
 unix {
     FLEX  = flex
