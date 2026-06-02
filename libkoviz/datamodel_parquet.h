@@ -119,6 +119,7 @@ class ParquetModel : public DataModel
     std::unique_ptr<parquet::arrow::FileReader> _reader;
     std::shared_ptr<arrow::io::ReadableFile> _infile;
     mutable QHash<int,std::shared_ptr<arrow::DoubleArray>> _col2array;
+    void _unmap();
 #endif
 
 };

@@ -131,6 +131,13 @@ void ParquetModel::map()
 void ParquetModel::unmap()
 {
 #ifdef HAS_PARQUET
+    _unmap();
+#endif
+}
+
+void ParquetModel::_unmap()
+{
+#ifdef HAS_PARQUET
     if ( !_isMonte ) {
         _close_parquet_reader();
     }
@@ -140,6 +147,7 @@ void ParquetModel::unmap()
     }
 #endif
 }
+
 
 int ParquetModel::paramColumn(const QString &param) const
 {
@@ -153,7 +161,7 @@ ModelIterator *ParquetModel::begin(int tcol, int xcol, int ycol) const
 
 ParquetModel::~ParquetModel()
 {
-    unmap();
+    _unmap();
     foreach ( Parameter* param, _col2param.values() ) {
         delete param;
     }
