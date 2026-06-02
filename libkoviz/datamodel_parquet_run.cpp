@@ -153,13 +153,12 @@ int ParquetRunModel::columnCount(const QModelIndex &pidx) const
 
 QVariant ParquetRunModel::data(const QModelIndex &idx, int role) const
 {
-    QVariant val;
+    Q_UNUSED(role);
+    Q_UNUSED(idx);
 
-    if ( idx.isValid() ) {
-        int row = idx.row();
-        int col = idx.column();
-        val = 777; // TODO!!!
-    }
+    fprintf(stderr, "koviz [error]: Using unimplemented "
+                    "ParquetRunModel::data().  Data should be retrieved "
+                    "via ParquetRunModelIterators\n");
 
-    return val;
+    return std::numeric_limits<double>::quiet_NaN();
 }
