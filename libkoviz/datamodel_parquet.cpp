@@ -94,6 +94,7 @@ void ParquetModel::_init()
 
 void ParquetModel::_open_parquet_reader()
 {
+#ifdef HAS_PARQUET
     if (_reader) return;
 
     auto infile_result = arrow::io::ReadableFile::Open(
@@ -118,12 +119,15 @@ void ParquetModel::_open_parquet_reader()
     }
 
     _reader = std::move(reader_result).ValueOrDie();
+#endif
 }
 
 void ParquetModel::_close_parquet_reader()
 {
+#ifdef HAS_PARQUET
     _reader.reset();
     _infile.reset();
+#endif
 }
 
 void ParquetModel::map()
