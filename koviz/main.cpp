@@ -1835,12 +1835,6 @@ bool writeCsv(const QString& fcsv,
                const QString& runPath,
                double start, double stop, double timeShift, double tmt)
 {
-    if ( timeNames.size() != 1 ) {
-        fprintf(stderr, "koviz [error]: writeCsv expects -timeNames to be a "\
-                        "single time name e.g. sys.exec.out.time\n");
-        return false;
-    }
-
     QFileInfo fcsvi(fcsv);
     if ( fcsvi.exists() ) {
         fprintf(stderr, "koviz [error]: Will not overwrite %s\n",
@@ -1877,12 +1871,6 @@ bool writeTrk(const QString& ftrk,
                double start, double stop,
                double timeShift, double tmt)
 {
-    if ( timeNames.size() != 1 ) {
-        fprintf(stderr, "koviz [error]: writeTrk expects -timeNames to be a "\
-                        "single time name e.g. sys.exec.out.time\n");
-        return false;
-    }
-
     QFileInfo ftrki(ftrk);
     if ( ftrki.exists() ) {
         fprintf(stderr, "koviz [error]: Will not overwrite %s\n",
@@ -1968,8 +1956,21 @@ bool writeData(QDataStream* outTrk, QTextStream* outCsv,
         foreach ( DataModel* dataModel, dataModels ) {
             int ycol = dataModel->paramColumn(var.name());
             if ( ycol >= 0 ) {
-                int tcol = dataModel->paramColumn(timeNames.at(0));
-                int xcol = dataModel->paramColumn(timeNames.at(0));
+                int tcol = -1;
+                int xcol = -1;
+                foreach ( const QString& timeName, timeNames ) {
+                    tcol = dataModel->paramColumn(timeName);
+                    xcol = tcol;
+                    if ( tcol >= 0 ) {
+                        break;
+                    }
+                }
+                if ( tcol < 0 ) {
+                    fprintf(stderr, "koviz [error]: Could not find time"
+                            "in runPath=%s.  Try setting -timeName\n",
+                            runPath.toLatin1().constData());
+                    exit(-1);
+                }
 
                 // Iterator
                 ModelIterator* it = dataModel->begin(tcol,xcol,ycol);
@@ -2244,13 +2245,6 @@ bool printVarValuesAtTime(double time, double tmt, const QStringList& timeNames,
                           const QString& varsOptString, const QString& runPath,
                           Runs* runs)
 {
-    if ( timeNames.size() != 1 ) {
-        fprintf(stderr, "koviz [error]: printVarValuesAtTime expects "
-                        "-timeNames to be a single time name "\
-                        "e.g. sys.exec.out.time\n");
-        return false;
-    }
-
     QList<DPVar> dpvars = makeVarsList(varsOptString,runs);
 
     QList<DataModel*> dataModels;
@@ -2303,7 +2297,21 @@ bool printVarValuesAtTime(double time, double tmt, const QStringList& timeNames,
     foreach (DPVar dpvar, dpvars) {
         foreach ( DataModel* dataModel, dataModels ) {
             dataModel->map();
-            int tcol = dataModel->paramColumn(timeNames.at(0));
+            QString timeName;
+            int tcol = -1;
+            foreach ( const QString& tName, timeNames ) {
+                tcol = dataModel->paramColumn(tName);
+                if ( tcol >= 0 ) {
+                    timeName = tName;
+                    break;
+                }
+            }
+            if ( tcol < 0 ) {
+                fprintf(stderr, "koviz [error]: Could not find time"
+                                "in runPath=%s.  Try setting -timeName\n",
+                        runPath.toLatin1().constData());
+                exit(-1);
+            }
             int ycol = dataModel->paramColumn(dpvar.name());
             if ( tcol >= 0 && ycol >= 0 ) {
 
@@ -2355,7 +2363,7 @@ bool printVarValuesAtTime(double time, double tmt, const QStringList& timeNames,
                     isValAtTime = true;
                 } else {
                     // If this is time, print time, otherwise leave empty field
-                    if ( dpvar.name() == timeNames.at(0) ) {
+                    if ( dpvar.name() == timeName ) {
                         printf("%.*g",DBL_DECIMAL_DIG,time);
                     }
                 }

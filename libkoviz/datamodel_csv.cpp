@@ -90,10 +90,11 @@ void CsvModel::_init()
         }
     }
     if ( ! isFoundTime ) {
-        _err_stream << "koviz [error]: couldn't find time param \""
-                    << _timeNames.join("=") << "\" in file=" << _csvfile
-                    << ".  Try setting -timeName on commandline option.";
-        throw std::runtime_error(_err_string.toLatin1().constData());
+        fprintf(stderr, "koviz [error]: couldn't find time param \"%s\" "
+                      "in file=%s. Try setting -timeName commandline option.\n",
+                      _timeNames.join("=").toLatin1().constData(),
+                      _csvfile.toLatin1().constData());
+        exit(-1);
     }
 
     _iteratorTimeIndex = new CsvModelIterator(0,this,
