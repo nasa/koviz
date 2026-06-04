@@ -39,6 +39,9 @@ exists (/usr/include/hdf5/serial/H5Cpp.h) {
 }
 
 # To build: qmake-qt5 ARROW_HOME=/home/kvetter/.local/arrow
+isEmpty(ARROW_HOME) {
+    ARROW_HOME = $$(ARROW_HOME)
+}
 !isEmpty(ARROW_HOME) {
     exists ($${ARROW_HOME}/include) {
         DEFINES += HAS_PARQUET
