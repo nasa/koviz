@@ -30,7 +30,8 @@ Runs::Runs(const QStringList &timeNames,
     _endRun(endRun),
     _isShowProgress(isShowProgress),
     _runsModel(new QStandardItemModel(this)),
-    _csvMonteModel(nullptr)
+    _csvMonteModel(nullptr),
+    _parquetModel(nullptr)
 {
     if ( runPaths.isEmpty() ) {
         return;
