@@ -53,6 +53,7 @@ public:
     explicit PlotMainWindow( PlotBookModel* bookModel,
                              const QString& trickhost,
                              uint trickport,
+                             uint virgoport,
                              double trickoffset,
                              const QList<QPair<QString,double> >& videos,
                              const QString& excludePattern,
@@ -89,6 +90,7 @@ private:
 
     const QString& _trickhost;
     uint _trickport;
+    uint _virgoport;
     double _trickoffset;
     QList<QPair<QString,double> > _videos;
     QString _excludePattern;
