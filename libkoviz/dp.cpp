@@ -1097,6 +1097,11 @@ void DPHLine::setColor(const QString &color)
     _color = color;
 }
 
+void DPHLine::setThickness(double thickness)
+{
+    _thickness = thickness;
+}
+
 void DPHLine::setLabel(const QString &label)
 {
     _label = label;

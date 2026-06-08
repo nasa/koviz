@@ -1034,6 +1034,10 @@ void CurvesLayoutItem::paintHLines(QPainter *painter,
         } else {
             pen.setColor(color);
         }
+
+        double thickness = _bookModel->getDataDouble(hlineIdx,"HLineThickness");
+        pen.setWidthF(thickness);
+
         painter->setPen(pen);
 
         painter->setTransform(T);

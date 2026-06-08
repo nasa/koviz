@@ -118,7 +118,7 @@ QString dpFileName() {
 %token DP_MINOR_X_TICS DP_MINOR_Y_TICS
 %token DP_RECT
 %token DP_PRESENTATION
-%token DP_HLINE DP_COLOR DP_LABEL_UNITS DP_LABEL_ORIENT
+%token DP_HLINE DP_COLOR DP_THICKNESS DP_LABEL_UNITS DP_LABEL_ORIENT
 %token DP_TAB_LABEL
 
 %token <sval> DP_STR
@@ -522,6 +522,9 @@ hline: DP_HLINE ':' DP_FLOAT {
         }
         | hline DP_COLOR ':' DP_STR {
                 currHLine->setColor($4);
+        }
+        | hline DP_THICKNESS ':' DP_FLOAT {
+                currHLine->setThickness($4);
         }
         | hline DP_LABEL ':' DP_STR {
                 currHLine->setLabel($4);

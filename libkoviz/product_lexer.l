@@ -69,6 +69,7 @@ RECT                          [Rr][Ee][Cc][Tt]
 PRESENTATION                  [Pp][Rr][Ee][Ss][Ee][Nn][Tt][Aa][Tt][Ii][Oo][Nn]
 HLINE                         [Hh][Ll][Ii][Nn][Ee]
 COLOR                         [Cc][Oo][Ll][Oo][Rr]
+THICKNESS                     [Tt][Hh][Ii][Cc][Kk][Nn][Ee][Ss][Ss]
 LABEL_UNITS                   [Ll][Aa][Bb][Ee][Ll]_[Uu][Nn][Ii][Tt][Ss]
 LABEL_ORIENT                  [Ll][Aa][Bb][Ee][Ll]_[Oo][Rr][Ii][Ee][Nn][Tt]
 TAB_LABEL                     [Tt][Aa][Bb]_[Ll][Aa][Bb][Ee][Ll]
@@ -142,6 +143,7 @@ W                             [ \t]+
 {PRESENTATION}             { return(DP_PRESENTATION); }
 {HLINE}                    { return(DP_HLINE); }
 {COLOR}                    { return(DP_COLOR); }
+{THICKNESS}                { return(DP_THICKNESS); }
 {LABEL_UNITS}              { return(DP_LABEL_UNITS); }
 {LABEL_ORIENT}             { return(DP_LABEL_ORIENT); }
 {TAB_LABEL}                { return(DP_TAB_LABEL); }

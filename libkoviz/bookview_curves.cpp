@@ -279,11 +279,12 @@ void CurvesView::_paintCoplot(const QTransform &T,QPainter &painter,QPen &pen)
 
         // Since grid and hlines too light with semi-transparent bg, paint them
         _paintGrid(painter,rootIndex());
-        _paintHLines(painter,rootIndex());
 
         // Paint curve (possibly with linestyle, symbols etc.)
         _paintCurve(currentIndex(),T,painter,true);
     }
+
+    _paintHLines(painter,rootIndex());
 
     painter.restore();
 }

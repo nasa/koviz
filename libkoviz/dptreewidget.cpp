@@ -639,6 +639,7 @@ void DPTreeWidget::_createDPPages(const QString& dpfile)
                 _addChild(hlineItem, "HLineValue", dpHLine->value());
                 _addChild(hlineItem, "HLineLabel", dpHLine->label());
                 _addChild(hlineItem, "HLineColor", dpHLine->color());
+                _addChild(hlineItem, "HLineThickness", dpHLine->thickness());
                 _addChild(hlineItem, "HLineUnit",  dpHLine->unit());
                 _addChild(hlineItem, "HLineLabelUnit", dpHLine->labelUnit());
                 _addChild(hlineItem, "HLineLabelPlacement",

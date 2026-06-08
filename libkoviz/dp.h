@@ -113,10 +113,11 @@ private:
 class DPHLine
 {
 public:
-    DPHLine(double val) : _val(val), _labelPlacement(0) {}
+    DPHLine(double val) : _val(val), _thickness(0.0), _labelPlacement(0) {}
 
     double value()  { return _val; }
     QString color() { return _color; }
+    double thickness() { return _thickness; }
     QString label() { return _label; }
     QString unit()  { return _unit; }
     QString labelUnit() { return _labelUnit; }
@@ -124,6 +125,7 @@ public:
 
     void setValue(double val);
     void setColor(const QString& color);
+    void setThickness(double thickness);
     void setLabel(const QString& label);
     void setUnit(const QString& unit);
     void setLabelUnit(const QString& labelUnit);
@@ -134,6 +136,7 @@ private:
     DPHLine() : _val(0) {}
     double _val;
     QString _color;
+    double _thickness; // 0 is default and is "cosmetic" and normally 1 pixel
     QString _label;
     QString _unit;
     QString _labelUnit;
