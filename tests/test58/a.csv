@@ -1,0 +1,5 @@
+sys.exec.out.time {s}, pos {m}, vel {m/s} 
+0, 1, 2
+1, 2, 3
+2, 7, 4
+3, 5, 6

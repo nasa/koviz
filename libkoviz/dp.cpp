@@ -96,7 +96,20 @@ void DPProduct::_handleDP05File(QString &contents)
 
         return;
     }
-    contents = contents.remove(0,i-1);
+
+    // Save index where header ends
+    int header_end = i-1;
+
+    // Count header lines skipped
+    int nlines_skipped = 0;
+    for (int k = 0; k < header_end; ++k ) {
+        if ( contents[k] == '\n' ) {
+            nlines_skipped++;
+        }
+    }
+
+    // Remove header from contents to parse
+    contents = contents.remove(0,header_end);
 
     product = this; // TODO: product is global, need to fix the hack
 
@@ -108,6 +121,7 @@ void DPProduct::_handleDP05File(QString &contents)
     }
 
     YY_BUFFER_STATE state = yy_scan_string(contents.toLatin1().constData());
+    yylineno = 1+nlines_skipped;
     yyparse();
     yy_delete_buffer(state);
 }

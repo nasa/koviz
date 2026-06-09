@@ -78,9 +78,10 @@ QSTR                          \"[^"\n]*["\n]
 STR                           [a-zA-Z][-_a-zA-Z0-9.\,()\[\]/$#{}]* 
 FLOAT                         -?(([0-9]+)|([0-9]*\.[0-9]+))([eE][-+]?[0-9]+)?
 W                             [ \t]+
+COMMENT                       #[^\n]*
 
 %%
- 
+
 {BACKGROUND_COLOR}         { return(DP_BACKGROUND_COLOR); }
 {BIAS}                     { return(DP_BIAS); }
 {CHANGE_ONLY}              { return(DP_CHANGE_ONLY); }
@@ -158,7 +159,7 @@ W                             [ \t]+
         }
         yylval.sval[ii-1] = '\0' ;
 
-        return(DP_STR) ; 
+        return(DP_STR) ;
 }
 
 {STR}  { 
@@ -172,6 +173,8 @@ W                             [ \t]+
 }
 
 {W} { /* Ignore white space */ }
+
+{COMMENT} { /* Ignore comments */ }
 
 \n   {/*fprintf(stderr, "line: %d\n",  yylineno);*/; yylval.ival = yylineno ;}
 \r\n {/*fprintf(stderr, "line: %d\n",  yylineno);*/; yylval.ival = yylineno ;}
