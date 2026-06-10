@@ -14,7 +14,8 @@ VarsWidget::VarsWidget(const QString &timeName,
     _plotModel(plotModel),
     _plotSelectModel(plotSelectModel),
     _monteInputsView(monteInputsView),
-    _qpId(0)
+    _qpId(0),
+    _loading(false)
 {
     // Setup models
     _varsModel = _createVarsModel(_runs);
@@ -70,6 +71,13 @@ void VarsWidget::_varsSelectModelSelectionChanged(
 {
     Q_UNUSED(prevVarSelection); // TODO: handle deselection (prevSelection)
 
+    if (_loading) {
+        // Don't fire off this method if method is re-entered before finishing
+        return;
+    }
+
+    ScopedBool guard(_loading);  // _loading stays true until method returns
+
     // If model signals blocked, it most likely means vars clicked on var tree
     // while curves are being loaded with signals off.  When this happens,
     // just ignore the selection change until model ready
@@ -81,7 +89,9 @@ void VarsWidget::_varsSelectModelSelectionChanged(
         return;
     }
 
-    if ( currVarSelection.size() == 0 ) return;
+    if ( currVarSelection.size() == 0 ) {
+        return;
+    }
 
     QModelIndexList selIdxs = _varsSelectModel->selection().indexes();
 

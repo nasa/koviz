@@ -20,6 +20,15 @@
 #include "trickvarsortfilterproxymodel.h"
 #include "runs.h"
 
+class ScopedBool {
+public:
+    ScopedBool(bool& b) : _b(b) { _b = true; }
+    ~ScopedBool() { _b = false; }
+
+private:
+    bool& _b;
+};
+
 class VarsWidget : public QWidget
 {
     Q_OBJECT
@@ -58,6 +67,7 @@ private:
     QItemSelectionModel* _varsSelectModel;
 
     int _qpId;
+    bool _loading;
 
     QModelIndex _findSinglePlotPageWithCurve(const QString& curveYName);
     QStandardItem* _addChild(QStandardItem* parentItem,
