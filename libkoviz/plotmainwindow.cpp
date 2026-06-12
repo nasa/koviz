@@ -152,8 +152,7 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
                                  _monteInputsView,
                                  varsFrame);
     if ( isPlotAllVars ) {
-        _varsWidget->selectAllVars();
-        _varsWidget->clearSelection();
+        _varsWidget->plotAllVars();
     }
     _nbDPVars->addTab(varsFrame,"Vars");
 
@@ -1712,8 +1711,7 @@ void PlotMainWindow::_launchScript(QAction* action)
 
 void PlotMainWindow::_plotAllVars()
 {
-    _varsWidget->selectAllVars();
-    _varsWidget->clearSelection();
+    _varsWidget->plotAllVars();
 }
 
 void PlotMainWindow::_runsRefreshed()

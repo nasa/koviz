@@ -51,10 +51,17 @@ VarsWidget::VarsWidget(const QString &timeName,
     _listView->setSelectionModel(_varsSelectModel);
     _listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     _listView->setFocusPolicy(Qt::ClickFocus);
+    _listView->installEventFilter(this);
     connect(_varsSelectModel,
          SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
          this,
          SLOT(_varsSelectModelSelectionChanged(QItemSelection,QItemSelection)));
+
+    // "Debounce" selection handling
+    _selectionTimer.setSingleShot(true);
+    _selectionTimer.setInterval(200);
+    connect(&_selectionTimer, SIGNAL(timeout()),
+            this, SLOT(_processSelection()));
 }
 
 VarsWidget::~VarsWidget()
@@ -64,36 +71,70 @@ VarsWidget::~VarsWidget()
     delete _varsModel;
 }
 
+// The sole purpose is to capture <esc> key to clear var selection
+bool VarsWidget::eventFilter(QObject *obj, QEvent *event)
+{
+    if (obj == _listView && event->type() == QEvent::KeyPress) {
+        auto *ke = static_cast<QKeyEvent*>(event);
+        if (ke->key() == Qt::Key_Escape) {
+            _selectionTimer.stop();
+            _varsSelectModel->clearSelection();
+            return true;
+        }
+    }
 
+    return QObject::eventFilter(obj, event);
+}
+
+
+// Selection changes can arrive in rapid succession while the user is
+// dragging through many variables. Instead of processing
+// each intermediate selection event (by loading possible BIG curves!),
+// we coalesce updates using a short timer.
+//
+// When the timer fires, we query the selection model directly and build
+// plots from the final stable selection state.
+//
+// This technique is called "debouncing"
 void VarsWidget::_varsSelectModelSelectionChanged(
                                 const QItemSelection &currVarSelection,
                                 const QItemSelection &prevVarSelection)
 {
-    Q_UNUSED(prevVarSelection); // TODO: handle deselection (prevSelection)
+    Q_UNUSED(currVarSelection);
+    Q_UNUSED(prevVarSelection);
+    _selectionTimer.start();
+}
 
-    if (_loading) {
-        // Don't fire off this method if method is re-entered before finishing
-        return;
-    }
-
-    ScopedBool guard(_loading);  // _loading stays true until method returns
-
-    // If model signals blocked, it most likely means vars clicked on var tree
-    // while curves are being loaded with signals off.  When this happens,
-    // just ignore the selection change until model ready
-    if ( _plotModel->signalsBlocked() ) {
-        return;
-    }
-
+void VarsWidget::_processSelection()
+{
     if ( _listView->dragEnabled() ) {
         return;
     }
 
+    QItemSelection currVarSelection = _varsSelectModel->selection();
     if ( currVarSelection.size() == 0 ) {
         return;
     }
 
     QModelIndexList selIdxs = _varsSelectModel->selection().indexes();
+
+    _plotVariables(selIdxs);
+}
+
+void VarsWidget::_plotVariables(const QModelIndexList &varIdxs)
+{
+    if (_loading) {
+        // Don't fire off this method if method is re-entered before finishing
+        return;
+    }
+    ScopedBool guard(_loading);  // _loading stays true until method returns
+
+    // If model signals blocked, it most likely means vars clicked on var tree
+    // while curves are being loaded with signals off.  When this happens,
+    // just ignore the selection change until model ready.
+    if ( _plotModel->signalsBlocked() ) {
+        return;
+    }
 
     QModelIndex pageIdx;
     QModelIndex currIdx = _plotSelectModel->currentIndex();
@@ -106,12 +147,25 @@ void VarsWidget::_varsSelectModelSelectionChanged(
         QModelIndex plotIdx = _plotModel->index(nplots-1,0,plotsIdx);
         QModelIndex curvesIdx = _plotModel->getIndex(plotIdx,
                                                      "Curves", "Plot");
-        QModelIndexList currVarIdxs = currVarSelection.indexes();
-        foreach (QModelIndex varIdx, currVarIdxs) {
+
+        // Curve creation can be expensive for large datasets. Use a modal
+        // progress dialog to prevent user interaction with the window while
+        // the plot model is being modified.
+        int rc = varIdxs.size();
+        QProgressDialog progress("Loading curves...", "Abort", 0, rc, this);
+        progress.setWindowModality(Qt::WindowModal);
+        progress.setMinimumDuration(500);
+        int r = 0;
+        foreach (QModelIndex varIdx, varIdxs) {
+            progress.setValue(r++);
+            if ( progress.wasCanceled() ) {
+                break;
+            }
             QString yName = _varsFilterModel->data(varIdx).toString();
             _plotModel->createCurves(curvesIdx,_timeName,yName,_unitOverrides,
                                     _monteInputsView->model(),this);
         }
+        progress.setValue(rc);
 
         // Set y axis label to empty string when adding multivars to plot
         QModelIndex yAxisLabelIdx = _plotModel->getDataIndex(plotIdx,
@@ -120,15 +174,15 @@ void VarsWidget::_varsSelectModelSelectionChanged(
 
     } else {
 
-        if ( selIdxs.size() == 1 ) { // Single selection
+        if ( varIdxs.size() == 1 ) { // Single selection
 
-            QString yName = _varsFilterModel->data(selIdxs.at(0)).toString();
+            QString yName = _varsFilterModel->data(varIdxs.at(0)).toString();
             pageIdx = _findSinglePlotPageWithCurve(yName) ;
 
             if ( ! pageIdx.isValid() ) {
                 // No page w/ single plot of selected var,so create plot of var
                 QStandardItem* pageItem = _plotModel->createPageItem();
-                _addPlotToPage(pageItem,currVarSelection.indexes().at(0));
+                _addPlotToPage(pageItem,varIdxs.at(0));
                 pageIdx = _plotModel->indexFromItem(pageItem);
                 _plotSelectModel->setCurrentIndex(pageIdx,
                                                   QItemSelectionModel::Current);
@@ -146,8 +200,7 @@ void VarsWidget::_varsSelectModelSelectionChanged(
                 pageIdx = _plotModel->getIndex(currIdx, "Page");
             }
             QStandardItem* pageItem = _plotModel->itemFromIndex(pageIdx);
-            QModelIndexList currVarIdxs = currVarSelection.indexes();
-            int rc = currVarIdxs.size();
+            int rc = varIdxs.size();
             QProgressDialog progress("Loading curves...", "Abort", 0, rc, this);
             progress.setWindowModality(Qt::WindowModal);
             progress.setMinimumDuration(500);
@@ -156,13 +209,40 @@ void VarsWidget::_varsSelectModelSelectionChanged(
             timer.start();
 
             int r = 0;
-            while ( ! currVarIdxs.isEmpty() ) {
+            foreach ( const QModelIndex& varIdx, varIdxs ) {
                 // Update progress dialog
                 progress.setValue(r++);
                 if (progress.wasCanceled()) {
                     break;
                 }
-                QModelIndex varIdx = currVarIdxs.takeFirst();
+                QString varName = _varsFilterModel->data(varIdx).toString();
+
+                // Search on current page for var and do not add if exists
+                bool isExists = false;
+                foreach ( QModelIndex plotIdx, _plotModel->plotIdxs(pageIdx) ) {
+                    QModelIndex curvesIdx = _plotModel->getIndex(plotIdx,
+                                                              "Curves", "Plot");
+                    foreach ( QModelIndex curveIdx, _plotModel->curveIdxs(
+                                                                  curvesIdx) ) {
+                        QModelIndex yIdx =  _plotModel->getDataIndex(curveIdx,
+                                                         "CurveYName", "Curve");
+                        QString yName =  _plotModel->data(yIdx).toString();
+                        if ( yName == varName ) {
+                            isExists = true;
+                            break;
+                        }
+                    }
+                    if ( isExists ) {
+                        break;
+                    }
+                }
+                if ( isExists ) {
+                    // Do not replot var if already plotted,
+                    _plotSelectModel->setCurrentIndex(pageIdx,
+                                                 QItemSelectionModel::NoUpdate);
+                    continue;
+                }
+
                 int nPlots = _plotModel->plotIdxs(pageIdx).size();
                 if ( nPlots == 6 ) {
                     pageItem = _plotModel->createPageItem();
@@ -256,11 +336,6 @@ void VarsWidget::clearSelection()
     _varsSelectModel->clear();
 }
 
-void VarsWidget::selectAllVars()
-{
-    _listView->selectAll();
-}
-
 void VarsWidget::setDragEnabled(bool isEnabled)
 {
     _varsSelectModel->clear();
@@ -270,6 +345,19 @@ void VarsWidget::setDragEnabled(bool isEnabled)
         _listView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     }
     _listView->setDragEnabled(isEnabled);
+}
+
+void VarsWidget::plotAllVars()
+{
+    QModelIndexList varIdxs;
+
+    QAbstractItemModel* model = _varsFilterModel;
+
+    for (int row = 0; row < model->rowCount(); ++row) {
+        varIdxs << model->index(row, 0);
+    }
+
+    _plotVariables(varIdxs);
 }
 
 void VarsWidget::_addPlotToPage(QStandardItem* pageItem,

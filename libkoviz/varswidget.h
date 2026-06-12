@@ -12,6 +12,7 @@
 #include <QProgressDialog>
 #include <QApplication>
 #include <QElapsedTimer>
+#include <QTimer>
 #include <float.h>
 #include <stdlib.h>
 #include "dp.h"
@@ -43,9 +44,11 @@ public:
     ~VarsWidget();
 
     void clearSelection();
-    void selectAllVars();
     void setDragEnabled(bool isEnabled);
+    void plotAllVars();
 
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override;
 
 signals:
     
@@ -69,6 +72,9 @@ private:
     int _qpId;
     bool _loading;
 
+    QTimer _selectionTimer;
+    QItemSelection _pendingSelection;
+
     QModelIndex _findSinglePlotPageWithCurve(const QString& curveYName);
     QStandardItem* _addChild(QStandardItem* parentItem,
                    const QString& childTitle,
@@ -81,11 +87,13 @@ private:
 
 
 private slots:
-     void _varsSearchBoxTextChanged(const QString& rx);
-     void _varsSelectModelSelectionChanged(
-                              const QItemSelection& currVarSelection,
-                              const QItemSelection& prevVarSelection);
-     void _runsRefreshed();
+    void _varsSearchBoxTextChanged(const QString& rx);
+    void _varsSelectModelSelectionChanged(
+                             const QItemSelection& currVarSelection,
+                             const QItemSelection& prevVarSelection);
+    void _runsRefreshed();
+    void _processSelection();
+    void _plotVariables(const QModelIndexList& varIdxs);
 };
 
 #endif // VARSWIDGET_H
