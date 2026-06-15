@@ -1522,6 +1522,8 @@ void CurvesLayoutItem::_paintMarker(QPainter* painter,
                                     const ScaleBias& sb,
                                     QPainterPath *path, int i)
 {
+    if ( i < 0 ) return; // Shouldn't happen
+
     // Element/coord at marker time
     QPainterPath::Element el = path->elementAt(i);
     QPointF coord(el.x*sb.xs+sb.xb,el.y*sb.ys+sb.yb);
@@ -1566,8 +1568,10 @@ void CurvesLayoutItem::_paintMarker(QPainter* painter,
             arrow.txt = QString("last=(%1, %2)").arg(x).arg(y);
         }
     } else {
-        fprintf(stderr,"koviz [bad scoobs]: CurvesView::_paintMarkers()\n");
-        exit(-1);
+        // i may be >= rc. This can happen when in the middle of toggling
+        // from time domain to frequency domain.  In this transient state,
+        // do not draw marker.
+        return;
     }
 
     // Show a curve label if more than 5 runs
