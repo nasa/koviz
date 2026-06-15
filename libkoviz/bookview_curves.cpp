@@ -1208,6 +1208,10 @@ bool CurvesView::_isErrorCurveNearMousePoint(const QPoint &pt)
 
 void CurvesView::mouseMoveEvent(QMouseEvent *event)
 {
+    // Do not process mouse movement if model is blocked,
+    // and therefore possibly in an inconsistent state
+    if ( model()->signalsBlocked() ) return;
+
     QRectF W = viewport()->rect();
     if ( W.width() < 1 || W.height() < 1 ) return;
 
