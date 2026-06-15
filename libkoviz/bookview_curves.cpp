@@ -2413,8 +2413,6 @@ void CurvesView::_keyPressF()
                              .arg(i).arg(curveIdxs.size());
             progress.setLabelText(msg);
         }
-        QRectF bbox = _bookModel()->calcCurvesBBox(curvesIdx);
-        _bookModel()->setPlotMathRect(bbox,rootIndex());
         _bookModel()->setData(startTimeIdx,-DBL_MAX);
         _bookModel()->setData(stopTimeIdx,DBL_MAX);
         _bookModel()->setData(xAxisLabelIdx,"Frequency");
@@ -2422,13 +2420,15 @@ void CurvesView::_keyPressF()
         QModelIndex xScaleIdx = _bookModel()->getDataIndex(plotIdx,
                                                            "PlotXScale","Plot");
         _bookModel()->setData(xScaleIdx,"log");
+        QRectF bbox = _bookModel()->calcCurvesBBox(curvesIdx);
+        _bookModel()->setPlotMathRect(bbox,rootIndex());
     } else {
         // FrequencyDomain -> TimeDomain
+        bool block = _bookModel()->blockSignals(true);
         _bookModel()->setData(xAxisLabelIdx,_fftCache.xAxisLabel);
         _bookModel()->setPlotMathRect(_fftCache.M,plotIdx);
         _bookModel()->setData(startTimeIdx,_fftCache.start);
         _bookModel()->setData(stopTimeIdx,_fftCache.stop);
-        bool block = _bookModel()->blockSignals(true);
         foreach ( QModelIndex curveIdx, curveIdxs ) {
             QModelIndex xUnitIdx = _bookModel()->getDataIndex(curveIdx,
                                                           "CurveXUnit","Curve");
@@ -2459,10 +2459,10 @@ void CurvesView::_keyPressF()
                              .arg(i).arg(curveIdxs.size());
             progress.setLabelText(msg);
         }
+        _bookModel()->blockSignals(block);
         QModelIndex xScaleIdx = _bookModel()->getDataIndex(plotIdx,
                                                            "PlotXScale","Plot");
         _bookModel()->setData(xScaleIdx,"linear");
-        _bookModel()->blockSignals(block);
         _bookModel()->setPlotMathRect(_fftCache.M,plotIdx);
     }
 

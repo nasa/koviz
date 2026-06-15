@@ -1,0 +1,23 @@
+#! /usr/bin/env bash
+
+echo "---------------------------------------------------------"
+echo "  Test Fourier Transforms                                "
+echo "                                                         "
+echo "The 5, 15, and 20 Hz components appear as sharp spikes   "
+echo "because they align with FFT bins. The 10.37 Hz component "
+echo "appears as a broadened peak centered near 10.4 Hz because"
+echo "it falls between FFT bins, demonstrating expected        "
+echo "spectral leakage.                                        "
+echo "---------------------------------------------------------"
+echo ""
+echo "Action1: View time domain plot"
+echo "Expect1: Composite waveform with visible oscillations"
+echo "Action2: Press f"
+echo "Expect2: Toggled to frequency domain"
+echo "Expect2: Spikes at 5,10.4,15,20"
+echo "Expect2: Tallest spike at 5"
+echo "Expect2: Peak near 10.4 Hz is broadened (spectral leakage)"
+echo "Expect2: 5,15,20 peaks are sharp"
+echo "Action3: Press f"
+echo "Expect3: Toggle back to original time domain"
+koviz DP_test fft_test.csv 
