@@ -1600,7 +1600,6 @@ void PlotBookModel::__appendDataToPainterPath(CurveModel *curveModel,
     QString msg = QString("Loaded %1 of %2 points.\n").
                            arg(nPointsLoaded).arg(nrows);
     setData(statusIdx,msg);
-    QCoreApplication::processEvents();
 
     delete it;
     curveModel->unmap();
