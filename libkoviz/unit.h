@@ -27,6 +27,7 @@ class Unit {
     void setName(const QString& name);
     bool isEmpty() const;
 
+    static QStringList familyMembers(const QString &unit);
     static bool canConvert(const QString& from,const QString& to);
     static bool isUnit(const QString& name);
     static double scale(const QString& from, const QString& to);
@@ -48,6 +49,5 @@ class Unit {
     static QString _family(const QString& name);
     static QStringList _sortUnits(const QStringList& unitsIn);
     static QStringList _families();
-
 };
 #endif

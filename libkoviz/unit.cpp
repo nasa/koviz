@@ -37,6 +37,32 @@ bool Unit::isEmpty() const
     return _name.isEmpty();
 }
 
+// E.g. Unit::familyMembers("s") returns {"s","min","hr","ms"...}
+QStringList Unit::familyMembers(const QString &unit)
+{
+    static QHash<QString,QStringList> _fam2members;
+    if ( _fam2members.contains(unit) ) {
+        return _fam2members.value(unit);
+    }
+
+    QStringList members;
+
+    QString family = _family(unit);
+
+    int i = 0;
+    for (auto it = _scales.constBegin(); it != _scales.constEnd(); ++it) {
+        const auto &pair = it.key();
+        if ( pair.first == family ) {
+            members << pair.second;
+        }
+        ++i;
+    }
+
+    _fam2members.insert(unit,members);
+
+    return members;
+}
+
 bool Unit::canConvert(const QString& from, const QString &to)
 {
     bool can = false;

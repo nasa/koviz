@@ -2066,11 +2066,15 @@ QString PlotBookModel::getCurvesYUnit(const QModelIndex &curvesIdx)
 }
 
 // If *any* of the curves in plot has a curve with x being time, return true
+// Note: When user does an FFT, the x name stays "sys.exec.exec.out.time"
+//       but units switch to Hz.  If the units are Hz, it's NOT time.
 bool PlotBookModel::isXTime(const QModelIndex &plotIdx) const
 {
     bool isXTime = false;
 
     bool isExistsCurves = isChildIndex(plotIdx, "Plot", "Curves");
+
+    QStringList timeUnits = Unit::familyMembers("s");
 
     if ( isExistsCurves ) {
         QModelIndex curvesIdx = getIndex(plotIdx,"Curves","Plot");
@@ -2078,12 +2082,14 @@ bool PlotBookModel::isXTime(const QModelIndex &plotIdx) const
         for ( int i = 0; i < rc ; ++i ) {
             QModelIndex curveIdx = index(i,0,curvesIdx);
             QString xName = getDataString(curveIdx, "CurveXName","Curve");
+            QString xUnit = getDataString(curveIdx, "CurveXUnit","Curve");
             QString tName = getDataString(curveIdx, "CurveTimeName","Curve");
-            if ( xName == tName ) {
+            bool isXUnitTime = timeUnits.contains(xUnit);
+            if ( xName == tName && isXUnitTime ) {
                 isXTime = true;
                 break;
             }
-            if ( _timeNames.contains(xName) ) {
+            if ( _timeNames.contains(xName) && isXUnitTime ) {
                 isXTime = true;
                 break;
             }
