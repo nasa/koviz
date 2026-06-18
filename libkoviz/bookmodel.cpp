@@ -78,7 +78,12 @@ bool PlotBookModel::setData(const QModelIndex &idx,
         } else if ( tag == "StartTime" || tag == "StopTime") {
             double start = -DBL_MAX;
             double stop = DBL_MAX;
+            double curr_start = -DBL_MAX;
+            double curr_stop = DBL_MAX;
             if ( tag == "StartTime" ) {
+                if ( isChildIndex(QModelIndex(),"","StartTime") ) {
+                    curr_start = getDataDouble(QModelIndex(),"StartTime");
+                }
                 if ( isChildIndex(QModelIndex(),"","StopTime") ) {
                     stop = getDataDouble(QModelIndex(),"StopTime");
                 }
@@ -93,6 +98,9 @@ bool PlotBookModel::setData(const QModelIndex &idx,
                 if ( isChildIndex(QModelIndex(),"","StartTime") ) {
                     start = getDataDouble(QModelIndex(),"StartTime");
                 }
+                if ( isChildIndex(QModelIndex(),"","StopTime") ) {
+                    curr_stop = getDataDouble(QModelIndex(),"StopTime");
+                }
                 bool ok = false;
                 stop = value.toDouble(&ok);
                 if ( !ok ) {
@@ -105,14 +113,18 @@ bool PlotBookModel::setData(const QModelIndex &idx,
                                 "PlotBookModel::setData()\n");
                 exit(-1);
             }
-            QModelIndexList pages = pageIdxs();
-            foreach ( QModelIndex pageIdx, pages ) {
-                foreach ( QModelIndex plotIdx, plotIdxs(pageIdx) ) {
-                    QModelIndex curvesIdx = getIndex(plotIdx,"Curves","Plot");
-                    foreach ( QModelIndex curveIdx, curveIdxs(curvesIdx) ) {
-                        _createPainterPath(curveIdx,
-                                           true,start,true,stop,
-                                           false,0,false,0,false,0,false,0);
+
+            if ( curr_start != start || curr_stop != stop ) {
+                QModelIndexList pages = pageIdxs();
+                foreach ( QModelIndex pageIdx, pages ) {
+                    foreach ( QModelIndex plotIdx, plotIdxs(pageIdx) ) {
+                        QModelIndex curvesIdx = getIndex(plotIdx,"Curves",
+                                                                 "Plot");
+                        foreach ( QModelIndex curveIdx, curveIdxs(curvesIdx) ) {
+                            _createPainterPath(curveIdx,
+                                               true,start,true,stop,
+                                               false,0,false,0,false,0,false,0);
+                        }
                     }
                 }
             }
