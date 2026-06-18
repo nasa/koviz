@@ -20,6 +20,7 @@
 PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
         const QString& trickhost,
         uint trickport,
+        uint virgoport,
         double trickoffset,
         const QList<QPair<QString,double> >& videos,
         const QString& excludePattern,
@@ -44,6 +45,7 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
     _tvModel(0),
     _trickhost(trickhost),
     _trickport(trickport),
+    _virgoport(virgoport),
     _trickoffset(trickoffset),
     _videos(videos),
     _excludePattern(excludePattern),
@@ -260,7 +262,7 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
             this, SLOT(setTimeFromBvis(double)));
 
     // creating timecom to send commands to the koviz blender plugin
-    _blender = new TimeCom("127.0.0.1", 64053, this);
+    _blender = new TimeCom("127.0.0.1", _virgoport, this);
     connect(_blender,SIGNAL(timechangedByBvis(double)),
             this, SLOT(setTimeFromBvis(double)));
 
