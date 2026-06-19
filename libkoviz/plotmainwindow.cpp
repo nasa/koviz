@@ -362,6 +362,7 @@ void PlotMainWindow::createMenu()
     _enableDragDropAction->setCheckable(true);
     _filterOutFlatLinesAction = _optsMenu->addAction(
                                                   tr("FilterOutFlatlineZeros"));
+    _newWindowAction = _optsMenu->addAction(tr("NewWindow"));
     _selectRunsHomeAction = _optsMenu->addAction(tr("SelectRunsHome"));
     _menuBar->addMenu(_fileMenu);
     _menuBar->addMenu(_optsMenu);
@@ -408,6 +409,8 @@ void PlotMainWindow::createMenu()
             this, SLOT(_toggleEnableDragDrop(bool)));
     connect(_filterOutFlatLinesAction, SIGNAL(triggered()),
             this, SLOT(_filterOutFlatLines()));
+    connect(_newWindowAction, SIGNAL(triggered()),
+            this, SLOT(_newWindow()));
     connect(_selectRunsHomeAction, SIGNAL(triggered()),
             this, SLOT(_selectRunsHome()));
     setMenuWidget(_menuBar);
@@ -2143,6 +2146,248 @@ void PlotMainWindow::_filterOutFlatLines()
         msgBox.setText(msg);
         msgBox.exec();
     }
+}
+
+// Copy of root part of bm model (no pages)
+PlotBookModel* PlotMainWindow::_newBookModel( PlotBookModel* bm)
+{
+    PlotBookModel* bookModel = new PlotBookModel(_timeNames,_runs,0,1);
+
+    QStandardItem *rootItem = bookModel->invisibleRootItem();
+    QStandardItem *citem;
+
+    // Titles
+    QModelIndex dptIdx = bm->getIndex(QModelIndex(),"DefaultPageTitles","");
+    QString title1 = bm->getDataString(dptIdx,"Title1","");
+    QString title2 = bm->getDataString(dptIdx,"Title2","");
+    QString title3 = bm->getDataString(dptIdx,"Title3","");
+    QString title4 = bm->getDataString(dptIdx,"Title4","");
+    citem = bookModel->addChild(rootItem, "DefaultPageTitles","");
+    bookModel->addChild(citem, "Title1",title1);
+    bookModel->addChild(citem, "Title2",title2);
+    bookModel->addChild(citem, "Title3",title3);
+    bookModel->addChild(citem, "Title4",title4);
+
+    // Timenames
+    bookModel->addChild(rootItem, "TimeNames", _timeNames);
+
+    // Live time
+    QString liveTimeString = bm->getDataString(QModelIndex(),
+                                               "LiveCoordTime","");
+    if ( !liveTimeString.isEmpty() ) {
+        bool ok;
+        double liveTime = liveTimeString.toDouble(&ok);
+        if ( ok ) {
+            bookModel->addChild(rootItem, "LiveCoordTime", liveTime);
+        } else {
+            bookModel->addChild(rootItem, "LiveCoordTime","");
+        }
+    } else {
+        bookModel->addChild(rootItem, "LiveCoordTime","");
+    }
+
+    // Livecoord, start/stop, pres, run shifts
+    bookModel->addChild(rootItem, "LiveCoordTimeIndex",0);
+    double startTime = bm->getDataDouble(QModelIndex(),"StartTime","");
+    bookModel->addChild(rootItem, "StartTime",startTime);
+    double stopTime = bm->getDataDouble(QModelIndex(),"StopTime","");
+    bookModel->addChild(rootItem, "StopTime",stopTime);
+    QString pres = bm->getDataString(QModelIndex(),"Presentation","");
+    bookModel->addChild(rootItem, "Presentation",pres);
+    bool isShow = bm->getDataBool(QModelIndex(),"IsShowLiveCoord","");
+    bookModel->addChild(rootItem, "IsShowLiveCoord",isShow);
+    QHash<QString,QVariant> shifts = bm->getDataHash(QModelIndex(),
+                                                     "RunToShiftHash","");
+    bookModel->addChild(rootItem, "RunToShiftHash",shifts);
+
+    // Labels
+    QModelIndex llIdx = bm->getIndex(QModelIndex(),"LegendLabels","");
+    QString l1 = bm->getDataString(llIdx,"Label1","LegendLabels");
+    QString l2 = bm->getDataString(llIdx,"Label2","LegendLabels");
+    QString l3 = bm->getDataString(llIdx,"Label3","LegendLabels");
+    QString l4 = bm->getDataString(llIdx,"Label4","LegendLabels");
+    QString l5 = bm->getDataString(llIdx,"Label5","LegendLabels");
+    QString l6 = bm->getDataString(llIdx,"Label6","LegendLabels");
+    QString l7 = bm->getDataString(llIdx,"Label7","LegendLabels");
+    citem = bookModel->addChild(rootItem, "LegendLabels","");
+    bookModel->addChild(citem, "Label1",l1);
+    bookModel->addChild(citem, "Label2",l2);
+    bookModel->addChild(citem, "Label3",l3);
+    bookModel->addChild(citem, "Label4",l4);
+    bookModel->addChild(citem, "Label5",l5);
+    bookModel->addChild(citem, "Label6",l6);
+    bookModel->addChild(citem, "Label7",l7);
+
+    // Orient, tmt, freq, islegend
+    QString orient = bm->getDataString(QModelIndex(),"Orientation","");
+    bookModel->addChild(rootItem, "Orientation", orient);
+    double tmt = bm->getDataDouble(QModelIndex(),"TimeMatchTolerance","");
+    bookModel->addChild(rootItem, "TimeMatchTolerance", tmt);
+    double frequency = bm->getDataDouble(QModelIndex(),"Frequency","");
+    bookModel->addChild(rootItem, "Frequency", frequency);
+    bool isLegend = bm->getDataBool(QModelIndex(),"IsLegend","");
+    bookModel->addChild(rootItem, "IsLegend", isLegend);
+
+    // Colors
+    QModelIndex clIdx = bm->getIndex(QModelIndex(),"LegendColors","");
+    QString c1 = bm->getDataString(clIdx,"Color1","LegendColors");
+    QString c2 = bm->getDataString(clIdx,"Color2","LegendColors");
+    QString c3 = bm->getDataString(clIdx,"Color3","LegendColors");
+    QString c4 = bm->getDataString(clIdx,"Color4","LegendColors");
+    QString c5 = bm->getDataString(clIdx,"Color5","LegendColors");
+    QString c6 = bm->getDataString(clIdx,"Color6","LegendColors");
+    QString c7 = bm->getDataString(clIdx,"Color7","LegendColors");
+    citem = bookModel->addChild(rootItem, "LegendColors","");
+    bookModel->addChild(citem, "Color1",c1);
+    bookModel->addChild(citem, "Color2",c2);
+    bookModel->addChild(citem, "Color3",c3);
+    bookModel->addChild(citem, "Color4",c4);
+    bookModel->addChild(citem, "Color5",c5);
+    bookModel->addChild(citem, "Color6",c6);
+    bookModel->addChild(citem, "Color7",c7);
+
+    // FG/BG
+    QString fg = bm->getDataString(QModelIndex(),"ForegroundColor","");
+    bookModel->addChild(rootItem, "ForegroundColor", fg);
+    QString bg = bm->getDataString(QModelIndex(),"BackgroundColor","");
+    bookModel->addChild(rootItem, "BackgroundColor", bg);
+
+    // Linestyles
+    QModelIndex lsIdx = bm->getIndex(QModelIndex(),"Linestyles","");
+    QString ls1 = bm->getDataString(lsIdx,"Linestyle1","Linestyles");
+    QString ls2 = bm->getDataString(lsIdx,"Linestyle2","Linestyles");
+    QString ls3 = bm->getDataString(lsIdx,"Linestyle3","Linestyles");
+    QString ls4 = bm->getDataString(lsIdx,"Linestyle4","Linestyles");
+    QString ls5 = bm->getDataString(lsIdx,"Linestyle5","Linestyles");
+    QString ls6 = bm->getDataString(lsIdx,"Linestyle6","Linestyles");
+    QString ls7 = bm->getDataString(lsIdx,"Linestyle7","Linestyles");
+    citem = bookModel->addChild(rootItem, "Linestyles","");
+    bookModel->addChild(citem, "Linestyle1",ls1);
+    bookModel->addChild(citem, "Linestyle2",ls2);
+    bookModel->addChild(citem, "Linestyle3",ls3);
+    bookModel->addChild(citem, "Linestyle4",ls4);
+    bookModel->addChild(citem, "Linestyle5",ls5);
+    bookModel->addChild(citem, "Linestyle6",ls6);
+    bookModel->addChild(citem, "Linestyle7",ls7);
+
+    // Symbolstyles
+    QModelIndex ssIdx = bm->getIndex(QModelIndex(),"Symbolstyles","");
+    QString ss1 = bm->getDataString(ssIdx,"Symbolstyle1","Symbolstyles");
+    QString ss2 = bm->getDataString(ssIdx,"Symbolstyle2","Symbolstyles");
+    QString ss3 = bm->getDataString(ssIdx,"Symbolstyle3","Symbolstyles");
+    QString ss4 = bm->getDataString(ssIdx,"Symbolstyle4","Symbolstyles");
+    QString ss5 = bm->getDataString(ssIdx,"Symbolstyle5","Symbolstyles");
+    QString ss6 = bm->getDataString(ssIdx,"Symbolstyle6","Symbolstyles");
+    QString ss7 = bm->getDataString(ssIdx,"Symbolstyle7","Symbolstyles");
+    citem = bookModel->addChild(rootItem, "Symbolstyles","");
+    bookModel->addChild(citem, "Symbolstyle1",ss1);
+    bookModel->addChild(citem, "Symbolstyle2",ss2);
+    bookModel->addChild(citem, "Symbolstyle3",ss3);
+    bookModel->addChild(citem, "Symbolstyle4",ss4);
+    bookModel->addChild(citem, "Symbolstyle5",ss5);
+    bookModel->addChild(citem, "Symbolstyle6",ss6);
+    bookModel->addChild(citem, "Symbolstyle7",ss7);
+
+    // Symbolends
+    QModelIndex seIdx = bm->getIndex(QModelIndex(),"Symbolends","");
+    QString se1 = bm->getDataString(seIdx,"Symbolend1","Symbolends");
+    QString se2 = bm->getDataString(seIdx,"Symbolend2","Symbolends");
+    QString se3 = bm->getDataString(seIdx,"Symbolend3","Symbolends");
+    QString se4 = bm->getDataString(seIdx,"Symbolend4","Symbolends");
+    QString se5 = bm->getDataString(seIdx,"Symbolend5","Symbolends");
+    QString se6 = bm->getDataString(seIdx,"Symbolend6","Symbolends");
+    QString se7 = bm->getDataString(seIdx,"Symbolend7","Symbolends");
+    citem = bookModel->addChild(rootItem, "Symbolends","");
+    bookModel->addChild(citem, "Symbolend1",se1);
+    bookModel->addChild(citem, "Symbolend2",se2);
+    bookModel->addChild(citem, "Symbolend3",se3);
+    bookModel->addChild(citem, "Symbolend4",se4);
+    bookModel->addChild(citem, "Symbolend5",se5);
+    bookModel->addChild(citem, "Symbolend6",se6);
+    bookModel->addChild(citem, "Symbolend7",se7);
+
+    // Groups
+    QModelIndex gIdx = bm->getIndex(QModelIndex(),"Groups","");
+    QString g1 = bm->getDataString(gIdx,"Group1","Groups");
+    QString g2 = bm->getDataString(gIdx,"Group2","Groups");
+    QString g3 = bm->getDataString(gIdx,"Group3","Groups");
+    QString g4 = bm->getDataString(gIdx,"Group4","Groups");
+    QString g5 = bm->getDataString(gIdx,"Group5","Groups");
+    QString g6 = bm->getDataString(gIdx,"Group6","Groups");
+    QString g7 = bm->getDataString(gIdx,"Group7","Groups");
+    citem = bookModel->addChild(rootItem, "Groups","");
+    bookModel->addChild(citem, "Group1",g1);
+    bookModel->addChild(citem, "Group2",g2);
+    bookModel->addChild(citem, "Group3",g3);
+    bookModel->addChild(citem, "Group4",g4);
+    bookModel->addChild(citem, "Group5",g5);
+    bookModel->addChild(citem, "Group6",g6);
+    bookModel->addChild(citem, "Group7",g7);
+
+    // The rest
+    bookModel->addChild(rootItem,"StatusBarMessage", "New Window!");
+
+    isShow = bm->getDataBool(QModelIndex(),"IsShowPageTitle","");
+    bookModel->addChild(rootItem,"IsShowPageTitle", isShow );
+
+    isShow = bm->getDataBool(QModelIndex(),"IsShowPlotLegend","");
+    bookModel->addChild(rootItem,"IsShowPlotLegend", isShow);
+
+    QString pos = bm->getDataString(QModelIndex(),"PlotLegendPosition","");
+    bookModel->addChild(rootItem,"PlotLegendPosition", pos );
+
+    QString btn = bm->getDataString(QModelIndex(),"ButtonSelectAndPan","");
+    bookModel->addChild(rootItem,"ButtonSelectAndPan", btn );
+
+    btn =  bm->getDataString(QModelIndex(),"ButtonZoom","");
+    bookModel->addChild(rootItem,"ButtonZoom",btn);
+
+    btn =  bm->getDataString(QModelIndex(),"ButtonReset","");
+    bookModel->addChild(rootItem,"ButtonReset",btn);
+
+    bookModel->addChild(rootItem,"XAxisLabel","");
+    bookModel->addChild(rootItem,"YAxisLabel","");
+
+    isShow = bm->getDataBool(QModelIndex(),"ShowVideo","");
+    bookModel->addChild(rootItem,"ShowVideo",isShow );
+
+    QString videoDir = bm->getDataString(QModelIndex(),"VideoDir","");
+    bookModel->addChild(rootItem,"VideoDir", videoDir);
+
+    // Finally, return new book model
+    return bookModel;
+}
+
+
+void PlotMainWindow::_newWindow()
+{
+    PlotBookModel* bookModel = _newBookModel(_bookModel);
+
+    QStringList emptyDPList;
+    PlotMainWindow* win = new PlotMainWindow(bookModel,
+                            _trickhost,
+                             _trickport,
+                             _trickoffset,
+                             _videos,
+                             _excludePattern,
+                             _filterPattern,
+                             _isFilterOutFlatlineZeros,
+                             _scripts,
+                             _isDebug,
+                             false,
+                             _timeNames,
+                             _dpDir,
+                             emptyDPList,
+                             _isShowTables,
+                             _unitOverrides,
+                             _map,
+                             _mapFile,
+                             _runs,
+                             _varsModel);
+
+    bookModel->setParent(bookModel);
+
+    win->show();
 }
 
 void PlotMainWindow::_selectRunsHome()
