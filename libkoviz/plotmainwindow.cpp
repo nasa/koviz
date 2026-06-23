@@ -336,6 +336,7 @@ void PlotMainWindow::createMenu()
     _menuBar = new QMenuBar;
     _fileMenu = new QMenu(tr("&File"), this);
     _optsMenu = new QMenu(tr("&Options"), this);
+    _newWindowAction = _fileMenu->addAction(tr("NewWindow"));
     _pdfAction  = _fileMenu->addAction(tr("Save &PDF"));
     _jpgAction  = _fileMenu->addAction(tr("Save &JPG"));
     _dpAction  = _fileMenu->addAction(tr("Save &DP"));
@@ -362,7 +363,6 @@ void PlotMainWindow::createMenu()
     _enableDragDropAction->setCheckable(true);
     _filterOutFlatLinesAction = _optsMenu->addAction(
                                                   tr("FilterOutFlatlineZeros"));
-    _newWindowAction = _optsMenu->addAction(tr("NewWindow"));
     _selectRunsHomeAction = _optsMenu->addAction(tr("SelectRunsHome"));
     _menuBar->addMenu(_fileMenu);
     _menuBar->addMenu(_optsMenu);
