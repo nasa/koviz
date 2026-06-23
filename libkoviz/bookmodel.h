@@ -24,6 +24,7 @@
 #include "curvemodel.h"
 #include "curvemodel_painterpath.h"
 #include "curvemodel_copy.h"
+#include "sharedwindowstate.h"
 
 #include <QList>
 #include <QColor>
@@ -34,10 +35,12 @@ class PlotBookModel : public QStandardItemModel
 {
     Q_OBJECT
 public:
-    explicit PlotBookModel(const QStringList &timeNames, Runs* runs,
+    explicit PlotBookModel(SharedWindowState* sharedState,
+                            const QStringList &timeNames, Runs* runs,
                             QObject *parent = 0);
-    explicit PlotBookModel(const QStringList &timeNames, Runs* runs,
-                            int rows, int columns, QObject * parent = 0 );
+    explicit PlotBookModel(SharedWindowState* sharedState,
+                           const QStringList &timeNames, Runs* runs,
+                           int rows, int columns, QObject * parent = 0 );
     ~PlotBookModel();
 
     bool setData(const QModelIndex &idx,
@@ -174,11 +177,15 @@ public:
         AppendData = 257  // Used to optimize painterpath data appending
     };
 
+    SharedWindowState* sharedWindowState() const;
+
 signals:
     
-public slots:
+private slots:
+    void onLiveCoordTimeChanged(double t);
 
 private:
+    SharedWindowState* _sharedWindowState;
     QStringList _timeNames;
     Runs* _runs;
     void _initModel();

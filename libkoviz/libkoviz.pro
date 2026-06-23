@@ -57,6 +57,7 @@ SOURCES += bookmodel.cpp \
            runfile.cpp \
            runswidget.cpp \
            runtv.cpp \
+           sharedwindowstate.cpp \
            sie_listmodel.cpp \
            trickvarsortfilterproxymodel.cpp \
            varswidget.cpp \
@@ -150,6 +151,7 @@ HEADERS  += bookmodel.h \
             runfile.h \
             runswidget.h \
             runtv.h \
+            sharedwindowstate.h \
             sie_listmodel.h \
             trickvarsortfilterproxymodel.h \
             varswidget.h \

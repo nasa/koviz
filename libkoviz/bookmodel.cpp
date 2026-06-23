@@ -2,19 +2,23 @@
 #include <float.h>
 #include "unit.h"
 
-PlotBookModel::PlotBookModel(const QStringList& timeNames,
+PlotBookModel::PlotBookModel(SharedWindowState *sharedWindowState,
+                             const QStringList& timeNames,
                              Runs *runs, QObject *parent) :
     QStandardItemModel(parent),
+    _sharedWindowState(sharedWindowState),
     _timeNames(timeNames),
     _runs(runs)
 {
     _initModel();
 }
 
-PlotBookModel::PlotBookModel(const QStringList& timeNames,
+PlotBookModel::PlotBookModel(SharedWindowState *sharedWindowState,
+                             const QStringList& timeNames,
                              Runs *runs,
                              int rows, int columns, QObject *parent) :
     QStandardItemModel(rows,columns,parent),
+    _sharedWindowState(sharedWindowState),
     _timeNames(timeNames),
     _runs(runs)
 {
@@ -168,6 +172,9 @@ bool PlotBookModel::setData(const QModelIndex &idx,
                                    false,0,false,0,false,0,
                                    "",yUnit,plotXScale,plotYScale);
             }
+        } else if ( tag == "LiveCoordTime" ) {
+            double time = value.toDouble();
+            _sharedWindowState->setLiveCoordTime(time);
         }
     }
 
@@ -493,6 +500,11 @@ void PlotBookModel::_initModel()
         QString fullpath = QDir(runpath).absolutePath();
         addChild(runItem,"RunPath", fullpath);
     }
+
+    connect(_sharedWindowState,
+            SIGNAL(liveCoordTimeChanged(double)),
+            this,
+            SLOT(onLiveCoordTimeChanged(double)));
 }
 
 //
@@ -2484,6 +2496,21 @@ bool PlotBookModel::isMatch(const QString &str, const QString &exp) const
 #endif
 
     return ok;
+}
+
+SharedWindowState *PlotBookModel::sharedWindowState() const
+{
+    return _sharedWindowState;
+}
+
+void PlotBookModel::onLiveCoordTimeChanged(double t)
+{
+    QModelIndex liveIdx = getDataIndex(QModelIndex(), "LiveCoordTime","");
+
+    double current_time = data(liveIdx).toDouble();
+    if ( current_time == t ) return;
+
+    setData(liveIdx,t);
 }
 
 QList<double> PlotBookModel::majorXTics(const QModelIndex& plotIdx) const

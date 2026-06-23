@@ -2151,7 +2151,8 @@ void PlotMainWindow::_filterOutFlatLines()
 // Copy of root part of bm model (no pages)
 PlotBookModel* PlotMainWindow::_newBookModel( PlotBookModel* bm)
 {
-    PlotBookModel* bookModel = new PlotBookModel(_timeNames,_runs,0,1);
+    SharedWindowState* sws = bm->sharedWindowState();
+    PlotBookModel* bookModel = new PlotBookModel(sws,_timeNames,_runs,0,1);
 
     QStandardItem *rootItem = bookModel->invisibleRootItem();
     QStandardItem *citem;

@@ -36,6 +36,7 @@ using namespace std;
 #include "libkoviz/session.h"
 #include "libkoviz/versionnumber.h"
 #include "libkoviz/mapvalue.h"
+#include "libkoviz/sharedwindowstate.h"
 
 QStandardItemModel* createVarsModel(Runs* runs);
 bool writeTrk(const QString& ftrk,
@@ -1309,7 +1310,9 @@ int main(int argc, char *argv[])
         }
 
         // Create book model
-        PlotBookModel* bookModel = new PlotBookModel(timeNames,runs,0,1);
+        auto* sharedWindowState = new SharedWindowState(qApp);
+        PlotBookModel* bookModel = new PlotBookModel(sharedWindowState,
+                                                     timeNames,runs,0,1);
         if ( titles.size() == 4 ) {
             QStandardItem *rootItem = bookModel->invisibleRootItem();
             QStandardItem *citem;
