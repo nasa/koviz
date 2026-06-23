@@ -175,6 +175,9 @@ bool PlotBookModel::setData(const QModelIndex &idx,
         } else if ( tag == "LiveCoordTime" ) {
             double time = value.toDouble();
             _sharedWindowState->setLiveCoordTime(time);
+        } else if ( tag == "LiveCoordTimeIndex" ) {
+            int i = value.toInt();
+            _sharedWindowState->setLiveCoordTimeIndex(i);
         }
     }
 
@@ -505,6 +508,11 @@ void PlotBookModel::_initModel()
             SIGNAL(liveCoordTimeChanged(double)),
             this,
             SLOT(onLiveCoordTimeChanged(double)));
+
+    connect(_sharedWindowState,
+            SIGNAL(liveCoordTimeIndexChanged(int)),
+            this,
+            SLOT(onLiveCoordTimeIndexChanged(int)));
 }
 
 //
@@ -2511,6 +2519,16 @@ void PlotBookModel::onLiveCoordTimeChanged(double t)
     if ( current_time == t ) return;
 
     setData(liveIdx,t);
+}
+
+void PlotBookModel::onLiveCoordTimeIndexChanged(int i)
+{
+    QModelIndex lctiIdx = getDataIndex(QModelIndex(),"LiveCoordTimeIndex","");
+
+    double current_index = data(lctiIdx).toInt();
+    if ( current_index == i ) return;
+
+    setData(lctiIdx,i);
 }
 
 QList<double> PlotBookModel::majorXTics(const QModelIndex& plotIdx) const

@@ -183,6 +183,7 @@ signals:
     
 private slots:
     void onLiveCoordTimeChanged(double t);
+    void onLiveCoordTimeIndexChanged(int i);
 
 private:
     SharedWindowState* _sharedWindowState;
