@@ -252,6 +252,12 @@ void PlotBookModel::setPlotMathRect(const QRectF& mathRect,
             }
         }
     }
+
+    if ( isXTime(plotIdxIn) ) { // Only sync when x is time (normal case)
+        // Sync with other koviz windows
+        QString xScale = getDataString(plotIdxIn,"PlotXScale","Plot");
+        sharedWindowState()->setPlotMathRect(M,xScale);
+    }
 }
 
 QStandardItem *PlotBookModel::addChild(QStandardItem *parentItem,
@@ -513,6 +519,11 @@ void PlotBookModel::_initModel()
             SIGNAL(liveCoordTimeIndexChanged(int)),
             this,
             SLOT(onLiveCoordTimeIndexChanged(int)));
+
+    connect(_sharedWindowState,
+            SIGNAL(plotMathRectChanged(QRectF,QString)),
+            this,
+            SLOT(onPlotMathRectChanged(QRectF,QString)));
 }
 
 //
@@ -2529,6 +2540,59 @@ void PlotBookModel::onLiveCoordTimeIndexChanged(int i)
     if ( current_index == i ) return;
 
     setData(lctiIdx,i);
+}
+
+// Should only fire if M's x is time
+void PlotBookModel::onPlotMathRectChanged(const QRectF &M,
+                                          const QString& M_XScale)
+{
+    // Get first time plot to sync
+    QModelIndex plotIdx;
+    QModelIndex pagesIdx = getIndex(QModelIndex(), "Pages","");
+    QModelIndexList pageIdxs = getIndexList(pagesIdx,"Page","Pages");
+    foreach ( const QModelIndex& pageIdx, pageIdxs ) {
+        QModelIndex plotsIdx = getIndex(pageIdx, "Plots", "Page");
+        QModelIndexList plotIdxs = getIndexList(plotsIdx,"Plot","Plots");
+        foreach ( const QModelIndex& pIdx, plotIdxs ) {
+            if ( isXTime(pIdx) ) {
+                plotIdx = pIdx;
+                break;
+            }
+        }
+    }
+
+    if ( plotIdx.isValid() ) {
+        QRectF O = getDataRectF(plotIdx,"PlotMathRect","Plot");
+        QString O_XScale = getDataString(plotIdx,"PlotXScale","Plot");
+        QRectF N = M;
+        if ( M_XScale == "log" && O_XScale == "linear" ) {
+            N.setLeft(pow(10,M.left()));
+            N.setRight(pow(10,M.right()));
+        } else if ( M_XScale == "linear" && O_XScale == "log") {
+            if ( M.left() != 0.0 ) {
+                N.setLeft(log10(M.left()));
+            }
+            if ( M.right() != 0.0 ) {
+                N.setRight(log10(M.right()));
+            }
+        }
+        if ( N.left() != O.left() || N.right() != O.right() ) {
+            O.setLeft(N.left());
+            O.setRight(N.right());
+            double plotXMinRange = getDataDouble(plotIdx,
+                                                 "PlotXMinRange","Plot");
+            double plotXMaxRange = getDataDouble(plotIdx,
+                                                 "PlotXMaxRange","Plot");
+            if ( O.left() >= plotXMinRange && O.right() <= plotXMaxRange ) {
+                // Flip if y-axis not directed "up" (this happens with bboxes)
+                if ( O.top() < O.bottom() ) {
+                    O = QRectF(O.bottomLeft(),O.topRight());
+                }
+
+                setPlotMathRect(O,plotIdx);
+            }
+        }
+    }
 }
 
 QList<double> PlotBookModel::majorXTics(const QModelIndex& plotIdx) const

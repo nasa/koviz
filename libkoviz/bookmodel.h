@@ -184,6 +184,7 @@ signals:
 private slots:
     void onLiveCoordTimeChanged(double t);
     void onLiveCoordTimeIndexChanged(int i);
+    void onPlotMathRectChanged(const QRectF& M, const QString &M_XScale);
 
 private:
     SharedWindowState* _sharedWindowState;
