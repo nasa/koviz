@@ -2439,6 +2439,7 @@ void PlotMainWindow::_detachTab()
                                                       "Plots","Page");
         QModelIndexList plotIdxs = newBookModel->getIndexList(plotsIdx,
                                                               "Plot","Plots");
+        // Reset all CurveData to instantiate view
         foreach ( const QModelIndex& plotIdx, plotIdxs ) {
             QModelIndex curvesIdx = newBookModel->getIndex(plotIdx,
                                                            "Curves","Plot");
@@ -2451,6 +2452,10 @@ void PlotMainWindow::_detachTab()
                 newBookModel->setData(curveDataIdx,v);
             }
         }
+
+        // Remove row which will take out Page tab from src book view
+        _bookModel->removeRow(pageIdx.row(),pageIdx.parent());
+
     } else if ( currItem->text() == "Table" ) {
         QModelIndex tableIdx = currIdx;
         QStandardItem* srcTableItem = _bookModel->itemFromIndex(tableIdx);
@@ -2467,6 +2472,7 @@ void PlotMainWindow::_detachTab()
                                                           "TableVars","Table");
         QModelIndexList varIdxs = newBookModel->getIndexList(tableVarsIdx,
                                                         "TableVar","TableVars");
+        // Reset all TableVarData to instantiate view
         foreach ( const QModelIndex& varIdx, varIdxs ) {
             QModelIndex dataIdx = newBookModel->getDataIndex(varIdx,
                                                      "TableVarData","TableVar");
@@ -2474,6 +2480,9 @@ void PlotMainWindow::_detachTab()
             newBookModel->setData(dataIdx,"");
             newBookModel->setData(dataIdx,v);
         }
+
+        // Remove row which will take out Table tab from src book view
+        _bookModel->removeRow(tableIdx.row(),tableIdx.parent());
 
     } else {
         fprintf(stderr, "koviz [bad scoobs]: PlotMainWindow::_detachTab() "
