@@ -1003,7 +1003,7 @@ void PlotBookModel::replaceCurveModelsWithCopies(
 
 QPainterPath* PlotBookModel::getPainterPath(const QModelIndex &curveIdx) const
 {
-    QPainterPath* path;
+    QPainterPath* path = nullptr;
 
     CurveModel* curveModel = getCurveModel(curveIdx);
 

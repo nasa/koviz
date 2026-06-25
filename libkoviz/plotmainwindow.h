@@ -142,6 +142,7 @@ private:
     QAction *_enableDragDropAction;
     QAction *_filterOutFlatLinesAction;
     QAction *_newWindowAction;
+    QAction *_detachTabAction;
     QAction *_selectRunsHomeAction;
 
     QTabWidget* _nbDPVars;
@@ -182,6 +183,9 @@ private:
                     const QModelIndex& tgtParentIdx);
 
     PlotBookModel* _newBookModel(PlotBookModel *bm);
+
+    void _copyRows(QStandardItemModel* model, QStandardItem* srcParent,
+                  const QModelIndex& dstParentIdx);
 private slots:
      void _bookModelRowsAboutToBeRemoved(const QModelIndex& pidx,
                                          int start, int end);
@@ -204,6 +208,7 @@ private slots:
      void _toggleEnableDragDrop(bool isChecked);
      void _filterOutFlatLines();
      void _newWindow();
+     void _detachTab();
      void _selectRunsHome();
 
      void _runsRefreshed();

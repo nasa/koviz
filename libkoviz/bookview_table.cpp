@@ -403,16 +403,15 @@ void BookTableView::dataChanged(const QModelIndex &topLeft,
 
             delete it;
             curveModel->unmap();
+
+            // Based on number of _timeStamps, set vertical scrollbar range
+            int max = _timeStamps.count()+1; // +1 for header
+            verticalScrollBar()->setRange(0,max);
+
+            // Based on column labels, set horizontal scrollbar range
+            int nCols = _columnLabels().size();
+            horizontalScrollBar()->setRange(0,nCols);
         }
-
-        // Based on number of _timeStamps, set vertical scrollbar range
-        int max = _timeStamps.count()+1; // +1 for header
-        verticalScrollBar()->setRange(0,max);
-
-        // Based on column labels, set horizontal scrollbar range
-        int nCols = _columnLabels().size();
-        horizontalScrollBar()->setRange(0,nCols);
-
     } else if ( tag == "LiveCoordTime" ) {
 
         QModelIndex liveCoordIdx = _bookModel()->getDataIndex(QModelIndex(),

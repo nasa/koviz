@@ -336,7 +336,8 @@ void PlotMainWindow::createMenu()
     _menuBar = new QMenuBar;
     _fileMenu = new QMenu(tr("&File"), this);
     _optsMenu = new QMenu(tr("&Options"), this);
-    _newWindowAction = _fileMenu->addAction(tr("NewWindow"));
+    _newWindowAction = _fileMenu->addAction(tr("New &Window"));
+    _detachTabAction = _fileMenu->addAction(tr("Detach &Tab"));
     _pdfAction  = _fileMenu->addAction(tr("Save &PDF"));
     _jpgAction  = _fileMenu->addAction(tr("Save &JPG"));
     _dpAction  = _fileMenu->addAction(tr("Save &DP"));
@@ -411,6 +412,8 @@ void PlotMainWindow::createMenu()
             this, SLOT(_filterOutFlatLines()));
     connect(_newWindowAction, SIGNAL(triggered()),
             this, SLOT(_newWindow()));
+    connect(_detachTabAction, SIGNAL(triggered()),
+            this, SLOT(_detachTab()));
     connect(_selectRunsHomeAction, SIGNAL(triggered()),
             this, SLOT(_selectRunsHome()));
     setMenuWidget(_menuBar);
@@ -2359,7 +2362,6 @@ PlotBookModel* PlotMainWindow::_newBookModel( PlotBookModel* bm)
     return bookModel;
 }
 
-
 void PlotMainWindow::_newWindow()
 {
     PlotBookModel* bookModel = _newBookModel(_bookModel);
@@ -2389,6 +2391,126 @@ void PlotMainWindow::_newWindow()
     bookModel->setParent(bookModel);
 
     win->show();
+}
+
+void PlotMainWindow::_detachTab()
+{
+    QModelIndex currIdx = _bookView->currentTabIndex();
+
+    PlotBookModel* newBookModel = _newBookModel(_bookModel);
+    QStringList emptyDPList;
+    PlotMainWindow* win = new PlotMainWindow(newBookModel,
+                            _trickhost,
+                             _trickport,
+                             _trickoffset,
+                             _videos,
+                             _excludePattern,
+                             _filterPattern,
+                             _isFilterOutFlatlineZeros,
+                             _scripts,
+                             _isDebug,
+                             false,
+                             _timeNames,
+                             _dpDir,
+                             emptyDPList,
+                             _isShowTables,
+                             _unitOverrides,
+                             _map,
+                             _mapFile,
+                             _runs,
+                             _varsModel);
+
+    newBookModel->setParent(newBookModel);
+
+    QStandardItem* currItem = _bookModel->itemFromIndex(currIdx);
+
+    if ( currItem->text() == "Page" ) {
+        QModelIndex pageIdx = currIdx;
+        QStandardItem* srcPageItem = _bookModel->itemFromIndex(pageIdx);
+        QModelIndex dstPagesIdx = newBookModel->getIndex(QModelIndex(),
+                                                         "Pages","");
+        QStandardItem* dstPagesItem = newBookModel->itemFromIndex(dstPagesIdx);
+        QStandardItem* dstPageItem = newBookModel->addChild(dstPagesItem,
+                                                            "Page");
+        QModelIndex dstPageIdx = newBookModel->indexFromItem(dstPageItem);
+
+        _copyRows(newBookModel, srcPageItem, dstPageIdx);
+        QModelIndex plotsIdx = newBookModel->getIndex(dstPageIdx,
+                                                      "Plots","Page");
+        QModelIndexList plotIdxs = newBookModel->getIndexList(plotsIdx,
+                                                              "Plot","Plots");
+        foreach ( const QModelIndex& plotIdx, plotIdxs ) {
+            QModelIndex curvesIdx = newBookModel->getIndex(plotIdx,
+                                                           "Curves","Plot");
+            QModelIndexList curveIdxs = newBookModel->getIndexList(curvesIdx,
+                                                              "Curve","Curves");
+            foreach ( const QModelIndex& curveIdx, curveIdxs ) {
+                QModelIndex curveDataIdx = newBookModel->getDataIndex(curveIdx,
+                                                           "CurveData","Curve");
+                QVariant v = newBookModel->data(curveDataIdx);
+                newBookModel->setData(curveDataIdx,v);
+            }
+        }
+    } else if ( currItem->text() == "Table" ) {
+        QModelIndex tableIdx = currIdx;
+        QStandardItem* srcTableItem = _bookModel->itemFromIndex(tableIdx);
+        QModelIndex dstTablesIdx = newBookModel->getIndex(QModelIndex(),
+                                                         "Tables","");
+        QStandardItem* dstTablesItem =newBookModel->itemFromIndex(dstTablesIdx);
+        QStandardItem* dstTableItem = newBookModel->addChild(dstTablesItem,
+                                                            "Table");
+        QModelIndex dstTableIdx = newBookModel->indexFromItem(dstTableItem);
+
+        _copyRows(newBookModel, srcTableItem, dstTableIdx);
+
+        QModelIndex tableVarsIdx = newBookModel->getIndex(dstTableIdx,
+                                                          "TableVars","Table");
+        QModelIndexList varIdxs = newBookModel->getIndexList(tableVarsIdx,
+                                                        "TableVar","TableVars");
+        foreach ( const QModelIndex& varIdx, varIdxs ) {
+            QModelIndex dataIdx = newBookModel->getDataIndex(varIdx,
+                                                     "TableVarData","TableVar");
+            QVariant v = newBookModel->data(dataIdx);
+            newBookModel->setData(dataIdx,"");
+            newBookModel->setData(dataIdx,v);
+        }
+
+    } else {
+        fprintf(stderr, "koviz [bad scoobs]: PlotMainWindow::_detachTab() "
+                        "Current index tag=%s, expected Table or Page\n",
+                currItem->text().toLatin1().constData());
+        exit(-1);
+    }
+
+
+    win->show();
+}
+
+void PlotMainWindow::_copyRows(QStandardItemModel* model,
+              QStandardItem* srcParent,
+              const QModelIndex& dstParentIdx)
+{
+    for (int r = 0; r < srcParent->rowCount(); ++r) {
+
+        QList<QStandardItem*> row;
+
+        for (int c = 0; c < srcParent->columnCount(); ++c) {
+
+            QStandardItem* srcChild = srcParent->child(r,c);
+
+            row << (srcChild ? srcChild->clone()
+                             : new QStandardItem);
+        }
+
+        QStandardItem* dstParentItem = model->itemFromIndex(dstParentIdx);
+        int dstRow = dstParentItem->rowCount();
+        dstParentItem->appendRow(row);
+
+        QModelIndex insertedIdx = model->index(dstRow,0,dstParentIdx);
+        QStandardItem* srcChild0 = srcParent->child(r,0);
+
+        _copyRows(model,srcChild0,insertedIdx);
+    }
 }
 
 void PlotMainWindow::_selectRunsHome()
