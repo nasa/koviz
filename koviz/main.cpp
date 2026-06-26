@@ -622,7 +622,8 @@ int main(int argc, char *argv[])
         }
     } else {
         // -showVideo not set
-        if ( !opts.videoFileName.isEmpty() || !opts.videoList.isEmpty() ) {
+        if ( !opts.videoFileName.isEmpty() || !opts.videoList.isEmpty() ||
+             (session && !session->videoFileName().isEmpty()) ) {
             // If -video or -videoList option set, show video
             showVideo = true;
         } else {
