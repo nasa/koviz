@@ -38,6 +38,8 @@ void BookView::currentChanged(const QModelIndex &current,
                               const QModelIndex &previous)
 {
     Q_UNUSED(previous);
+    if ( !model() ) return;
+
     if ( _bookModel()->isIndex(current,"Page") ||
          _bookModel()->isIndex(current,"Plot") ) {
 

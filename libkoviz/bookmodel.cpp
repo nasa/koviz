@@ -8,7 +8,7 @@ PlotBookModel::PlotBookModel(SharedWindowState *sharedWindowState,
     QStandardItemModel(parent),
     _sharedWindowState(sharedWindowState),
     _timeNames(timeNames),
-    _runs(runs)
+    _runs(runs),_isDetaching(false)
 {
     _initModel();
 }
@@ -20,7 +20,7 @@ PlotBookModel::PlotBookModel(SharedWindowState *sharedWindowState,
     QStandardItemModel(rows,columns,parent),
     _sharedWindowState(sharedWindowState),
     _timeNames(timeNames),
-    _runs(runs)
+    _runs(runs),_isDetaching(false)
 {
     _initModel();
 }
@@ -41,6 +41,17 @@ PlotBookModel::~PlotBookModel()
                 CurveModel* c =  getCurveModel(curveIdx);
                 delete c;
             }
+        }
+    }
+    foreach ( QModelIndex tableIdx, tableIdxs() ) {
+        QModelIndex tableVarsIdx = getIndex(tableIdx, "TableVars","Table");
+        QModelIndexList varIdxs = getIndexList(tableVarsIdx,
+                                                        "TableVar","TableVars");
+        foreach ( const QModelIndex& varIdx, varIdxs ) {
+            QModelIndex dataIdx =getDataIndex(varIdx,"TableVarData","TableVar");
+            QVariant v = data(dataIdx);
+            CurveModel* curveModel = QVariantToPtr<CurveModel>::convert(v);
+            delete curveModel;
         }
     }
 }
@@ -524,6 +535,11 @@ void PlotBookModel::_initModel()
             SIGNAL(plotMathRectChanged(QRectF,QString)),
             this,
             SLOT(onPlotMathRectChanged(QRectF,QString)));
+
+    connect(this,
+            SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
+            this,
+            SLOT(onRowsAboutToBeRemoved(QModelIndex,int,int)));
 }
 
 //
@@ -2522,6 +2538,14 @@ SharedWindowState *PlotBookModel::sharedWindowState() const
     return _sharedWindowState;
 }
 
+bool PlotBookModel::detachRow(int row, const QModelIndex &pidx)
+{
+    _isDetaching = true;
+    bool ok = removeRow(row,pidx);
+    _isDetaching = false;
+    return ok;
+}
+
 void PlotBookModel::onLiveCoordTimeChanged(double t)
 {
     QModelIndex liveIdx = getDataIndex(QModelIndex(), "LiveCoordTime","");
@@ -2590,6 +2614,52 @@ void PlotBookModel::onPlotMathRectChanged(const QRectF &M,
                 }
 
                 setPlotMathRect(O,plotIdx);
+            }
+        }
+    }
+}
+
+// Before removing rows (if not detaching) delete curveModels in model tree
+void PlotBookModel::onRowsAboutToBeRemoved(const QModelIndex &pidx,
+                                           int first, int last)
+{
+    // When detaching, pages/tables removed but CurveModels kept since
+    // they will be moved to new book model
+    if ( _isDetaching ) return;
+
+    // Delete curve models
+    QString tag = data(pidx).toString();
+    if ( tag == "Pages" ) {
+        for ( int i = first; i <= last; ++i ) {
+            QModelIndex pageIdx = index(i,0,pidx);
+            QModelIndex plotsIdx = getIndex(pageIdx, "Plots","Page");
+            QModelIndexList plotIdxs = getIndexList(plotsIdx, "Plot","Plots");
+            foreach ( const QModelIndex& plotIdx, plotIdxs ) {
+                QModelIndex curvesIdx = getIndex(plotIdx,"Curves","Plot");
+                QModelIndexList curveIdxs = getIndexList(curvesIdx,
+                                                         "Curve","Curves");
+                foreach ( const QModelIndex& curveIdx, curveIdxs ) {
+                    QModelIndex curveDataIdx = getDataIndex(curveIdx,
+                                                           "CurveData","Curve");
+                    QVariant v = data(curveDataIdx);
+                    CurveModel* curveModel = QVariantToPtr<CurveModel>::
+                                                                     convert(v);
+                    delete curveModel;
+                }
+            }
+        }
+    } else if ( tag == "Tables" ) {
+        for ( int i = first; i <= last; ++i ) {
+            QModelIndex tableIdx = index(i,0,pidx);
+            QModelIndex tableVarsIdx = getIndex(tableIdx, "TableVars","Table");
+            QModelIndexList varIdxs = getIndexList(tableVarsIdx,
+                                                   "TableVar","TableVars");
+            foreach ( const QModelIndex& varIdx, varIdxs ) {
+                QModelIndex dataIdx =getDataIndex(varIdx,
+                                                  "TableVarData","TableVar");
+                QVariant v = data(dataIdx);
+                CurveModel* curveModel = QVariantToPtr<CurveModel>::convert(v);
+                delete curveModel;
             }
         }
     }

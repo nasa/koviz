@@ -1554,7 +1554,7 @@ int main(int argc, char *argv[])
                 dpDir = runPaths.at(0);
             }
 
-            PlotMainWindow w(bookModel,
+            PlotMainWindow* w = new PlotMainWindow(bookModel,
                              opts.trickhost,
                              opts.trickport,
                              opts.trickoffset,
@@ -1644,11 +1644,11 @@ int main(int argc, char *argv[])
             }
 
             if ( !opts.liveTime.isEmpty() ) {
-                w.selectFirstCurve();
+                w->selectFirstCurve();
             }
 
             if ( isPdf ) {
-                w.savePdf(pdfOutFile);
+                w->savePdf(pdfOutFile);
                 ret = 0;
             } else if ( isJpg ) {
                 QSize sz = str2size(opts.jpgSize);
@@ -1659,10 +1659,10 @@ int main(int argc, char *argv[])
                                     opts.jpgSize.toLatin1().constData());
                     exit(-1);
                 }
-                w.saveJpgs(jpgOutFile,sz);
+                w->saveJpgs(jpgOutFile,sz);
                 ret = 0;
             } else {
-                w.show();
+                w->show();
                 ret = a.exec();
             }
         }

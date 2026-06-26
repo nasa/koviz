@@ -65,6 +65,8 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
     _trickView(0),
     vidView(0)
 {
+    setAttribute(Qt::WA_DeleteOnClose, true);
+
     // Set version dependent string split flag
     #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         _skipEmptyParts = Qt::SkipEmptyParts;
@@ -2155,7 +2157,7 @@ void PlotMainWindow::_filterOutFlatLines()
 PlotBookModel* PlotMainWindow::_newBookModel( PlotBookModel* bm)
 {
     SharedWindowState* sws = bm->sharedWindowState();
-    PlotBookModel* bookModel = new PlotBookModel(sws,_timeNames,_runs,0,1);
+    PlotBookModel* bookModel = new PlotBookModel(sws,_timeNames,_runs,0,1,this);
 
     QStandardItem *rootItem = bookModel->invisibleRootItem();
     QStandardItem *citem;
@@ -2420,7 +2422,7 @@ void PlotMainWindow::_detachTab()
                              _runs,
                              _varsModel);
 
-    newBookModel->setParent(newBookModel);
+    newBookModel->setParent(win);
 
     QStandardItem* currItem = _bookModel->itemFromIndex(currIdx);
 
@@ -2453,8 +2455,8 @@ void PlotMainWindow::_detachTab()
             }
         }
 
-        // Remove row which will take out Page tab from src book view
-        _bookModel->removeRow(pageIdx.row(),pageIdx.parent());
+        // Detach row which will take out Page tab from src book view
+        _bookModel->detachRow(pageIdx.row(),pageIdx.parent());
 
     } else if ( currItem->text() == "Table" ) {
         QModelIndex tableIdx = currIdx;
@@ -2481,8 +2483,8 @@ void PlotMainWindow::_detachTab()
             newBookModel->setData(dataIdx,v);
         }
 
-        // Remove row which will take out Table tab from src book view
-        _bookModel->removeRow(tableIdx.row(),tableIdx.parent());
+        // Detach row which will take out Table tab from src book view
+        _bookModel->detachRow(tableIdx.row(),tableIdx.parent());
 
     } else {
         fprintf(stderr, "koviz [bad scoobs]: PlotMainWindow::_detachTab() "

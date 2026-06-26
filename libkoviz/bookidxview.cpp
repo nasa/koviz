@@ -92,6 +92,7 @@ void BookIdxView::setModel(QAbstractItemModel *model)
         view->setModel(model);
     }
     QAbstractItemView::setModel(model);
+    if ( !model ) return;
 
     QHash<QString,Qt::MouseButton> button2mouse;
     button2mouse.insert("left",Qt::LeftButton);

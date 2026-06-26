@@ -179,17 +179,21 @@ public:
 
     SharedWindowState* sharedWindowState() const;
 
+    bool detachRow(int row, const QModelIndex &pidx);
+
 signals:
     
 private slots:
     void onLiveCoordTimeChanged(double t);
     void onLiveCoordTimeIndexChanged(int i);
     void onPlotMathRectChanged(const QRectF& M, const QString &M_XScale);
+    void onRowsAboutToBeRemoved(const QModelIndex &pidx, int first, int last);
 
 private:
     SharedWindowState* _sharedWindowState;
     QStringList _timeNames;
     Runs* _runs;
+    bool _isDetaching;
     void _initModel();
     QModelIndex _pageIdx(const QModelIndex& idx) const ;
     QModelIndex _plotIdx(const QModelIndex& idx) const ;
