@@ -1,7 +1,7 @@
 #include "sharedwindowstate.h"
 
 SharedWindowState::SharedWindowState(QObject *parent)
-    : QObject(parent), _liveCoordTime(0.0), _liveCoordTimeIndex(0)
+    : QObject(parent), vidView(0), _liveCoordTime(0.0), _liveCoordTimeIndex(0)
 {}
 
 double SharedWindowState::liveCoordTime() const
@@ -60,4 +60,9 @@ void SharedWindowState::setPlotMathRect(const QRectF &M, const QString &xScale)
     _plotMathRect = M;
     _plotMathRectXScale = xScale;
     emit plotMathRectChanged(M,xScale);
+}
+
+void SharedWindowState::onVideoWindowDestroyed()
+{
+    vidView = nullptr;
 }

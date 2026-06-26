@@ -241,7 +241,7 @@ void VideoWindow::seek_time(double time) {
         int ret = mpv_get_property(video->mpv,"core-idle",
                                    MPV_FORMAT_FLAG,&isIdle);
         if ( ret >= 0 ) {
-            if ( isIdle && parentWidget()->isActiveWindow() ) {
+            if ( isIdle ) {
                 // Koviz is driving time
                 double timeOffset = video->timeOffset;
                 QString com = QString("seek %1 absolute").arg(time+timeOffset);

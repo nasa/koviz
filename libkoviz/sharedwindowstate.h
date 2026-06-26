@@ -5,6 +5,8 @@
 #include <QRectF>
 #include <cmath>
 
+#include "libkoviz/videowindow.h"
+
 class SharedWindowState : public QObject
 {
   Q_OBJECT
@@ -16,9 +18,18 @@ class SharedWindowState : public QObject
     int liveCoordTimeIndex() const;
     QRectF plotMathRect() const;
 
+    VideoWindow* vidView;
+
+  public slots:
     void setLiveCoordTime(double t);
     void setLiveCoordTimeIndex(int i);
     void setPlotMathRect(const QRectF& M, const QString& xScale);
+    void onVideoWindowDestroyed();
+
+  signals:
+    void liveCoordTimeChanged(double t);
+    void liveCoordTimeIndexChanged(int i);
+    void plotMathRectChanged(const QRectF& M, const QString& xScale);
 
   private:
     double _liveCoordTime;
@@ -26,10 +37,6 @@ class SharedWindowState : public QObject
     QRectF _plotMathRect;
     QString _plotMathRectXScale;
 
-  signals:
-    void liveCoordTimeChanged(double t);
-    void liveCoordTimeIndexChanged(int i);
-    void plotMathRectChanged(const QRectF& M, const QString& xScale);
 
 };
 

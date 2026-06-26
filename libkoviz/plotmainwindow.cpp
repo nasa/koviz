@@ -62,8 +62,7 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
     _varsModel(varsModel),
     _monteInputsView(0),
     _dpTreeWidget(0),
-    _trickView(0),
-    vidView(0)
+    _trickView(0)
 {
     setAttribute(Qt::WA_DeleteOnClose, true);
 
@@ -508,8 +507,8 @@ void PlotMainWindow::_bookModelDataChanged(const QModelIndex &topLeft,
         bool ok;
         double liveTime = model->data(topLeft).toDouble(&ok);
         if ( ok ) {
-            if ( vidView ) {
-                vidView->seek_time(liveTime);
+            if ( _bookModel->sharedWindowState()->vidView ) {
+                _bookModel->sharedWindowState()->setLiveCoordTime(liveTime);
             }
             _the_visualizer->sendTime2Bvis(liveTime);
             _blender->sendTime2Bvis(liveTime);
@@ -529,7 +528,7 @@ void PlotMainWindow::vidViewClosed()
         _bookModel->setData(showVideoIdx,false);
         _showVideoAction->setChecked(false);
     }
-    vidView = 0;
+    _bookModel->sharedWindowState()->vidView = 0;
 }
 
 void PlotMainWindow::_scriptError(QProcess::ProcessError error)
@@ -1475,6 +1474,9 @@ void PlotMainWindow::_openVideos(const QList<QPair<QString, double> > &videos)
                         "  Please install mpv and rebuild koviz!\n");
         exit(-1);
 #endif
+
+    VideoWindow* vidView = _bookModel->sharedWindowState()->vidView ;
+
     QRect lastVideoRect;
     if ( vidView ) {
         lastVideoRect = vidView->geometry();
@@ -1495,17 +1497,30 @@ void PlotMainWindow::_openVideos(const QList<QPair<QString, double> > &videos)
     }
 
     if ( !vidView ) {
-        vidView = new VideoWindow(videos,this);
+        vidView = new VideoWindow(videos,nullptr);
         vidView->setAttribute(Qt::WA_DeleteOnClose);
+        _bookModel->sharedWindowState()->vidView = vidView;
         vidView->show();
         this->setFocusPolicy(Qt::StrongFocus);
+        SharedWindowState *sws = _bookModel->sharedWindowState();
         connect(vidView,SIGNAL(timechangedByMpv(double)),
-                this, SLOT(setTimeFromVideo(double)));
-        connect(vidView,SIGNAL(closeVidView()), this, SLOT(vidViewClosed()));
+                sws, SLOT(setLiveCoordTime(double)));
+        connect(vidView, SIGNAL(destroyed()),
+                sws, SLOT(onVideoWindowDestroyed()));
+        connect(sws, SIGNAL(liveCoordTimeChanged(double)),
+                vidView, SLOT(seek_time(double)));
     } else {
         if ( vidView->isHidden() ) {
             vidView->show();
         }
+    }
+
+    // Connect close for this plot window
+    if ( vidView ) {
+        SharedWindowState *sws = _bookModel->sharedWindowState();
+        connect(sws->vidView, &VideoWindow::closeVidView,
+                this, &PlotMainWindow::vidViewClosed,
+                Qt::UniqueConnection);
     }
 
     if ( isLiveTime ) {
@@ -1540,6 +1555,7 @@ void PlotMainWindow::_toggleShowVideo()
         _bookModel->setData(showVideoIdx,false);
         _showVideoAction->setChecked(false);
         settings.setValue("VideoWindow/showVideo", false);
+        VideoWindow* vidView = _bookModel->sharedWindowState()->vidView ;
         if ( vidView ) {
             vidView->close();
             vidView = 0;
@@ -2781,6 +2797,7 @@ void PlotMainWindow::_writeSettings()
     settings.setValue("size", size());
     settings.setValue("pos", pos());
     settings.endGroup();
+    VideoWindow* vidView = _bookModel->sharedWindowState()->vidView ;
     if ( vidView ) {
         settings.beginGroup("VideoWindow");
         settings.setValue("size", vidView->size());
@@ -2809,6 +2826,7 @@ void PlotMainWindow::_readMainWindowSettings()
 
 void PlotMainWindow::_readVideoWindowSettings()
 {
+    VideoWindow* vidView = _bookModel->sharedWindowState()->vidView ;
     if ( vidView ) {
         QSettings settings("JSC", "koviz");
         settings.beginGroup("VideoWindow");
@@ -2938,8 +2956,10 @@ void PlotMainWindow::_vsRead()
 
     static double lasttime = -1.0;
     if ( time != lasttime ) {
+        VideoWindow* vidView = _bookModel->sharedWindowState()->vidView;
         if ( vidView ) {
-            vidView->seek_time(time+_trickoffset);
+            _bookModel->sharedWindowState()->setLiveCoordTime(time+
+                                                              _trickoffset);
         }
         lasttime = time;
     }
