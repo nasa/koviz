@@ -2151,6 +2151,10 @@ bool PlotBookModel::isXTime(const QModelIndex &plotIdx) const
                 isXTime = true;
                 break;
             }
+            if ( _timeNames.contains(xName) && xUnit.isEmpty() ) {
+                isXTime = true;
+                break;
+            }
         }
     }
 
