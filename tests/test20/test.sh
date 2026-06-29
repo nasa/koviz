@@ -11,7 +11,7 @@ echo "---------------------"
 echo ""
 
 echo "Expect (10,0),(0,10),(-10,0),(0,-10),(10,0) - diamond "
-/home/kvetter/dev/koviz/bin/koviz . \
-              DP_test \
-              -tmt 0.1 \
-              -timeName "time=sys.exec.out.time=snow.time"
+koviz . \
+      DP_test \
+      -tmt 0.1 \
+      -timeName "time=sys.exec.out.time=snow.time"

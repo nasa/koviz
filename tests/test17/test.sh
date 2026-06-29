@@ -8,4 +8,4 @@ echo "---------------------"
 echo ""
 echo "Error plot two vars with single run with alt+click, then spacebar"
 echo "Expect: flatline=-10"
-~/dev/koviz/bin/koviz a.csv 
+koviz a.csv 
