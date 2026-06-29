@@ -20,6 +20,7 @@ public:
     explicit PageView(QWidget *parent = 0);
     void setModel(QAbstractItemModel *model) override;
     void setRootIndex(const QModelIndex &index) override;
+    QList<PlotView*> plotViews() const ;
 
 protected:
     void paintEvent(QPaintEvent * event) override;

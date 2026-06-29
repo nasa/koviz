@@ -226,6 +226,11 @@ void PlotView::setModel(QAbstractItemModel *model)
     _buttonRubberBandZoom = button2mouse.value(buttonZoom);
 }
 
+CurvesView *PlotView::curvesView() const
+{
+    return _curvesView;
+}
+
 QSize PlotView::minimumSizeHint() const
 {
     QSize s(50,50);

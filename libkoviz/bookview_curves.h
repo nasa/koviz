@@ -233,6 +233,8 @@ public:
     explicit CurvesView(QWidget *parent = 0);
     ~CurvesView();
 
+    bool isCache() const;
+
 public:
     void setCurrentCurveRunID(int runID) override;
     void markTime(const QString& label, double time, int timeIdx) override;

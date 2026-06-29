@@ -31,6 +31,21 @@ CurvesView::~CurvesView()
     }
 }
 
+bool CurvesView::isCache() const
+{
+    if ( !_fftCache.curveCaches.isEmpty() ) {
+        return true;
+    }
+    if ( !_integCache.plotCaches.isEmpty() ) {
+        return true;
+    }
+    if ( !_derivCache.plotCaches.isEmpty() ) {
+        return true;
+    }
+
+    return false;
+}
+
 void CurvesView::setCurrentCurveRunID(int runID)
 {
     if ( runID < 0 ) {

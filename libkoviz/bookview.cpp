@@ -38,6 +38,22 @@ QModelIndex BookView::currentTabIndex() const
     }
 }
 
+PageView* BookView::currentPageView() const
+{
+    PageView* pageView = nullptr;
+
+    int tabId = _nb->currentIndex();
+    if ( tabId >= 0 ) {
+        QString wt = _nb->tabWhatsThis(tabId);
+        if ( wt == "Page" ) {
+            QWidget* w = _nb->widget(tabId);
+            pageView = static_cast<PageView*>(w);
+        }
+    }
+
+    return pageView;
+}
+
 void BookView::currentChanged(const QModelIndex &current,
                               const QModelIndex &previous)
 {

@@ -27,6 +27,7 @@ class PlotView : public BookIdxView
 public:
     explicit PlotView(QWidget *parent = 0);
     void setModel(QAbstractItemModel *model) override;
+    CurvesView* curvesView() const;
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;

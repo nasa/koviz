@@ -219,3 +219,13 @@ void PageView::setRootIndex(const QModelIndex &index)
     }
     QAbstractItemView::setRootIndex(index);
 }
+
+QList<PlotView *> PageView::plotViews() const
+{
+    QList<PlotView*> plotViews;
+    QList<QAbstractItemView*> views = _childViews.mid(1);
+    foreach (QAbstractItemView* view, views ) {
+        plotViews.append(static_cast<PlotView*>(view));
+    }
+    return plotViews;
+}

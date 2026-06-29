@@ -44,6 +44,7 @@ public:
     explicit BookView(QWidget *parent = 0);
     void setModel(QAbstractItemModel *model) override;
     QModelIndex currentTabIndex() const;
+    PageView* currentPageView() const;
 
 protected:
     void currentChanged(const QModelIndex& current,

@@ -2437,6 +2437,28 @@ void PlotMainWindow::_detachTab()
         return;
     }
 
+    // See msgbox msg below
+    bool isCache = false;
+    PageView* pageView = _bookView->currentPageView();
+    QList<PlotView*> plotViews = pageView->plotViews();
+    QList<CurvesView*> curveViews;
+    foreach ( PlotView* plotView, plotViews ) {
+        if ( plotView->curvesView()->isCache() ) {
+            isCache = true;
+            break;
+        }
+    }
+    if ( isCache ) {
+        QMessageBox msgBox;
+        QString msg = QString("Sorry! This tab cannot be detached because it "
+                              "contains a plot with cached FFT, derivative or "
+                              "integration state.  Please return the plot to "
+                              "its original state before detaching.\n");
+        msgBox.setText(msg);
+        msgBox.exec();
+        return;
+    }
+
     PlotBookModel* newBookModel = _newBookModel(_bookModel);
     QStringList emptyDPList;
     PlotMainWindow* win = new PlotMainWindow(newBookModel,
