@@ -1,7 +1,8 @@
 #include "sharedwindowstate.h"
 
 SharedWindowState::SharedWindowState(QObject *parent)
-    : QObject(parent), vidView(0), _liveCoordTime(0.0), _liveCoordTimeIndex(0)
+    : QObject(parent), vidView(0), _liveCoordTime(0.0), _liveCoordTimeIndex(0),
+      _sieModel(nullptr),_tvModel(nullptr)
 {}
 
 double SharedWindowState::liveCoordTime() const
@@ -17,6 +18,26 @@ int SharedWindowState::liveCoordTimeIndex() const
 QRectF SharedWindowState::plotMathRect() const
 {
     return _plotMathRect;
+}
+
+SieListModel *SharedWindowState::sieModel() const
+{
+    return _sieModel;
+}
+
+TVModel *SharedWindowState::tvModel() const
+{
+    return _tvModel;
+}
+
+void SharedWindowState::setSieModel(SieListModel *sieModel)
+{
+    _sieModel = sieModel;
+}
+
+void SharedWindowState::setTVModel(TVModel *tvModel)
+{
+    _tvModel = tvModel;
 }
 
 void SharedWindowState::setLiveCoordTime(double t)

@@ -76,6 +76,8 @@ public:
      void saveJpgs(const QString& fname, const QSize &jpgSize);
      void selectFirstCurve();
 
+     TrickView* trickView() const;
+
     ~PlotMainWindow();
 
 protected:

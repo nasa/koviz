@@ -37,6 +37,9 @@ public:
 
     void setDragEnabled(bool isEnabled);
 
+    QList<CurveModel*> detach(const QList<CurveModel*> curves);
+    void attach(const QList<CurveModel*>& curves);
+
 signals:
     
 public slots:

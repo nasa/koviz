@@ -159,8 +159,19 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
 
     // Sie and TV models!
     if ( _trickport ) {
-        _sieModel = new SieListModel(_trickhost, _trickport);
-        _tvModel = new TVModel(_trickhost,_trickport);
+        SharedWindowState* sws = _bookModel->sharedWindowState();
+        if ( !sws->sieModel() ) {
+            _sieModel = new SieListModel(_trickhost, _trickport);
+            sws->setSieModel(_sieModel);
+        } else {
+            _sieModel = sws->sieModel();
+        }
+        if ( !sws->tvModel() ) {
+            _tvModel = new TVModel(_trickhost,_trickport);
+            sws->setTVModel(_tvModel);
+        } else {
+            _tvModel = sws->tvModel();
+        }
     }
 
     // DP Tab
@@ -961,6 +972,11 @@ void PlotMainWindow::selectFirstCurve()
             }
         }
     }
+}
+
+TrickView *PlotMainWindow::trickView() const
+{
+    return _trickView;
 }
 
 void PlotMainWindow::_savePdf()
@@ -2442,6 +2458,7 @@ void PlotMainWindow::_detachTab()
 
     QStandardItem* currItem = _bookModel->itemFromIndex(currIdx);
 
+    QList<CurveModel*> detachedCurveModels;
     if ( currItem->text() == "Page" ) {
         QModelIndex pageIdx = currIdx;
         QStandardItem* srcPageItem = _bookModel->itemFromIndex(pageIdx);
@@ -2468,6 +2485,8 @@ void PlotMainWindow::_detachTab()
                                                            "CurveData","Curve");
                 QVariant v = newBookModel->data(curveDataIdx);
                 newBookModel->setData(curveDataIdx,v);
+                CurveModel* curveModel = QVariantToPtr<CurveModel>::convert(v);
+                detachedCurveModels.append(curveModel);
             }
         }
 
@@ -2497,6 +2516,9 @@ void PlotMainWindow::_detachTab()
             QVariant v = newBookModel->data(dataIdx);
             newBookModel->setData(dataIdx,"");
             newBookModel->setData(dataIdx,v);
+
+            CurveModel* curveModel = QVariantToPtr<CurveModel>::convert(v);
+            detachedCurveModels.append(curveModel);
         }
 
         // Detach row which will take out Table tab from src book view
@@ -2509,6 +2531,10 @@ void PlotMainWindow::_detachTab()
         exit(-1);
     }
 
+    if ( _trickView && win->trickView() ) {
+        QList<CurveModel*> tvCurves = _trickView->detach(detachedCurveModels);
+        win->trickView()->attach(tvCurves);
+    }
 
     win->show();
 }

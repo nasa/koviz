@@ -69,6 +69,42 @@ void TrickView::setDragEnabled(bool isEnabled)
     _listView->setDragEnabled(isEnabled);
 }
 
+// Detach a set of CurveModels from this TrickView.
+//
+// Removes any CurveModels that are currently registered as "live"
+// (i.e., receiving updates from TVModel through this TrickView).
+//
+// Returns the subset of input curves that were successfully detached,
+// so the caller can re-attach them to another TrickView instance
+// after a window detach operation.
+//
+QList<CurveModel *> TrickView::detach(const QList<CurveModel *> curves)
+{
+    QList<CurveModel*> result;
+
+    for (CurveModel* c : curves) {
+        if (_tvCurveModels.contains(c)) {
+            _tvCurveModels.removeOne(c);
+            result.append(c);
+        }
+    }
+
+    return result;
+}
+
+void TrickView::attach(const QList<CurveModel*>& curves)
+{
+    if ( curves.isEmpty() ) return;
+
+    for (CurveModel* c : curves) {
+        if (!_tvCurveModels.contains(c)) {
+            _tvCurveModels.append(c);
+        }
+    }
+
+    _bookModel->appendDataToCurves(curves);
+}
+
 void TrickView::slotDropEvent(QDropEvent *event, const QModelIndex &idx)
 {
     QString tag = _bookModel->data(idx.sibling(idx.row(),0)).toString();

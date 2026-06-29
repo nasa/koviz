@@ -6,6 +6,8 @@
 #include <cmath>
 
 #include "libkoviz/videowindow.h"
+#include "sie_listmodel.h"
+#include "datamodel_tv.h"
 
 class SharedWindowState : public QObject
 {
@@ -19,6 +21,12 @@ class SharedWindowState : public QObject
     QRectF plotMathRect() const;
 
     VideoWindow* vidView;
+
+    SieListModel* sieModel() const;
+    TVModel* tvModel() const;
+
+    void setSieModel(SieListModel* sieModel) ;
+    void setTVModel(TVModel* tvModel);
 
   public slots:
     void setLiveCoordTime(double t);
@@ -36,6 +44,9 @@ class SharedWindowState : public QObject
     int _liveCoordTimeIndex;
     QRectF _plotMathRect;
     QString _plotMathRectXScale;
+
+    SieListModel* _sieModel;
+    TVModel* _tvModel;
 
 
 };
