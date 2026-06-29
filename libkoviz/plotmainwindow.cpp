@@ -2431,6 +2431,12 @@ void PlotMainWindow::_detachTab()
 {
     QModelIndex currIdx = _bookView->currentTabIndex();
 
+    if ( !currIdx.isValid() ) {
+        // Nothing to detach, so create New Window instead
+        _newWindow();
+        return;
+    }
+
     PlotBookModel* newBookModel = _newBookModel(_bookModel);
     QStringList emptyDPList;
     PlotMainWindow* win = new PlotMainWindow(newBookModel,

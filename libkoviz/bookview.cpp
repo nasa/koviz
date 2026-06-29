@@ -31,7 +31,11 @@ void BookView::setModel(QAbstractItemModel *model)
 QModelIndex BookView::currentTabIndex() const
 {
     int tabId = _nb->currentIndex();
-    return _tabIdToModelIdx(tabId);
+    if ( tabId >= 0 ) {
+        return _tabIdToModelIdx(tabId);
+    } else {
+        return QModelIndex();  // Return invalid if tabId < 0
+    }
 }
 
 void BookView::currentChanged(const QModelIndex &current,
