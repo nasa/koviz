@@ -83,6 +83,7 @@ public:
     QString filterPattern() const { return _filterPattern; }
     QString videoFileName() const { return _videoFileName; }
     double videoOffset() const { return _videoOffset; }
+    QString videoList() const { return _videoList; }
     bool isShowPageTitle() const { return _isShowPageTitle; }
     QString isShowPlotLegend() const { return _isShowPlotLegend; }
     QString plotLegendPosition() const { return _plotLegendPosition; }
@@ -120,6 +121,7 @@ private:
     QString _filterPattern;
     QString _videoFileName;
     double _videoOffset;
+    QString _videoList;
     bool _isShowPageTitle;
     QString _isShowPlotLegend;
     QString _plotLegendPosition;

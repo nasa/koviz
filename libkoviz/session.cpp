@@ -17,6 +17,7 @@ Session::Session() :
     _showTables(""),
     _videoFileName(""),
     _videoOffset(0.0),
+    _videoList(""),
     _isShowPageTitle(true),
     _isShowPlotLegend(""),
     _xAxisLabel(""),
@@ -53,6 +54,7 @@ Session::Session(const QString &sessionFileName) :
     _isLegend(true),
     _videoFileName(""),
     _videoOffset(0.0),
+    _videoList(""),
     _isShowPageTitle(true),
     _isShowPlotLegend(""),
     _plotLegendPosition("ne"),
@@ -434,6 +436,9 @@ Session::Session(const QString &sessionFileName) :
                         sessionFileName.toLatin1().constData());
                 exit(-1);
             }
+        } else if ( line.contains("videoList:",Qt::CaseInsensitive) ) {
+            int i = line.indexOf("videoList:",0,Qt::CaseInsensitive);
+            _videoList = line.mid(i+10).trimmed();
         } else if ( line.contains("showPageTitle:",Qt::CaseInsensitive) ) {
             int i = line.indexOf("showPageTitle:",0,Qt::CaseInsensitive);
             QString isShowTxt = line.mid(i+14).trimmed();

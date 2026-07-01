@@ -566,14 +566,20 @@ int main(int argc, char *argv[])
     if ( !videoFileName.isEmpty() ) {
         videos.append(qMakePair(videoFileName,videoOffset));
     }
+    QString videoList;
     if ( !opts.videoList.isEmpty() ) {
+        videoList = opts.videoList;
+    } else if ( opts.videoList.isEmpty() && session ) {
+        videoList = session->videoList();
+    }
+    if ( !videoList.isEmpty() ) {
         if ( !videoFileName.isEmpty() ) {
             fprintf(stderr, "koviz [error]: Cannot use -video and "
                              "-videoList options together.");
             exit(-1);
         }
 
-        QStringList items = opts.videoList.split(',',skipEmptyParts);
+        QStringList items = videoList.split(',',skipEmptyParts);
         foreach ( QString item, items ) {
             if ( item.contains(':') ) {
                 QString f = item.split(':',skipEmptyParts).at(0).trimmed();
@@ -624,7 +630,8 @@ int main(int argc, char *argv[])
     } else {
         // -showVideo not set
         if ( !opts.videoFileName.isEmpty() || !opts.videoList.isEmpty() ||
-             (session && !session->videoFileName().isEmpty()) ) {
+             (session && !session->videoFileName().isEmpty()) ||
+             (session && !session->videoList().isEmpty() )) {
             // If -video or -videoList option set, show video
             showVideo = true;
         } else {
