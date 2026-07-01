@@ -1,0 +1,24 @@
+Koviz
+
+PLOTS:
+  Page 1: "Three Plots"
+
+    Plot 1: "Plot One"
+      x_variable: "sys.exec.out.time"
+      y_variable: "a"
+
+    Plot 2: "Plot Two"
+      x_variable: "sys.exec.out.time"
+      y_variable: "b"
+
+    Plot 3: "Plot Three"
+      x_variable: "sys.exec.out.time"
+      y_variable: "c"
+
+
+  Page 2: "Detach Me"
+    tab_label: "Detach Me"
+
+    Plot 1: "Detach Me"
+      x_variable: "sys.exec.out.time"
+      y_variable: "d"
