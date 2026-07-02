@@ -193,6 +193,7 @@ class SnapOptions : public Options
     QString vars;
     QString liveTime;
     bool isFilterOutFlatlineZeros;
+    bool isShowVersion;
 };
 
 SnapOptions opts;
@@ -377,11 +378,20 @@ int main(int argc, char *argv[])
     opts.add("-z:{0,1}",
              &opts.isFilterOutFlatlineZeros,false,
              "Filter out flat line zero and empty plots");
+    opts.add("-version:{0,1}",&opts.isShowVersion,false, "Print koviz version");
 
     opts.parse(argc,argv, QString("koviz"), &ok);
 
     if ( opts.isHelp ) {
         fprintf(stdout,"%s\n",opts.usage().toLatin1().constData());
+        return 0;
+    }
+
+    if (opts.isShowVersion) {
+        fprintf(stdout, "Koviz version : %s\n", KOVIZ_VERSION);
+        fprintf(stdout, "Build date    : %s\n", KOVIZ_BUILD_DATE);
+        fprintf(stdout, "Compiler      : %s\n", KOVIZ_COMPILER);
+        fprintf(stdout, "Qt version    : %s\n", KOVIZ_QT_VERSION);
         return 0;
     }
 
