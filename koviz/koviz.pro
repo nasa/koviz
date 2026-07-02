@@ -7,27 +7,14 @@ QT  += network
 # Create version.txt and version #DEFINEs for main.cpp
 VERSION_TXT = $$PWD/../version.txt
 VERSION_GIT_DESC = $$system(git describe --tags --always --dirty)
-isEmpty(VERSION_GIT_DESC): VERSION_GIT_DESC = unknown
+VERSION_COMMIT_DATE = $$system(git show -s --format=%cI --date=iso-strict)
 VERSION_QT_VER = $$[QT_VERSION]
-VERSION_COMPILER_VER = $$system($$QMAKE_CXX -dumpfullversion \
-                                            -dumpversion 2> /dev/null)
-isEmpty(VERSION_COMPILER_VER) {
-    VERSION_COMPILER_VER = $$system($$QMAKE_CXX --version | head -n1)
-}
-isEmpty(VERSION_COMPILER_VER) {
-    VERSION_COMPILER_VER = unknown_version
-}
-VERSION_COMPILER = "$$QMAKE_CXX-$$VERSION_COMPILER_VER"
-VERSION_BUILD_DATE = $$system(date -u \"+%Y-%m-%dT%H:%M:%SZ\")
 DEFINES += KOVIZ_VERSION=\\\"$$VERSION_GIT_DESC\\\"
-DEFINES += KOVIZ_BUILD_DATE=\\\"$$VERSION_BUILD_DATE\\\"
-DEFINES += KOVIZ_COMPILER=\\\"$$VERSION_COMPILER\\\"
+DEFINES += KOVIZ_COMMIT_DATE=\\\"$$VERSION_COMMIT_DATE\\\"
 DEFINES += KOVIZ_QT_VERSION=\\\"$$VERSION_QT_VER\\\"
 system(echo KOVIZ_VERSION = $$VERSION_GIT_DESC > $$VERSION_TXT)
-system(echo KOVIZ_BUILD_DATE = $$VERSION_BUILD_DATE >> $$VERSION_TXT)
-system(echo KOVIZ_COMPILER = $$VERSION_COMPILER >> $$VERSION_TXT)
+system(echo KOVIZ_COMMIT_DATE = $$VERSION_COMMIT_DATE >> $$VERSION_TXT)
 system(echo KOVIZ_QT_VERSION = $$VERSION_QT_VER >> $$VERSION_TXT)
-
 
 CONFIG -= app_bundle
 

@@ -388,10 +388,9 @@ int main(int argc, char *argv[])
     }
 
     if (opts.isShowVersion) {
-        fprintf(stdout, "Koviz version : %s\n", KOVIZ_VERSION);
-        fprintf(stdout, "Build date    : %s\n", KOVIZ_BUILD_DATE);
-        fprintf(stdout, "Compiler      : %s\n", KOVIZ_COMPILER);
-        fprintf(stdout, "Qt version    : %s\n", KOVIZ_QT_VERSION);
+        fprintf(stdout, "Koviz version    : %s\n", KOVIZ_VERSION);
+        fprintf(stdout, "Last commit date : %s\n", KOVIZ_COMMIT_DATE);
+        fprintf(stdout, "Qt version       : %s\n", KOVIZ_QT_VERSION);
         return 0;
     }
 
