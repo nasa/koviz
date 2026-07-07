@@ -2443,11 +2443,11 @@ void CurvesView::_keyPressF()
         _bookModel()->setPlotMathRect(bbox,rootIndex());
     } else {
         // FrequencyDomain -> TimeDomain
-        bool block = _bookModel()->blockSignals(true);
         _bookModel()->setData(xAxisLabelIdx,_fftCache.xAxisLabel);
         _bookModel()->setPlotMathRect(_fftCache.M,plotIdx);
         _bookModel()->setData(startTimeIdx,_fftCache.start);
         _bookModel()->setData(stopTimeIdx,_fftCache.stop);
+        bool block = _bookModel()->blockSignals(true);
         foreach ( QModelIndex curveIdx, curveIdxs ) {
             QModelIndex xUnitIdx = _bookModel()->getDataIndex(curveIdx,
                                                           "CurveXUnit","Curve");
