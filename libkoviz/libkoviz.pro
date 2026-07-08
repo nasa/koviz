@@ -12,6 +12,8 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = koviz
 TEMPLATE = lib
 
+RESOURCES += $$PWD/../koviz.qrc
+
 include($$PWD/../koviz.pri)
 
 CONFIG += staticlib

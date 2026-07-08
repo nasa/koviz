@@ -348,8 +348,13 @@ void PlotMainWindow::createMenu()
     _menuBar = new QMenuBar;
     _fileMenu = new QMenu(tr("&File"), this);
     _optsMenu = new QMenu(tr("&Options"), this);
+    _toolsMenu = new QMenu(tr("&Tools"), this);
+    _helpMenu = new QMenu(tr("&Help"), this);
+
+    // File Menu
     _newWindowAction = _fileMenu->addAction(tr("New &Window"));
     _detachTabAction = _fileMenu->addAction(tr("Detach &Tab"));
+    _fileMenu->addSeparator();
     _pdfAction  = _fileMenu->addAction(tr("Save &PDF"));
     _jpgAction  = _fileMenu->addAction(tr("Save &JPG"));
     _dpAction  = _fileMenu->addAction(tr("Save &DP"));
@@ -357,28 +362,43 @@ void PlotMainWindow::createMenu()
 #ifdef HAS_MPV
     _openVideoAction = _fileMenu->addAction(tr("Open &Video"));
 #endif
+    _fileMenu->addSeparator();
     _exitAction = _fileMenu->addAction(tr("E&xit"));
-    _showVideoAction = _optsMenu->addAction(tr("ShowVideo"));
+
+    // Options Menu
+    _showLiveCoordAction = _optsMenu->addAction(tr("Show Live Coord"));
+        _showLiveCoordAction->setCheckable(true);
+        _showLiveCoordAction->setChecked(true);
+    _enableDragDropAction = _optsMenu->addAction(tr("Enable DragAndDrop"));
+    _enableDragDropAction->setCheckable(true);
+    _showVideoAction = _optsMenu->addAction(tr("Show Video"));
         _showVideoAction->setCheckable(true);
         bool showVideo = _bookModel->getDataBool(QModelIndex(),"ShowVideo","");
         _showVideoAction->setChecked(showVideo);
-    _videoDirAction = _optsMenu->addAction(tr("VideoDirectory"));
-    _showLiveCoordAction = _optsMenu->addAction(tr("ShowLiveCoord"));
-        _showLiveCoordAction->setCheckable(true);
-        _showLiveCoordAction->setChecked(true);
-    _markTimeAction = _optsMenu->addAction(tr("MarkTime"));
-    _refreshPlotsAction  = _optsMenu->addAction(tr("RefreshPlots"));
-    _clearPlotsAction  = _optsMenu->addAction(tr("ClearPlots"));
-    _clearTablesAction = _optsMenu->addAction(tr("ClearTables"));
-    _clearRunsAction = _optsMenu->addAction(tr("ClearRuns"));
-    _plotAllVarsAction = _optsMenu->addAction(tr("PlotAllVars"));
-    _enableDragDropAction = _optsMenu->addAction(tr("EnableDragAndDrop"));
-    _enableDragDropAction->setCheckable(true);
-    _filterOutFlatLinesAction = _optsMenu->addAction(
-                                                  tr("FilterOutFlatlineZeros"));
-    _selectRunsHomeAction = _optsMenu->addAction(tr("SelectRunsHome"));
+    _videoDirAction = _optsMenu->addAction(tr("Select Video Directory"));
+    _selectRunsHomeAction = _optsMenu->addAction(tr("Select Runs Home"));
+
+    // Tools Menu
+    _markTimeAction = _toolsMenu->addAction(tr("Mark Time"));
+    _refreshPlotsAction  = _toolsMenu->addAction(tr("Refresh Plots"));
+    _clearPlotsAction  = _toolsMenu->addAction(tr("Clear Plots"));
+    _clearTablesAction = _toolsMenu->addAction(tr("Clear Tables"));
+    _clearRunsAction = _toolsMenu->addAction(tr("Clear Runs"));
+    _plotAllVarsAction = _toolsMenu->addAction(tr("Plot All Variables"));
+    _filterOutFlatLinesAction = _toolsMenu->addAction(
+                                                  tr("Filter Out Flatline Zeros"));
+
+    // Help Menu
+    _showDocumentationAction = _helpMenu->addAction(tr("Documentation..."));
+    _showAboutAction = _helpMenu->addAction(tr("About Koviz..."));
+
+    // Create main menu
     _menuBar->addMenu(_fileMenu);
     _menuBar->addMenu(_optsMenu);
+    _menuBar->addMenu(_toolsMenu);
+    _menuBar->addMenu(_helpMenu);
+
+    // Scripts Menu (if user supplies scripts)
     if ( !_scripts.isEmpty() ) {
         _scriptsMenu = new QMenu(tr("&Scripts"), this);
         QStringList scripts = _scripts.split(',',_skipEmptyParts);
@@ -390,6 +410,8 @@ void PlotMainWindow::createMenu()
                 this,SLOT(_launchScript(QAction*)));
         _menuBar->addMenu(_scriptsMenu);
     }
+
+    // Menu connections
     connect(_dpAction, SIGNAL(triggered()),this, SLOT(_saveDP()));
     connect(_pdfAction, SIGNAL(triggered()),this, SLOT(_savePdf()));
     connect(_jpgAction, SIGNAL(triggered()),this, SLOT(_saveJpg()));
@@ -428,6 +450,13 @@ void PlotMainWindow::createMenu()
             this, SLOT(_detachTab()));
     connect(_selectRunsHomeAction, SIGNAL(triggered()),
             this, SLOT(_selectRunsHome()));
+
+    connect(_showDocumentationAction, SIGNAL(triggered()),
+            this, SLOT(_showDocumentation()));
+    connect(_showAboutAction, SIGNAL(triggered()),
+            this, SLOT(_showAbout()));
+
+
     setMenuWidget(_menuBar);
 }
 
@@ -3017,4 +3046,40 @@ void PlotMainWindow::_vsRead()
         }
         lasttime = time;
     }
+}
+
+void PlotMainWindow::_showDocumentation()
+{
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle(tr("Koviz Documentation"));
+    msgBox.setTextFormat(Qt::RichText);
+    msgBox.setText(
+                tr("<a href=\"https://github.com/nasa/koviz/raw/master/docs/"
+                   "koviz-users-guide.pdf\">"
+                   "Github Link To User Guide (PDF)</a><br><br>"
+                   "For command line options, run:<br>"
+                   "<code>koviz -h</code>"));
+    msgBox.exec();
+}
+
+void PlotMainWindow::_showAbout()
+{
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle(tr("Koviz About"));
+    QPixmap icon(":/images/win/icon/koviz-icon-256x256.png");
+    msgBox.setIconPixmap(icon.scaled(128, 128,
+                                     Qt::KeepAspectRatio,
+                                     Qt::SmoothTransformation));
+    msgBox.setTextFormat(Qt::RichText);
+    msgBox.setText(
+           tr("<b>Koviz - Trick Sim Plotting!</b><br>"
+              "<table>"
+              "<tr><td><b>Version:</b></td><td>%1</td></tr>"
+              "<tr><td><b>Commit&nbsp;Date:</b></td><td>%2</td></tr>"
+              "<tr><td><b>Qt&nbsp;Version:</b></td><td>%3</td></tr>"
+              "</table>")
+              .arg(KOVIZ_VERSION)
+              .arg(KOVIZ_COMMIT_DATE)
+              .arg(KOVIZ_QT_VERSION));
+    msgBox.exec();
 }

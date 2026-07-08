@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/images">
+        <file>win/icon/koviz-icon-256x256.png</file>
+    </qresource>
+</RCC>

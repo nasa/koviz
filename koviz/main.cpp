@@ -209,6 +209,8 @@ int main(int argc, char *argv[])
     bool ok;
     int ret = -1;
 
+    Q_INIT_RESOURCE(koviz);  // For koviz icon
+
     opts.add("-h:{0,1}",&opts.isHelp,false, "print usage");
     opts.add("[RUNs and DPs:{0,5000}]",
              &opts.rundps, QStringList(),

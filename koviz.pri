@@ -1,11 +1,20 @@
 # =============================================================================
 #
-# koviz - Fast plotting for Trick simulation data
+# koviz - Trick sim plotting!
 #
 # =============================================================================
 
 PROJECT_NAME = koviz
-PROJECT_VERSION = 1.0.0
+
+# Koviz Version
+# Create version #DEFINEs for main.cpp and plotmainwindow.cpp
+VERSION_GIT_DESC = $$system(git describe --tags --always --dirty)
+VERSION_COMMIT_DATE = $$system(git show -s --format=%cI --date=iso-strict)
+VERSION_QT_VER = $$[QT_VERSION]
+DEFINES += KOVIZ_VERSION=\\\"$$VERSION_GIT_DESC\\\"
+DEFINES += KOVIZ_COMMIT_DATE=\\\"$$VERSION_COMMIT_DATE\\\"
+DEFINES += KOVIZ_QT_VERSION=\\\"$$VERSION_QT_VER\\\"
+PROJECT_VERSION = $$KOVIZ_VERSION
 
 INSTALL_PREFIX = /usr/local
 isEmpty(PREFIX) {

@@ -125,6 +125,8 @@ private:
     QMenuBar* _menuBar;
     QMenu *_fileMenu;
     QMenu *_optsMenu;
+    QMenu *_toolsMenu;
+    QMenu *_helpMenu;
     QMenu *_scriptsMenu;
     QAction *_dpAction;
     QAction *_pdfAction;
@@ -146,6 +148,8 @@ private:
     QAction *_newWindowAction;
     QAction *_detachTabAction;
     QAction *_selectRunsHomeAction;
+    QAction *_showDocumentationAction;
+    QAction *_showAboutAction;
 
     QTabWidget* _nbDPVars;
     VarsWidget* _varsWidget;
@@ -234,6 +238,9 @@ private slots:
      void setTimeFromBvis(double time);
      void _scriptError(QProcess::ProcessError error);
      void _vsRead();
+
+     void _showDocumentation();
+     void _showAbout();
 };
 
 #endif // PLOTMAINWINDOW_H
