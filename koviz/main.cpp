@@ -656,6 +656,16 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Enable/disable mousewheel toggle linear/logscale
+    bool isMousewheelLogScale = true;
+    // Use setting in koviz.conf if set
+    QSettings settings("JSC", "koviz");
+    if (!settings.contains("PlotMainWindow/isMousewheelLogScale")) {
+        settings.setValue("PlotMainWindow/isMousewheelLogScale", true);
+    }
+    isMousewheelLogScale = settings.value(
+                                "PlotMainWindow/isMousewheelLogScale").toBool();
+
     if ( !opts.trk2csvFile.isEmpty() ) {
         QString csvOutFile = opts.outputFileName;
         if ( csvOutFile.isEmpty() ) {
@@ -1445,6 +1455,8 @@ int main(int argc, char *argv[])
         bookModel->addChild(rootItem,"YAxisLabel",yaxislabel );
         bookModel->addChild(rootItem,"ShowVideo",showVideo );
         bookModel->addChild(rootItem,"VideoDir", videoDir);
+        bookModel->addChild(rootItem,"IsMousewheelLogScale",
+                                     isMousewheelLogScale);
 
         if ( isDP2Csv || isDP2Trk ) {
 

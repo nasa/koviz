@@ -83,6 +83,13 @@ void LabeledRulerView::wheelEvent(QWheelEvent *e)
 {
     Q_UNUSED(e);
 
+    // If user has turned off mousewheel toggle lin/log scale, return
+    bool isMWLogScale = _bookModel()->getDataBool(QModelIndex(),
+                                                  "IsMousewheelLogScale","");
+    if ( !isMWLogScale ) {
+        return;
+    }
+
     QString from ;
     QModelIndex scaleIdx;
     if ( _alignment == Qt::AlignBottom ) {

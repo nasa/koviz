@@ -137,6 +137,7 @@ private:
     QAction *_showVideoAction;
     QAction *_videoDirAction;
     QAction *_showLiveCoordAction;
+    QAction *_isMousewheelLogScaleAction;
     QAction *_markTimeAction;
     QAction *_refreshPlotsAction;
     QAction *_clearPlotsAction;
@@ -212,6 +213,7 @@ private slots:
      void _launchScript(QAction *action);
      void _plotAllVars();
      void _toggleEnableDragDrop(bool isChecked);
+     void _toggleMousewheelLogScale(bool isChecked);
      void _filterOutFlatLines();
      void _newWindow();
      void _detachTab();

@@ -371,6 +371,12 @@ void PlotMainWindow::createMenu()
         _showLiveCoordAction->setChecked(true);
     _enableDragDropAction = _optsMenu->addAction(tr("Enable DragAndDrop"));
     _enableDragDropAction->setCheckable(true);
+    _isMousewheelLogScaleAction =
+        _optsMenu->addAction(tr("Mousewheel Logscale"));
+        _isMousewheelLogScaleAction->setCheckable(true);
+        bool isMWLogScale = _bookModel->getDataBool(QModelIndex(),
+                                                    "IsMousewheelLogScale","");
+        _isMousewheelLogScaleAction->setChecked(isMWLogScale);
     _showVideoAction = _optsMenu->addAction(tr("Show Video"));
         _showVideoAction->setCheckable(true);
         bool showVideo = _bookModel->getDataBool(QModelIndex(),"ShowVideo","");
@@ -442,6 +448,8 @@ void PlotMainWindow::createMenu()
             this, SLOT(_plotAllVars()));
     connect(_enableDragDropAction, SIGNAL(toggled(bool)),
             this, SLOT(_toggleEnableDragDrop(bool)));
+    connect(_isMousewheelLogScaleAction, SIGNAL(toggled(bool)),
+            this, SLOT(_toggleMousewheelLogScale(bool)));
     connect(_filterOutFlatLinesAction, SIGNAL(triggered()),
             this, SLOT(_filterOutFlatLines()));
     connect(_newWindowAction, SIGNAL(triggered()),
@@ -2126,6 +2134,22 @@ void PlotMainWindow::_toggleEnableDragDrop(bool isChecked )
     _varsWidget->setDragEnabled(isChecked);
     if ( _trickView ) {
         _trickView->setDragEnabled(isChecked);
+    }
+}
+
+void PlotMainWindow::_toggleMousewheelLogScale(bool isChecked)
+{
+    QSettings settings("JSC", "koviz");
+    QModelIndex isMWLogScaleIdx = _bookModel->getDataIndex(QModelIndex(),
+                                                        "IsMousewheelLogScale");
+    if ( isChecked ) {
+        _bookModel->setData(isMWLogScaleIdx,true);
+        _isMousewheelLogScaleAction->setChecked(true);
+        settings.setValue("PlotMainWindow/isMousewheelLogScale",true);
+    } else {
+        _bookModel->setData(isMWLogScaleIdx,false);
+        _isMousewheelLogScaleAction->setChecked(false);
+        settings.setValue("PlotMainWindow/isMousewheelLogScale",false);
     }
 }
 
