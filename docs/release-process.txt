@@ -1,0 +1,63 @@
+Koviz Release Process
+
+Note: Koviz should never move a tag.
+If a problem is found after tagging, one must
+create a new tag.
+
+1. Test gitlab to github connection
+   1. Get gitlab's github token
+        Login to Gitlab ESGL
+        Goto koviz project
+        Settings > CI/CD > KOVIZ_GITHUB_API > Value (Copy)
+             (should get ghp_cHAw....)
+   2. curl -I -H "Authorization: token ghp_cHAw..." https://api.github.com/user
+      Should see 200 and msg like:
+            HTTP/2 200 
+            date: Wed, 08 Jul 2026 16:01:11 GMT
+            content-type: application/json; charset=utf-8
+            ...
+   3. curl -I -H "Authorization: token ghp_cHAw..." https://api.github.com/repos/nasa/koviz
+      Should see 200 and msg like:
+            HTTP/2 200 
+            date: Wed, 08 Jul 2026 16:06:33 GMT
+            content-type: application/json; charset=utf-8
+            ...
+
+2. Create change log
+   * Edit <koviz>/CHANGELOG.md and follow format
+   * Use gitk --all to review changes from last tag to this tag 
+   * Check in CHANGELOG.md
+
+3. Test build/run on Mac and Windows
+   1. For Mac (6/8/2026), Hong ran on the Mac
+   2. For Windows, used Kovi's Windows box
+      No need to create installer until tag (see below)
+
+4. Tag 
+   1. git tag 0.1.0 (or whatever tag is)
+   2. git push esgl 0.1.0
+      This will fire off CI
+   3. Wait (not sure how long)
+   4. View release on github (made by CI!)
+      Goto: https://github.com/nasa/koviz
+      and look in right panel under "Releases"
+      Click the link
+   
+5. Edit release notes (add change log) on github
+   1. Goto: https://github.com/nasa/koviz
+   2. Click on newly created Release
+   3. Click pen to "Edit: Release a.b.c"
+   4. Replace automated release message with CHANGELOG.md contents
+   
+6. Create Windows installer with freshly tagged release
+   1. Make the installer on Windows box (see win/README-win.txt)
+   2. Upload installer to Github
+        1. Go to release page (e.g. https://github.com/nasa/koviz/releases/tag/0.1.0)
+        2. Click pen to "Edit: Release 0.1.0"
+        3. Upload installer via "Assets" selection
+
+7. Post test
+   1. Download and install rpm from github release area
+   2. Run a couple sanity tests on linux
+
+8. Announce release
