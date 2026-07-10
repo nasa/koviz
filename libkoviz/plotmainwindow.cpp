@@ -21,6 +21,8 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
         const QString& trickhost,
         uint trickport,
         double trickoffset,
+        const QString& virgohost,
+        uint virgoport,
         const QList<QPair<QString,double> >& videos,
         const QString& excludePattern,
         const QString& filterPattern,
@@ -45,6 +47,8 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
     _trickhost(trickhost),
     _trickport(trickport),
     _trickoffset(trickoffset),
+    _virgohost(virgohost),
+    _virgoport(virgoport),
     _videos(videos),
     _excludePattern(excludePattern),
     _filterPattern(filterPattern),
@@ -62,7 +66,8 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
     _varsModel(varsModel),
     _monteInputsView(0),
     _dpTreeWidget(0),
-    _trickView(0)
+    _trickView(0),
+    _virgo(0)
 {
     setAttribute(Qt::WA_DeleteOnClose, true);
 
@@ -276,6 +281,13 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
     connect(_blender,SIGNAL(timechangedByBvis(double)),
             this, SLOT(setTimeFromBvis(double)));
 
+    // creating timecom to send commands to VIRGO
+    if ( _virgoport ) {
+        _virgo = new TimeCom(_virgohost, _virgoport, this);
+        connect(_virgo,SIGNAL(timechangedByBvis(double)),
+                this, SLOT(setTimeFromBvis(double)));
+    }
+
     // sending run command if there is only one run
     if ( runs->runsModel()->rowCount() == 1 ) {
         QString rundir = QString("%1/").arg(
@@ -283,6 +295,9 @@ PlotMainWindow::PlotMainWindow(PlotBookModel* bookModel,
                         _runs->runPaths().at(0)));
         _the_visualizer->sendRun2Bvis(rundir);
         _blender->sendRun2Bvis(rundir);
+        if ( _virgo ) {
+            _virgo->sendRun2Bvis(rundir);
+        }
     }
 
     bool showVideo = _bookModel->getDataBool(QModelIndex(),"ShowVideo","");
@@ -341,6 +356,9 @@ PlotMainWindow::~PlotMainWindow()
 
     delete _the_visualizer;
     delete _blender;
+    if ( _virgo ) {
+        delete _virgo;
+    }
 }
 
 void PlotMainWindow::createMenu()
@@ -526,6 +544,9 @@ void PlotMainWindow::_bookViewCurrentChanged(const QModelIndex &currIdx,
                 list.append(el1);
                 list.append(el2);
                 _blender->sendList2Bvis(list);
+                if ( _virgo ) {
+                    _virgo->sendList2Bvis(list);
+                }
             }
             delete it;
             curveModel->unmap();
@@ -560,6 +581,9 @@ void PlotMainWindow::_bookModelDataChanged(const QModelIndex &topLeft,
             }
             _the_visualizer->sendTime2Bvis(liveTime);
             _blender->sendTime2Bvis(liveTime);
+            if ( _virgo ) {
+                _virgo->sendTime2Bvis(liveTime);
+            }
         }
     } else if ( tag == "StatusBarMessage" ) {
         QString msg = _bookModel->data(topLeft).toString();
@@ -2458,6 +2482,8 @@ void PlotMainWindow::_newWindow()
                             _trickhost,
                              _trickport,
                              _trickoffset,
+                             _virgohost,
+                             _virgoport,
                              _videos,
                              _excludePattern,
                              _filterPattern,
@@ -2518,6 +2544,8 @@ void PlotMainWindow::_detachTab()
                             _trickhost,
                              _trickport,
                              _trickoffset,
+                             _virgohost,
+                             _virgoport,
                              _videos,
                              _excludePattern,
                              _filterPattern,
@@ -2886,6 +2914,9 @@ void PlotMainWindow::_monteInputsViewCurrentChanged(const QModelIndex &currIdx,
                                      _runs->runPaths().at(runID)));
             _the_visualizer->sendRun2Bvis(runpath);
             _blender->sendRun2Bvis(runpath);
+            if ( _virgo ) {
+                _virgo->sendRun2Bvis(runpath);
+            }
         }
 #if HAS_MPV
         bool showVideo = _bookModel->getDataBool(QModelIndex(),"ShowVideo","");

@@ -54,6 +54,8 @@ public:
                              const QString& trickhost,
                              uint trickport,
                              double trickoffset,
+                             const QString& virgohost,
+                             uint virgoport,
                              const QList<QPair<QString,double> >& videos,
                              const QString& excludePattern,
                              const QString& filterPattern,
@@ -92,6 +94,8 @@ private:
     const QString& _trickhost;
     uint _trickport;
     double _trickoffset;
+    const QString& _virgohost;
+    uint _virgoport;
     QList<QPair<QString,double> > _videos;
     QString _excludePattern;
     QString _filterPattern;
@@ -180,6 +184,7 @@ private:
 
     TimeCom* _the_visualizer;
     TimeCom* _blender;
+    TimeCom* _virgo;
 
     VideoWindow* vidView;
     QTcpSocket* _vsSocket ;

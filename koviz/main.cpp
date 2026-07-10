@@ -167,6 +167,8 @@ class SnapOptions : public Options
     QString trickhost;
     uint trickport;
     double trickoffset;
+    QString virgohost;
+    uint virgoport;
     QString videoFileName;
     double videoOffset;
     QString videoList;
@@ -336,6 +338,10 @@ int main(int argc, char *argv[])
              "trick var server port");
     opts.add("-trickoffset", &opts.trickoffset, 0.0,
              "trick var server time sync offset");
+    opts.add("-virgohost", &opts.virgohost, "127.0.0.1",
+             "VIRGO host");
+    opts.add("-virgoport", &opts.virgoport, 0,
+             "VIRGO port");
     opts.add("-video", &opts.videoFileName, "",
              "mp4 video filename");
     opts.add("-videoOffset", &opts.videoOffset, 0.0,
@@ -1589,6 +1595,8 @@ int main(int argc, char *argv[])
                              opts.trickhost,
                              opts.trickport,
                              opts.trickoffset,
+                             opts.virgohost,
+                             opts.virgoport,
                              videos,
                              excludePattern,
                              filterPattern,
