@@ -115,6 +115,8 @@ private:
     void _resize_videos(const QList<QPair<QString,double> >& videos);
     Video* _create_video();
 
+    double _lastTime;
+
 #ifdef HAS_MPV
     void handle_mpv_event(Video* video, mpv_event *event);
 #endif
