@@ -11,7 +11,8 @@ static void wakeup(void *ctx)
 VideoWindow::VideoWindow(const QList<QPair<QString, double> > &videos,
                          QWidget *parent) :
     QMainWindow(parent),
-    _startTime(0.0)
+    _startTime(0.0),
+    _lastTime(-1e20)
 {
 #ifndef HAS_MPV
     Q_UNUSED(videos)
@@ -236,19 +237,33 @@ void VideoWindow::seek_time(double time) {
 #endif
 #ifdef HAS_MPV
     int isIdle;
-    int i = 0;
     foreach (Video* video, _videos) {
         int ret = mpv_get_property(video->mpv,"core-idle",
                                    MPV_FORMAT_FLAG,&isIdle);
+
         if ( ret >= 0 ) {
             if ( isIdle ) {
                 // Koviz is driving time
+                double duration;
+                ret = mpv_get_property(video->mpv, "duration",
+                                       MPV_FORMAT_DOUBLE,
+                                       &duration);
+                if ( ret != 0 ) {
+                    continue;
+                }
                 double timeOffset = video->timeOffset;
-                QString com = QString("seek %1 absolute").arg(time+timeOffset);
+                double seekTime = time + timeOffset;
+                if ( seekTime < 0 || seekTime > duration ) {
+                    // If seek time is outside video time, do not seek.
+                    // This means koviz is sending time that does not exist
+                    // in video.
+                    continue;
+                }
+
+                QString com = QString("seek %1 absolute").arg(seekTime);
                 mpv_command_string(video->mpv, com.toLocal8Bit().data());
             }
         }
-        ++i;
     }
 #endif
 }
@@ -273,7 +288,15 @@ void VideoWindow::handle_mpv_event(Video* video, mpv_event *event)
                         // If mpv playing, update time
                         // If mpv paused but still active, update time
                         // If mpv paused and koviz active, don't emit signal
-                        emit timechangedByMpv(time);
+                        //
+                        // If time change is tiny, video time really
+                        // didn't change, so do not emit a signal to avoid
+                        // thrashing feedback
+                        constexpr double timeChangeEpsilon = 0.001; // seconds
+                        if ( qAbs(_lastTime-time) > timeChangeEpsilon ) {
+                            emit timechangedByMpv(time);
+                            _lastTime = time;
+                        }
                     }
                 }
             } else if (prop->format == MPV_FORMAT_NONE) {
