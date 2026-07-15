@@ -8,7 +8,7 @@ create a new tag.
    1. Get gitlab's github token
         Login to Gitlab ESGL
         Goto koviz project
-        Settings > CI/CD > KOVIZ_GITHUB_API > Value (Copy)
+        Settings > CI/CD > Variables > KOVIZ_GITHUB_API > Value (Copy)
              (should get ghp_cHAw....)
    2. curl -I -H "Authorization: token ghp_cHAw..." https://api.github.com/user
       Should see 200 and msg like:
@@ -34,7 +34,7 @@ create a new tag.
       No need to create installer until tag (see below)
 
 4. Tag 
-   1. git tag 0.1.0 (or whatever tag is)
+   1. git tag 0.1.0 (replace 0.1.0 with whatever tag is)
    2. git push esgl 0.1.0
       This will fire off CI
    3. Wait (not sure how long)

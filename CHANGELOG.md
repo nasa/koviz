@@ -1,3 +1,15 @@
+# Koviz 0.1.1 (2026-07-15)
+
+This patch is to incorporate EGs fork 
+of koviz to support syncing koviz 
+to EG's Virgo tool.
+
+## Enhancements
+* Added EG Virgo support
+
+## Fixes
+* Smoother video/data sync
+
 # Koviz 0.1.0 (2026-07-08)
 
 ## Enhancements
