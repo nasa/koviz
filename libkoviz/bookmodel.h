@@ -52,6 +52,7 @@ public:
     double xBias(const QModelIndex& curveIdx, CurveModel* curveModelIn=0) const;
     double yBias(const QModelIndex& curveIdx) const;
     QRectF calcCurvesBBox(const QModelIndex& curvesIdx) const;
+    QRectF calcPathBBox(const QPainterPath* path,double xMin,double xMax) const;
 
     QStandardItem* addChild(QStandardItem* parentItem,
                             const QString& childTitle,

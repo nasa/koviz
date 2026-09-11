@@ -1264,6 +1264,23 @@ QRectF PlotBookModel::calcCurvesBBox(const QModelIndex &curvesIdx) const
     QString plotXScale = getDataString(plotIdx,"PlotXScale","Plot");
     QString plotYScale = getDataString(plotIdx,"PlotYScale","Plot");
     QString presentation = getDataString(plotIdx,"PlotPresentation","Plot");
+    double plotXMinRange = getDataDouble(plotIdx,"PlotXMinRange","Plot");
+    double plotXMaxRange = getDataDouble(plotIdx,"PlotXMaxRange","Plot");
+    double plotYMinRange = getDataDouble(plotIdx,"PlotYMinRange","Plot");
+    double plotYMaxRange = getDataDouble(plotIdx,"PlotYMaxRange","Plot");
+    bool isYAutoRange = false;
+    double xmin = plotXMinRange;
+    double xmax = plotXMaxRange;
+    if ( plotXScale == "log" ) {
+        xmin = log10(xmin);
+        xmax = log10(xmax);
+    }
+    if ((plotXMinRange != -DBL_MAX || plotXMaxRange != DBL_MAX) &&
+        (plotYMinRange == -DBL_MAX && plotYMaxRange == DBL_MAX)) {
+        // If user has set the x range but has not set the y range, then
+        // auto calculate y range
+        isYAutoRange = true;
+    }
     if ( presentation == "compare" || presentation == "error+compare" ) {
         int rc = rowCount(curvesIdx);
         for (int i = 0; i < rc; ++i) {
@@ -1287,6 +1304,9 @@ QRectF PlotBookModel::calcCurvesBBox(const QModelIndex &curvesIdx) const
                 ys = getDataDouble(curveIdx,"CurveYScale","Curve");
             }
             QRectF pathBox = path->boundingRect();
+            if ( isYAutoRange ) {
+                pathBox = calcPathBBox(path,xmin,xmax);
+            }
             double w = pathBox.width();
             double h = pathBox.height();
             if ( w == 0 && h == 0 && path->elementCount() > 0 ) {
@@ -1304,12 +1324,19 @@ QRectF PlotBookModel::calcCurvesBBox(const QModelIndex &curvesIdx) const
         }
         if ( presentation == "error+compare" ) {
             QPainterPath* errorPath = _createCurvesErrorPath(curvesIdx);
-            bbox = bbox.united(errorPath->boundingRect());
+            QRectF errorPathBBox = errorPath->boundingRect();
+            if ( isYAutoRange ) {
+                errorPathBBox = calcPathBBox(errorPath,xmin,xmax);
+            }
+            bbox = bbox.united(errorPathBBox);
             delete errorPath;
         }
     } else if ( presentation == "error" ) {
         QPainterPath* errorPath = _createCurvesErrorPath(curvesIdx);
         bbox = errorPath->boundingRect();
+        if ( isYAutoRange ) {
+            bbox = calcPathBBox(errorPath,xmin,xmax);
+        }
         double w = bbox.width();
         double h = bbox.height();
         if ( w == 0 && h == 0 && errorPath->elementCount() > 0 ) {
@@ -1402,10 +1429,6 @@ QRectF PlotBookModel::calcCurvesBBox(const QModelIndex &curvesIdx) const
     bbox.setRight(right);
 
     // Fit bbox within PlotXYMinMax bounds
-    double plotXMinRange = getDataDouble(plotIdx,"PlotXMinRange","Plot");
-    double plotXMaxRange = getDataDouble(plotIdx,"PlotXMaxRange","Plot");
-    double plotYMinRange = getDataDouble(plotIdx,"PlotYMinRange","Plot");
-    double plotYMaxRange = getDataDouble(plotIdx,"PlotYMaxRange","Plot");
     if ( plotXMinRange != -DBL_MAX ) {
         if ( plotXScale == "log" ) {
             if ( plotXMinRange > 0 ) {
@@ -1444,6 +1467,32 @@ QRectF PlotBookModel::calcCurvesBBox(const QModelIndex &curvesIdx) const
     }
 
     return bbox;
+}
+
+// Calculate path's y-range given x-range, then return bounding box
+QRectF PlotBookModel::calcPathBBox(const QPainterPath *path,
+                                   double xMin, double xMax) const
+{
+    double yMin = DBL_MAX;
+    double yMax = -DBL_MAX;
+
+    double left = qMax(xMin,path->boundingRect().left());
+    double right = qMin(xMax,path->boundingRect().right());
+
+    int n = path->elementCount();
+    for (int i = 0; i < n; ++i) {
+        QPainterPath::Element element = path->elementAt(i);
+        if ( element.x >= left && element.x <= right ) {
+            yMin = qMin(yMin,element.y);
+            yMax = qMax(yMax,element.y);
+        }
+    }
+
+    if ( yMin == DBL_MAX ) {
+        return QRectF();
+    }
+
+    return QRectF(left,yMin,right-left,yMax-yMin);
 }
 
 // Append new data in curveModel to given QPainterPath path.
