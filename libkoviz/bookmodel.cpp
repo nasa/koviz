@@ -1311,15 +1311,23 @@ QRectF PlotBookModel::calcCurvesBBox(const QModelIndex &curvesIdx) const
             double h = pathBox.height();
             if ( w == 0 && h == 0 && path->elementCount() > 0 ) {
                 // If single point (could be duplicated), make 1x1 box around pt
-                double x = pathBox.x()-0.5;
-                double y = pathBox.y()-0.5;
+                double x = pathBox.x();
+                if ( isYAutoRange ) {
+                    if ( x < xmin || x > xmax ) {
+                        // Skip this path (point) if not in dp x range
+                        continue;
+                    }
+                }
+                double xl = pathBox.x()-0.5;
+                double yu = pathBox.y()-0.5;
                 w = 1.0;
                 h = 1.0;
-                pathBox.setRect(x,y,w,h);
+                pathBox.setRect(xl,yu,w,h);
             }
             QPointF topLeft(xs*pathBox.topLeft().x()+xb,
                            (ys*pathBox.topLeft().y()+yb));
             QRectF scaledPathBox(topLeft,QSizeF(xs*w,ys*h));
+
             bbox = bbox.united(scaledPathBox);
         }
         if ( presentation == "error+compare" ) {
