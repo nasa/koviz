@@ -656,10 +656,45 @@ void DPTreeWidget::_createDPPages(const QString& dpfile)
                 foreach ( QModelIndex siblingPlotIdx, siblingPlotIdxs ) {
                     bool isXTime = _bookModel->isXTime(siblingPlotIdx);
                     if ( isXTime ) {
-                        QRectF sibPlotRect = _bookModel->getPlotMathRect(
+                        double ll;
+                        double rr;
+                        if ( plot->xMinRange() == -DBL_MAX &&
+                             plot->xMaxRange() == DBL_MAX ) {
+                            // Common case where DP does NOT set x min/max range
+                            // Use sibling's range
+                            QRectF sibPlotRect = _bookModel->getPlotMathRect(
                                                                 siblingPlotIdx);
-                        bbox.setLeft(sibPlotRect.left());
-                        bbox.setRight(sibPlotRect.right());
+                            QString sibPlotXScale = _bookModel->getDataString(
+                                                                 siblingPlotIdx,
+                                                           "PlotXScale","Plot");
+                            ll = sibPlotRect.left();
+                            rr = sibPlotRect.right();
+                            if ( sibPlotXScale == "linear" &&
+                                 plot->plotXScale() == "log" ) {
+                                ll = ll > 0 ? log10(ll) : 0;
+                                rr = rr > 0 ? log10(rr) : 0;
+                            } else if ( sibPlotXScale == "log" &&
+                                        plot->plotXScale() == "linear" ) {
+                                // A log sibling's range may be the result
+                                // of culling x=0 rather than an explicitly
+                                // user set range. Since there is no easy way to
+                                // determine, do not inherit that range
+                                // for a linear plot; instead, use full range.
+                                ll = bbox.left();
+                                rr = bbox.right();
+                            }
+                        } else {
+                            // If x plot range set by user in DP file,
+                            // use that instead of auto ranging to sibling
+                            ll = plot->xMinRange();
+                            rr = plot->xMaxRange();
+                            if ( plot->plotXScale() == "log" ) {
+                                ll = log10(ll);
+                                rr = log10(rr);
+                            }
+                        }
+                        bbox.setLeft(ll);
+                        bbox.setRight(rr);
                         break;
                     }
                 }
