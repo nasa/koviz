@@ -1487,12 +1487,94 @@ QRectF PlotBookModel::calcPathBBox(const QPainterPath *path,
     double left = qMax(xMin,path->boundingRect().left());
     double right = qMin(xMax,path->boundingRect().right());
 
+    bool isFirst = true;
+    QPainterPath::Element lastElement;
+
     int n = path->elementCount();
     for (int i = 0; i < n; ++i) {
         QPainterPath::Element element = path->elementAt(i);
-        if ( element.x >= left && element.x <= right ) {
-            yMin = qMin(yMin,element.y);
-            yMax = qMax(yMax,element.y);
+        if ( isFirst ) {
+            if ( left <= element.x && element.x <= right ) {
+                yMin = qMin(yMin,element.y);
+                yMax = qMax(yMax,element.y);
+            }
+            lastElement = element;
+            isFirst = false;
+        } else {
+            double m = (element.y - lastElement.y)/
+                       (element.x - lastElement.x);  // 0 will not be used
+            double yleft = m*(left-element.x) + element.y;
+            double yright = m*(right-element.x) + element.y;
+            if ( lastElement.x < left ) {
+                if ( element.x < left ) {
+                    // Segment is out of box, do nothing
+                } else if ( element.x >= left && element.x <= right ) {
+                    // Segment comes from left outside to inside bounding box
+                    // Interpolate y position on left bound side
+                    yMin = qMin(yMin,yleft);
+                    yMax = qMax(yMax,yleft);
+                    // Take min/max of point inside box too
+                    yMin = qMin(yMin,element.y);
+                    yMax = qMax(yMax,element.y);
+                } else if ( element.x > right ) {
+                    // Segment crosses from left of box to right of box
+                    // Interpolate y position on left and right side of box
+                    yMin = qMin(yMin,yleft);
+                    yMax = qMax(yMax,yleft);
+                    yMin = qMin(yMin,yright);
+                    yMax = qMax(yMax,yright);
+                } else {
+                    // Can't happen
+                }
+            } else if ( left <= lastElement.x && lastElement.x <= right ) {
+
+                if ( element.x < left ) {
+                    // Segment goes from inside to left outside
+                    // Interpolate y pos that crosses left side
+                    yMin = qMin(yMin,yleft);
+                    yMax = qMax(yMax,yleft);
+                } else if ( left <= element.x && element.x <= right ) {
+                    // Segment is completely inside, no interpolation needed
+                    yMin = qMin(yMin,element.y);
+                    yMax = qMax(yMax,element.y);
+                } else if ( element.x > right ) {
+                    // Segment goes from inside to right (outside)
+                    // Interpolate y pos that crosses right side
+                    yMin = qMin(yMin,yright);
+                    yMax = qMax(yMax,yright);
+                } else {
+                    // Can't happen
+                }
+            } else if ( lastElement.x > right ) {
+                if ( element.x < left ) {
+                    // Segment crosses from right to left side
+                    // Interpolate y position on left and right side of box
+                    yMin = qMin(yMin,yleft);
+                    yMax = qMax(yMax,yleft);
+                    yMin = qMin(yMin,yright);
+                    yMax = qMax(yMax,yright);
+                } else if ( element.x >= left && element.x <= right ) {
+                    // Segment crosses from right to inside
+                    // Interpolate y position on right side of box
+                    yMin = qMin(yMin,yright);
+                    yMax = qMax(yMax,yright);
+                    // Take min/max of point inside box too
+                    yMin = qMin(yMin,element.y);
+                    yMax = qMax(yMax,element.y);
+                } else if ( element.x > right ) {
+                    // Nothing to do since segment out of view
+                } else {
+                    // Can't happen
+                }
+            } else {
+                // Can't happen
+                fprintf(stderr, "koviz [error]: Bad scoobs in "\
+                                "PlotBookModel::calcPathBBox\n");
+                exit(-1);
+            }
+
+            // Save element for next pass
+            lastElement = element;
         }
     }
 

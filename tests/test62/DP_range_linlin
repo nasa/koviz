@@ -1,0 +1,12 @@
+Koviz
+
+PLOTS:
+  Page 1: ""
+
+    Plot 1: ""
+      x_min_range: 2.5
+      x_max_range: 3.5
+      x_variable: "sys.exec.out.time"
+      y_variable: "val"
+        units: "m"
+        symbol_style: "circle"
