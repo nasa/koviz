@@ -2197,29 +2197,80 @@ void CurvesView::_keyPressSpace()
         exit(-1);
     }
 
-    // Make units the same (in the book model)
+    // Load curve indexes and curve0
     QModelIndex idx0 = model()->index(0,0,curvesIdx);
     QModelIndex idx1 = model()->index(1,0,curvesIdx);
-    QString dpYUnit0 = _bookModel()->getDataString(idx0,"CurveYUnit","Curve");
-    QString dpYUnit1 = _bookModel()->getDataString(idx1,"CurveYUnit","Curve");
-    CurveModel* c0 = _bookModel()->getCurveModel(curvesIdx,0);
-    if ( c0->y()->unit() != dpYUnit0 ) {
-        if ( dpYUnit0.isEmpty() || dpYUnit0 == "--" ) {
-            QModelIndex unitIdx0 = _bookModel()->getDataIndex(idx0,
-                                                         "CurveYUnit", "Curve");
-            model()->setData(unitIdx0,c0->y()->unit());
-            dpYUnit0 = c0->y()->unit();
+    CurveModel *c0 = _bookModel()->getCurveModel(curvesIdx,0);
+    CurveModel *c1 = _bookModel()->getCurveModel(curvesIdx,1);
+
+    // If error plot, make sure units are compatible for comparison
+    // Explicitly unitless curves are comparable with any units
+    if ( plotPresentation == "error" ||
+         plotPresentation == "error+compare" ) {
+
+        QString u0 = _bookModel()->getDataString(idx0,"CurveYUnit","Curve");
+        QString u1 = _bookModel()->getDataString(idx1,"CurveYUnit","Curve");
+
+        if ( !u0.isEmpty() && !Unit::canConvert(u0,c0->y()->unit()) ) {
+            QMessageBox msgBox;
+            QString msg = QString("Sorry, cannot take error plot between "
+                                  "curves when DP units=%1 do not match "
+                                  "underlying curve units=%2.\n")
+                                  .arg(u0).arg(c0->y()->unit());
+            msgBox.setText(msg);
+            msgBox.exec();
+            return;
+        }
+
+        if ( !u1.isEmpty() && !Unit::canConvert(u1,c1->y()->unit()) ) {
+            QMessageBox msgBox;
+            QString msg = QString("Sorry, cannot take error plot between "
+                                  "curves when DP units=%1 do not match "
+                                  "underlying curve units=%2.\n")
+                                  .arg(u1).arg(c1->y()->unit());
+            msgBox.setText(msg);
+            msgBox.exec();
+            return;
+        }
+
+
+        // Resolve unspecified DP units to native model units.
+        if ( u0.isEmpty() ) u0 = c0->y()->unit();
+        if ( u1.isEmpty() ) u1 = c1->y()->unit();
+
+        if ( !Unit::canConvert(u0,u1) ) {
+            QMessageBox msgBox;
+            QString msg = QString("Sorry, cannot take error plot between "\
+                                  "curves when units do not match.\n");
+            msgBox.setText(msg);
+            msgBox.exec();
+            return;
         }
     }
-    if ( dpYUnit0 != dpYUnit1 && !dpYUnit0.isEmpty() && !dpYUnit1.isEmpty() ) {
-        // Make dp units the same (if in same family)
-        QString u0(dpYUnit0);
-        QString u1(dpYUnit1);
-        if ( Unit::canConvert(u0,u1) ) {
-            QModelIndex unitIdx1 = _bookModel()->getDataIndex(idx1,
+
+    // Make units the same (in the book model)
+    QString dpYUnit0 = _bookModel()->getDataString(idx0,"CurveYUnit","Curve");
+    QString dpYUnit1 = _bookModel()->getDataString(idx1,"CurveYUnit","Curve");
+    if ( dpYUnit0.isEmpty() ) {
+        QModelIndex unitIdx0 = _bookModel()->getDataIndex(idx0,
                                                          "CurveYUnit", "Curve");
-            model()->setData(unitIdx1,dpYUnit0);
-        }
+        model()->setData(unitIdx0,c0->y()->unit());
+        dpYUnit0 = c0->y()->unit();
+    }
+    if ( dpYUnit1.isEmpty() ) {
+        QModelIndex unitIdx1 = _bookModel()->getDataIndex(idx1,
+                                                         "CurveYUnit", "Curve");
+        model()->setData(unitIdx1,c1->y()->unit());
+        dpYUnit1 = c1->y()->unit();
+    }
+    if ( dpYUnit0 != dpYUnit1 && Unit::canConvert(dpYUnit0,dpYUnit1) ) {
+        // Make dp units the same (if in same family)
+        // E.g. If curve0 is in m and curve1 is in cm, the dp unit will
+        // be set to m so the comparison is done in meters i.e. curve1
+        // can be converted to m for comparison - especially error plot
+        QModelIndex unitIdx1 = _bookModel()->getDataIndex(idx1,
+                                                         "CurveYUnit", "Curve");
+        model()->setData(unitIdx1,dpYUnit0);
     }
 
     // Set presentation
