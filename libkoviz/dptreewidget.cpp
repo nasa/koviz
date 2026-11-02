@@ -297,6 +297,9 @@ void DPTreeWidget::_dpTreeViewCurrentChanged(const QModelIndex &currIdx,
             }
         }
         if ( !isPage && !isTable ) {
+            if ( !_isDPUnitsCompatible(fp) ) {
+                return;
+            }
             int nPages0 = _bookModel->pageIdxs().size();
             int nTables0 = _bookModel->tableIdxs().size();
             _createDP(fp);
@@ -1272,6 +1275,76 @@ CurveModel* DPTreeWidget::_addCurve(QStandardItem *curvesItem,
     _addChild(curveItem, "CurveData", v);
 
     return curveModel;
+}
+
+// Check that DP units can be converted from the logged units.
+// Unit::scale() hard exits if not, so warn and refuse to load the DP.
+// DP units that are empty or "--" are not converted, so they always pass.
+// Exact "--" (not canConvert(dpUnit,"--")) matches the bookmodel guards.
+bool DPTreeWidget::_isDPUnitsCompatible(const QString &dpfile)
+{
+    QStringList errs;
+
+    DPProduct dp(dpfile);
+    foreach (DPPage* page, dp.pages() ) {
+        foreach ( DPPlot* plot, page->plots() ) {
+            foreach ( DPCurve* dpcurve, plot->curves() ) {
+
+                if ( !dpcurve->xyPairs().isEmpty() ) {
+                    continue; // Skip xy pairs
+                }
+
+                QString xName = dpcurve->x()->name();
+                QString yName = dpcurve->y()->name();
+                if ( xName.isEmpty() ) {
+                    xName = _timeName;
+                }
+
+                CurveModel* curveModel = _bookModel->createCurve(0,_timeName,
+                                                                 xName,yName);
+                if ( !curveModel ) {
+                    continue; // e.g. sie or external program
+                }
+
+                QList<QPair<DPVar*,CurveModelParameter*> > vars;
+                vars << qMakePair(dpcurve->x(),curveModel->x())
+                     << qMakePair(dpcurve->y(),curveModel->y());
+                for ( int i = 0; i < vars.size(); ++i ) {
+                    QString dpUnit = vars.at(i).first->unit();
+                    QString logUnit = vars.at(i).second->unit();
+                    if ( dpUnit.isEmpty() || dpUnit == "--" ||
+                         dpUnit == logUnit ) {
+                        continue;
+                    }
+                    if ( !Unit::isUnit(logUnit) || !Unit::isUnit(dpUnit) ||
+                         !Unit::canConvert(logUnit,dpUnit) ) {
+                        QString err = QString("%1 {%2} -> {%3}")
+                                             .arg(vars.at(i).second->name())
+                                             .arg(logUnit).arg(dpUnit);
+                        if ( !errs.contains(err) ) {
+                            errs << err;
+                        }
+                    }
+                }
+
+                delete curveModel;
+            }
+        }
+    }
+
+    if ( !errs.isEmpty() ) {
+        QMessageBox msgBox;
+        QString msg = QString("Sorry, cannot load %1.\n"
+                              "DP units are incompatible with logged units:\n"
+                              "    %2\n")
+                              .arg(QFileInfo(dpfile).fileName())
+                              .arg(errs.join("\n    "));
+        msgBox.setText(msg);
+        msgBox.exec();
+        return false;
+    }
+
+    return true;
 }
 
 bool DPTreeWidget::_isDP(const QString &fp)

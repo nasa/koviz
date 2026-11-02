@@ -11,6 +11,7 @@
 #include <QProgressDialog>
 #include <QLabel>
 #include <QElapsedTimer>
+#include <QMessageBox>
 #include "dp.h"
 #include "dpfilterproxymodel.h"
 #include "bookmodel.h"
@@ -97,6 +98,7 @@ private:
                           const QString &defaultColor,
                           const QString &defaultLineStyle);
     bool _isDP(const QString& fp);
+    bool _isDPUnitsCompatible(const QString& dpfile);
     QString _descrPlotTitle(DPPlot* plot);
 
     static QString _err_string;
